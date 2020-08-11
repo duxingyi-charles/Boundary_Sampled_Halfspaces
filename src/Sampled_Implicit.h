@@ -17,7 +17,8 @@ public:
 
 	std::vector<Point> get_sample_points() const { return sample_points; }
 
-	virtual double evaluate_at(const Point &p) const = 0;
+	virtual double function_at(const Point &p) const = 0;
+	virtual Vec3 gradient_at(const Point &p) const = 0
 
 protected:
 

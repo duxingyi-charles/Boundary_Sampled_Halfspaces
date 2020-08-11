@@ -10,7 +10,8 @@ public:
 	Plane_sImplicit(const Point &p1, const Point &p2, const Point &p3);
 	~Plane_sImplicit() = default;
 
-	double evaluate_at(const Point &p) const override;
+	double function_at(const Point &p) const override;
+	Vec3   gradient_at(const Point &p) const override { return normal; }
 
 protected:
 	Vec3 normal;
