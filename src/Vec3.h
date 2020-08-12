@@ -31,7 +31,7 @@ void Vec3::normalize() {
 		z /= n;
 	}
 	else {
-		std::cout << "zero vector can't be normalized!"
+		std::cout << "zero vector can't be normalized!";
 	}	
 }
 

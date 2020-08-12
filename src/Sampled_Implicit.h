@@ -1,5 +1,5 @@
-#ifndef SAMPLED_INPLICIT_H
-#define SAMPLED_INPLICIT_H
+#ifndef SAMPLED_IMPLICIT_H
+#define SAMPLED_IMPLICIT_H
 
 #include <vector>
 #include "Vec3.h"
@@ -18,7 +18,7 @@ public:
 	std::vector<Point> get_sample_points() const { return sample_points; }
 
 	virtual double function_at(const Point &p) const = 0;
-	virtual Vec3 gradient_at(const Point &p) const = 0
+	virtual Vec3 gradient_at(const Point &p) const = 0;
 
 protected:
 

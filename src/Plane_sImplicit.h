@@ -30,8 +30,8 @@ Plane_sImplicit::Plane_sImplicit(const Point &p1, const Point &p2, const Point &
 }
 
 
-double Plane_sImplicit::evaluate_at(const Point &p) {
-	return dot(normal, p-p1);
+double Plane_sImplicit::function_at(const Point &p) const {
+	return dot(normal, p-sample_points[0]);
 }
 
 #endif
