@@ -1,5 +1,5 @@
-#ifndef PLANE_SIMPLICIT_H
-#define PLANE_SIMPLICIT_H
+#ifndef PLANE_S_IMPLICIT_H
+#define PLANE_S_IMPLICIT_H
 
 #include "Sampled_Implicit.h"
 #include "Vec3.h"
