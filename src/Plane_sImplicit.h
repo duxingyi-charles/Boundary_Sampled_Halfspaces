@@ -2,7 +2,7 @@
 #define PLANE_S_IMPLICIT_H
 
 #include "Sampled_Implicit.h"
-#include "Vec3.h"
+#include <vector>
 
 class Plane_sImplicit : public Sampled_Implicit
 {
@@ -10,28 +10,21 @@ public:
 	Plane_sImplicit(const Point &p1, const Point &p2, const Point &p3);
 	~Plane_sImplicit() = default;
 
-	double function_at(const Point &p) const override;
-	Vec3   gradient_at(const Point &p) const override { return normal; }
+	double function_at(const Point &p) const override { return normal.dot(p-sample_points[0]); }
+	Eigen::Vector3d   gradient_at(const Point &p) const override { return normal; }
 
 protected:
-	Vec3 normal;
+	Eigen::Vector3d normal;
 	
 };
 
 
 Plane_sImplicit::Plane_sImplicit(const Point &p1, const Point &p2, const Point &p3)
-	: Sampled_Implicit()
+	: Sampled_Implicit(std::vector<Point>{p1,p2,p3})
 {
-	std::vector<Point> pts = {p1,p2,p3};
-	sample_points = pts;
-
-	normal = cross(p2-p1,p3-p1);
+    normal = (p2-p1).cross(p3-p1);
 	normal.normalize();
 }
 
-
-double Plane_sImplicit::function_at(const Point &p) const {
-	return dot(normal, p-sample_points[0]);
-}
 
 #endif
