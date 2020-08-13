@@ -2,7 +2,6 @@
 #define PLANE_S_IMPLICIT_H
 
 #include "Sampled_Implicit.h"
-#include <vector>
 
 class Plane_sImplicit : public Sampled_Implicit
 {
