@@ -112,6 +112,24 @@ Eigen::Vector3d Hermite_RBF_sImplicit::kernel_gradient(const Point &p1, const Po
     return 3 * (p1-p2).norm() * (p1-p2);
 }
 
+Eigen::Matrix3d Hermite_RBF_sImplicit::kernel_Hessian(const Point &p1, const Point &p2) const {
+    Eigen::Vector3d diff = p1 - p2;
+    double len = diff.norm();
+    if (len < 1e-8) {
+        return Eigen::Matrix3d::Zero();
+    }
+
+    Eigen::Matrix3d hess = diff * (diff.transpose()/len);
+    hess(0,0) += len;
+    hess(1,1) += len;
+    hess(2,2) += len;
+    hess *= 3;
+
+    return hess;
+}
+
+
+
 double Hermite_RBF_sImplicit::function_at(const Point &p) const {
     size_t npt = sample_points.size();
     int dim = 3;
@@ -136,6 +154,28 @@ double Hermite_RBF_sImplicit::function_at(const Point &p) const {
     return re;
 }
 
-Eigen::Vector3d Hermite_RBF_sImplicit::gradient_at(const Point &) const {
+Eigen::Vector3d Hermite_RBF_sImplicit::gradient_at(const Point &p) const {
+    size_t npt = sample_points.size();
+    int dim = 3;
 
+    Eigen::Vector3d grad;
+    grad.setZero();
+    // sum(ai * fi)
+    for (size_t i = 0; i < npt; ++i) {
+        grad += kernel_gradient(p,sample_points[i]) * coeff_a[i];
+    }
+    // sum(hi * bi)
+    Eigen::Matrix3d H;
+    for (size_t i = 0; i < npt; ++i) {
+        H = kernel_Hessian(p,sample_points[i]);
+        grad += H.col(0) * coeff_a[npt+i];
+        grad += H.col(1) * coeff_a[2*npt+i];
+        grad += H.col(2) * coeff_a[3*npt+i];
+    }
+    // c
+    grad(0) += coeff_b(1);
+    grad(1) += coeff_b(2);
+    grad(2) += coeff_b(3);
+
+    return grad;
 }

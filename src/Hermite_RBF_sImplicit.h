@@ -35,6 +35,8 @@ private:
     double kernel_function(const Point &p1, const Point &p2) const;
     // 3 |p1-p2| (p1-p2)
     Eigen::Vector3d kernel_gradient(const Point &p1, const Point &p2) const;
+    // 3 [ |p1-p2|I + (p1-p2)*(p1-p2)^T/|p1-p1| ]
+    Eigen::Matrix3d kernel_Hessian(const Point &p1, const Point &p2) const;
 
 
 };
