@@ -4,7 +4,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <cmath>
 #include "Hermite_RBF_sImplicit.h"
 
@@ -36,7 +35,7 @@ bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, cons
     return true;
 }
 
-bool Hermite_RBF_sImplicit::import_sample_points(const std::string &filename, std::vector<Point> &pts) const {
+bool Hermite_RBF_sImplicit::import_sample_points(const std::string &filename, std::vector<Point> &pts) {
 
     std::ifstream reader(filename.data(), std::ofstream::in);
 
@@ -67,7 +66,7 @@ bool Hermite_RBF_sImplicit::import_sample_points(const std::string &filename, st
     return true;
 }
 
-bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b) const {
+bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b) {
     std::ifstream reader(filename.data(), std::ofstream::in);
     if (!reader.good()) {
         std::cout << "Can not open the file " << filename << std::endl;
@@ -88,31 +87,30 @@ bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen:
         a(i) = tmp_a[i];
     }
 
-    // second line: coefficient b
+    // second line: coefficient b (d,c0,c1,c2)
     std::getline(reader, line);
-    iss.str(line);
+    std::istringstream iss2(line);
     double d,c0,c1,c2;
-    if (!(iss >> d >> c0 >> c1 >> c2)) {
+    if (!(iss2 >> d >> c0 >> c1 >> c2)) {
         std::cout << "coeff_b should have 4 elements (in 3D)." << std::endl;
         reader.close();
         return false;
     }
     b << d, c0, c1, c2;
 
-
     reader.close();
     return true;
 }
 
-double Hermite_RBF_sImplicit::kernel_function(const Point &p1, const Point &p2) const {
+double Hermite_RBF_sImplicit::kernel_function(const Point &p1, const Point &p2) {
     return pow((p1-p2).norm(), 3);
 }
 
-Eigen::Vector3d Hermite_RBF_sImplicit::kernel_gradient(const Point &p1, const Point &p2) const {
+Eigen::Vector3d Hermite_RBF_sImplicit::kernel_gradient(const Point &p1, const Point &p2) {
     return 3 * (p1-p2).norm() * (p1-p2);
 }
 
-Eigen::Matrix3d Hermite_RBF_sImplicit::kernel_Hessian(const Point &p1, const Point &p2) const {
+Eigen::Matrix3d Hermite_RBF_sImplicit::kernel_Hessian(const Point &p1, const Point &p2) {
     Eigen::Vector3d diff = p1 - p2;
     double len = diff.norm();
     if (len < 1e-8) {
@@ -156,7 +154,6 @@ double Hermite_RBF_sImplicit::function_at(const Point &p) const {
 
 Eigen::Vector3d Hermite_RBF_sImplicit::gradient_at(const Point &p) const {
     size_t npt = sample_points.size();
-    int dim = 3;
 
     Eigen::Vector3d grad;
     grad.setZero();

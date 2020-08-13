@@ -13,7 +13,7 @@ public:
     // constant 0 function
     Hermite_RBF_sImplicit() : Sampled_Implicit(), coeff_a(), coeff_b(0,0,0,0) {};
 
-    ~Hermite_RBF_sImplicit() = default;
+    ~Hermite_RBF_sImplicit() override = default;
 
     bool import_Hermite_RBF(const std::string& pts_file, const std::string& coeff_file);
 
@@ -28,15 +28,15 @@ private:
     Eigen::VectorXd coeff_a;
     Eigen::Vector4d coeff_b;
 
-    bool import_sample_points(const std::string &filename, std::vector<Point> &pts) const;
-    bool import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b) const;
+    static bool import_sample_points(const std::string &filename, std::vector<Point> &pts);
+    static bool import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b);
 
     // |p1-p2|^3
-    double kernel_function(const Point &p1, const Point &p2) const;
+    static double kernel_function(const Point &p1, const Point &p2);
     // 3 |p1-p2| (p1-p2)
-    Eigen::Vector3d kernel_gradient(const Point &p1, const Point &p2) const;
+    static Eigen::Vector3d kernel_gradient(const Point &p1, const Point &p2);
     // 3 [ |p1-p2|I + (p1-p2)*(p1-p2)^T/|p1-p1| ]
-    Eigen::Matrix3d kernel_Hessian(const Point &p1, const Point &p2) const;
+    static Eigen::Matrix3d kernel_Hessian(const Point &p1, const Point &p2);
 
 
 };
