@@ -28,8 +28,14 @@ private:
     Eigen::VectorXd coeff_a;
     Eigen::Vector4d coeff_b;
 
-    bool import_sample_points(const std::string &filename, std::vector<Point> &pts);
-    bool import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b);
+    bool import_sample_points(const std::string &filename, std::vector<Point> &pts) const;
+    bool import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b) const;
+
+    // |p1-p2|^3
+    double kernel_function(const Point &p1, const Point &p2) const;
+    // 3 |p1-p2| (p1-p2)
+    Eigen::Vector3d kernel_gradient(const Point &p1, const Point &p2) const;
+
 
 };
 

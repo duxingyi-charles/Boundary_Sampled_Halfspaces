@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 #include "Hermite_RBF_sImplicit.h"
 
 
@@ -35,7 +36,7 @@ bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, cons
     return true;
 }
 
-bool Hermite_RBF_sImplicit::import_sample_points(const std::string &filename, std::vector<Point> &pts) {
+bool Hermite_RBF_sImplicit::import_sample_points(const std::string &filename, std::vector<Point> &pts) const {
 
     std::ifstream reader(filename.data(), std::ofstream::in);
 
@@ -66,7 +67,7 @@ bool Hermite_RBF_sImplicit::import_sample_points(const std::string &filename, st
     return true;
 }
 
-bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b) {
+bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b) const {
     std::ifstream reader(filename.data(), std::ofstream::in);
     if (!reader.good()) {
         std::cout << "Can not open the file " << filename << std::endl;
@@ -101,4 +102,40 @@ bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen:
 
     reader.close();
     return true;
+}
+
+double Hermite_RBF_sImplicit::kernel_function(const Point &p1, const Point &p2) const {
+    return pow((p1-p2).norm(), 3);
+}
+
+Eigen::Vector3d Hermite_RBF_sImplicit::kernel_gradient(const Point &p1, const Point &p2) const {
+    return 3 * (p1-p2).norm() * (p1-p2);
+}
+
+double Hermite_RBF_sImplicit::function_at(const Point &p) const {
+    size_t npt = sample_points.size();
+    int dim = 3;
+
+    Eigen::VectorXd kern(npt*(dim+1));
+    for (size_t i = 0; i < npt; ++i) {
+        kern(i) = kernel_function(p,sample_points[i]);
+    }
+    Eigen::Vector3d G;
+    for (size_t i = 0; i < npt; ++i) {
+        G = kernel_gradient(p,sample_points[i]);
+        for (int j = 0; j < 3; ++j) {
+            kern(npt+i+j*npt) = G(j);
+        }
+    }
+    double loc_part = kern.dot(coeff_a);
+
+    Eigen::Vector4d kb(1,p(0),p(1),p(2));
+    double poly_part = kb.dot(coeff_b);
+
+    double re = loc_part + poly_part;
+    return re;
+}
+
+Eigen::Vector3d Hermite_RBF_sImplicit::gradient_at(const Point &) const {
+
 }
