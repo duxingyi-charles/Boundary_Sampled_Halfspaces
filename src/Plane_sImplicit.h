@@ -2,6 +2,7 @@
 #define PLANE_S_IMPLICIT_H
 
 #include "Sampled_Implicit.h"
+#include <eigen3/Eigen/Geometry>
 
 class Plane_sImplicit : public Sampled_Implicit
 {
