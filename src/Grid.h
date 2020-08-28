@@ -7,6 +7,7 @@
 
 #include "Sampled_Implicit.h"
 #include <vector>
+#include <string>
 
 typedef std::pair<int,int> Edge;
 
@@ -14,10 +15,14 @@ class Grid {
 public:
 
     Grid() = default;
+    // construct a single cuboid grid with lower corner p_min and upper corner p_max
+    Grid(const Point& p_min, const Point& p_max);
+
     ~Grid() = default;
 
     void compute_arrangement(const Sampled_Implicit &);
 
+    bool export_grid(const std::string &filename);
 
 private:
     // vertices
