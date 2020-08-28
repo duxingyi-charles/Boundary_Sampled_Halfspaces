@@ -8,8 +8,45 @@
 #include <queue>
 #include <set>
 
-void Grid::compute_arrangement(const Sampled_Implicit &sImplicit)
-{
+#include <fstream>
+#include <iostream>
+
+Grid::Grid(const Point &p_min, const Point &p_max) {
+    // 8 vertices
+    std::vector<Point> p_min_max = {p_min, p_max};
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            for (int k = 0; k < 2; ++k) {
+                V.emplace_back(p_min_max[i].x(), p_min_max[j].y(), p_min_max[k].z());
+            }
+        }
+    }
+
+   // 12 edges
+   for (int i : {0, 1, 2, 3}) {
+       E.emplace_back(i, i+4);
+   }
+   for (int i : {0, 1, 4, 5}) {
+       E.emplace_back(i, i+2);
+   }
+   for (int i : {0, 2, 4, 6}) {
+       E.emplace_back(i, i+1);
+   }
+
+   // 6 faces
+   F.emplace_back(std::vector<int>{4,9,5,8});
+   F.emplace_back(std::vector<int>{0,8,1,10});
+   F.emplace_back(std::vector<int>{0,6,2,4});
+   F.emplace_back(std::vector<int>{6,11,7,10});
+   F.emplace_back(std::vector<int>{2,9,3,11});
+   F.emplace_back(std::vector<int>{7,3,5,1});
+
+   // 1 cell
+   C.emplace_back(std::vector<int>{0,1,2,3,4,5});
+}
+
+
+void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     // initialize
     std::vector<Point> Vertices = V;
     std::vector<Edge>  Edges = E;
@@ -26,9 +63,14 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit)
     std::vector<bool> C_split(C.size(), false);
 
     // step 1: get implicit function value at each vertex
+    double zero_threshold = 1e-8;
     std::vector<double> V_value(V.size());
     for (int i = 0; i < V.size(); ++i) {
         V_value[i] = sImplicit.function_at(V[i]);
+        // if function at vertex is close to zero, slightly perturb it away from zero
+        if (abs(V_value[i])<zero_threshold) {
+            V_value[i] = (V_value[i] >=0 ? zero_threshold : -zero_threshold);
+        }
     }
 
     // step 2: intersect edges with 0 level-set of the implicit function
@@ -43,9 +85,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit)
             int v_index = Vertices.size();
             Vertices.push_back(v);
             // split edge
-//            Edges.push_back(Edge(vi, v_index));
             Edges.emplace_back(vi, v_index);
-//            Edges.push_back(Edge(v_index, vj));
             Edges.emplace_back(v_index, vj);
             is_split_edge.push_back(false);
             is_split_edge.push_back(false);
@@ -103,7 +143,6 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit)
                     split_face.push_back(E_new[e].first);
                     //
                     int e_split = Edges.size();
-//                    Edges.push_back(Edge(v_start, v_end));
                     Edges.emplace_back(v_start, v_end);
                     is_split_edge.push_back(true);
                     F_edge[f].push_back(e_split);
@@ -230,12 +269,12 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit)
                     Cells.emplace_back();
                     auto &new_cell = Cells.back();
                     std::set<int> boundary_loops;
+                    visited[f] = true;
                     Q.push(f);
                     while (! Q.empty()) {
                         int f_front = Q.front();
                         Q.pop();
                         new_cell.push_back(f_front);
-                        visited[f_front] = true;
                         for (auto e : Faces[f_front]) {
                             if (is_split_edge[e]) {
                                 boundary_loops.insert(split_edge_to_loop[e]);
@@ -244,6 +283,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit)
                                 const auto &neighbor_faces = edge_to_face[e];
                                 int f_opposite = (neighbor_faces[0] == f_front ? neighbor_faces[1] : neighbor_faces[0]);
                                 if (! visited[f_opposite]) {
+                                    visited[f_opposite] = true;
                                     Q.push(f_opposite);
                                 }
                             }
@@ -324,4 +364,51 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit)
     }
 
     ///
+}
+
+
+bool Grid::export_grid(const std::string &filename) {
+    std::ofstream fout(filename, std::ofstream::out);
+    if (!fout.good()) {
+        std::cout << "Can not create output file " << filename << std::endl;
+        return false;
+    }
+
+    // V
+    fout << "vert ";
+    fout << V.size() << " " << V[0].size() << std::endl;
+    for (auto &v : V) {
+        fout << v.transpose() << std::endl;
+    }
+
+    // E
+    fout << "edge ";
+    fout << E.size() << " " << "2" << std::endl;
+    for (auto &e : E) {
+        fout << e.first << " " << e.second << std::endl;
+    }
+
+    // F
+    fout << "face ";
+    fout << F.size() << std::endl;
+    for (auto &f : F) {
+        for (auto  &e : f) {
+            fout << e << " ";
+        }
+        fout << std::endl;
+    }
+
+    // C
+    fout << "cell ";
+    fout << C.size() << std::endl;
+    for (auto &c : C) {
+        for (auto &f : c) {
+            fout << f << " ";
+        }
+        fout << std::endl;
+    }
+
+    fout.close();
+    std::cout << "export_grid finish: " << filename << std::endl;
+    return true;
 }
