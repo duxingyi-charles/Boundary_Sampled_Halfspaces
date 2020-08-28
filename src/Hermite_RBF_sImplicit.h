@@ -15,7 +15,7 @@ public:
 
     ~Hermite_RBF_sImplicit() override = default;
 
-    bool import_Hermite_RBF(const std::string& pts_file, const std::string& coeff_file);
+    bool import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file);
 
 
     double function_at(const Point &) const override;
