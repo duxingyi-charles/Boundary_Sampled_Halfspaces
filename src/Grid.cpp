@@ -11,39 +11,49 @@
 #include <fstream>
 #include <iostream>
 
-Grid::Grid(const Point &p_min, const Point &p_max) {
-    // 8 vertices
-    std::vector<Point> p_min_max = {p_min, p_max};
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 2; ++j) {
-            for (int k = 0; k < 2; ++k) {
-                V.emplace_back(p_min_max[i].x(), p_min_max[j].y(), p_min_max[k].z());
-            }
-        }
-    }
-
-   // 12 edges
-   for (int i : {0, 1, 2, 3}) {
-       E.emplace_back(i, i+4);
-   }
-   for (int i : {0, 1, 4, 5}) {
-       E.emplace_back(i, i+2);
-   }
-   for (int i : {0, 2, 4, 6}) {
-       E.emplace_back(i, i+1);
-   }
-
-   // 6 faces
-   F.emplace_back(std::vector<int>{4,9,5,8});
-   F.emplace_back(std::vector<int>{0,8,1,10});
-   F.emplace_back(std::vector<int>{0,6,2,4});
-   F.emplace_back(std::vector<int>{6,11,7,10});
-   F.emplace_back(std::vector<int>{2,9,3,11});
-   F.emplace_back(std::vector<int>{7,3,5,1});
-
-   // 1 cell
-   C.emplace_back(std::vector<int>{0,1,2,3,4,5});
+Grid::Grid(const Point &p_min, const Point &p_max, int n_cell_x, int n_cell_y, int n_cell_z) {
+    init_grid(p_min, p_max, n_cell_x, n_cell_y, n_cell_z);
 }
+
+Grid::Grid(const Point &p_min, const Point &p_max) {
+    init_grid(p_min, p_max, 1, 1, 1);
+}
+
+//Grid::Grid(const Point &p_min, const Point &p_max) {
+//    // 8 vertices
+//    std::vector<Point> p_min_max = {p_min, p_max};
+//    for (int i = 0; i < 2; ++i) {
+//        for (int j = 0; j < 2; ++j) {
+//            for (int k = 0; k < 2; ++k) {
+//                V.emplace_back(p_min_max[i].x(), p_min_max[j].y(), p_min_max[k].z());
+//            }
+//        }
+//    }
+//
+//   // 12 edges
+//   for (int i : {0, 1, 2, 3}) {
+//       E.emplace_back(i, i+4);
+//   }
+//   for (int i : {0, 1, 4, 5}) {
+//       E.emplace_back(i, i+2);
+//   }
+//   for (int i : {0, 2, 4, 6}) {
+//       E.emplace_back(i, i+1);
+//   }
+//
+//   // 6 faces
+//   F.emplace_back(std::vector<int>{4,9,5,8});
+//   F.emplace_back(std::vector<int>{0,8,1,10});
+//   F.emplace_back(std::vector<int>{0,6,2,4});
+//   F.emplace_back(std::vector<int>{6,11,7,10});
+//   F.emplace_back(std::vector<int>{2,9,3,11});
+//   F.emplace_back(std::vector<int>{7,3,5,1});
+//
+//   // 1 cell
+//   C.emplace_back(std::vector<int>{0,1,2,3,4,5});
+//}
+
+
 
 
 void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
@@ -367,7 +377,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
 }
 
 
-bool Grid::export_grid(const std::string &filename) {
+bool Grid::export_grid(const std::string &filename) const {
     std::ofstream fout(filename, std::ofstream::out);
     if (!fout.good()) {
         std::cout << "Can not create output file " << filename << std::endl;
@@ -411,4 +421,168 @@ bool Grid::export_grid(const std::string &filename) {
     fout.close();
     std::cout << "export_grid finish: " << filename << std::endl;
     return true;
+}
+
+
+void Grid::init_grid(const Point &p_min, const Point &p_max,
+                     int n_cell_x, int n_cell_y, int n_cell_z) {
+    // make sure grid resolution is non-negative
+    n_cell_x = abs(n_cell_x);
+    n_cell_y = abs(n_cell_y);
+    n_cell_z = abs(n_cell_z);
+
+    // clear grid data
+    V.clear(); E.clear(); F.clear(); C.clear();
+
+    /// step 1:  create vertices
+    double dx = (p_max.x() - p_min.x()) / n_cell_x;
+    double dy = (p_max.y() - p_min.y()) / n_cell_y;
+    double dz = (p_max.z() - p_min.z()) / n_cell_z;
+
+    double cur_x = p_min.x(), cur_y = p_min.y(), cur_z = p_min.z();
+    for (int i = 0; i < n_cell_z+1; ++i) {
+        cur_x = p_min.x();
+        cur_y = p_min.y();
+        for (int j = 0; j < n_cell_y+1; ++j) {
+            cur_x = p_min.x();
+            for (int k = 0; k < n_cell_x+1; ++k) {
+                V.emplace_back(cur_x, cur_y, cur_z);
+                cur_x += dx;
+            }
+            cur_y += dy;
+        }
+        cur_z += dz;
+    }
+
+    /// step 2: create edges
+    std::vector<int> V_E_x(V.size(), -1);
+    std::vector<int> V_E_y(V.size(), -1);
+    std::vector<int> V_E_z(V.size(), -1);
+
+    int n_vert_x = n_cell_x + 1;
+    int n_vert_y = n_cell_y + 1;
+    int n_vert_xy = n_vert_x * n_vert_y;
+
+    int v_idx = 0;
+    for (int i = 0; i < n_cell_z; ++i) {
+        for (int j = 0; j < n_cell_y; ++j) {
+            for (int k = 0; k < n_cell_x; ++k) {
+                E.emplace_back(v_idx, v_idx + 1);
+                E.emplace_back(v_idx, v_idx + n_vert_x);
+                E.emplace_back(v_idx, v_idx + n_vert_xy);
+                V_E_x[v_idx] = E.size() -3;
+                V_E_y[v_idx] = E.size() -2;
+                V_E_z[v_idx] = E.size() -1;
+                ++v_idx;
+            }
+            // k == n_cell_x
+            E.emplace_back(v_idx, v_idx + n_vert_x);
+            E.emplace_back(v_idx, v_idx + n_vert_xy);
+            V_E_y[v_idx] = E.size() - 2;
+            V_E_z[v_idx] = E.size() - 1;
+            ++v_idx;
+        }
+        // j == n_cell_y
+        for (int k = 0; k < n_cell_x; ++k) {
+            E.emplace_back(v_idx, v_idx + 1);
+            E.emplace_back(v_idx, v_idx + n_vert_xy);
+            V_E_x[v_idx] = E.size() -2;
+            V_E_z[v_idx] = E.size() -1;
+            ++v_idx;
+        }
+        // j == n_cell_y && k == n_cell_x
+        E.emplace_back(v_idx, v_idx + n_vert_xy);
+        V_E_z[v_idx] = E.size() - 1;
+        ++v_idx;
+    }
+    // i == n_cell_z
+    for (int j = 0; j < n_cell_y; ++j) {
+        for (int k = 0; k < n_cell_x; ++k) {
+            E.emplace_back(v_idx, v_idx + 1);
+            E.emplace_back(v_idx, v_idx + n_vert_x);
+            V_E_x[v_idx] = E.size() -2;
+            V_E_y[v_idx] = E.size() -1;
+            ++v_idx;
+        }
+        // i == n_cell_z && k == n_cell_x
+        E.emplace_back(v_idx, v_idx + n_vert_x);
+        V_E_y[v_idx] = E.size() - 1;
+        ++v_idx;
+    }
+    // i == n_cell_z && j == n_cell_y
+    for (int k = 0; k < n_cell_x; ++k) {
+        E.emplace_back(v_idx, v_idx + 1);
+        V_E_x[v_idx] = E.size() -1;
+        ++v_idx;
+    }
+    // i == n_cell_z && j == n_cell_y && k == n_cell_x
+    // nothing here
+
+    /// step 3: create faces
+    std::vector<int> V_F_x(V.size(), -1);
+    std::vector<int> V_F_y(V.size(), -1);
+    std::vector<int> V_F_z(V.size(), -1);
+
+    v_idx = 0;
+    for (int i = 0; i < n_cell_z; ++i) {
+        for (int j = 0; j < n_cell_y; ++j) {
+            for (int k = 0; k < n_cell_x; ++k) {
+                // f_x
+                F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_y[v_idx], V_E_z[v_idx + n_vert_x], V_E_y[v_idx + n_vert_xy]});
+                // f_y
+                F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_x[v_idx], V_E_z[v_idx +1], V_E_x[v_idx + n_vert_xy]});
+                // f_z
+                F.emplace_back(std::vector<int>{V_E_y[v_idx], V_E_x[v_idx], V_E_y[v_idx+1], V_E_x[v_idx + n_vert_x]});
+                V_F_x[v_idx] = F.size() - 3;
+                V_F_y[v_idx] = F.size() - 2;
+                V_F_z[v_idx] = F.size() - 1;
+                ++v_idx;
+            }
+            // k == n_cell_x
+            // f_x
+            F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_y[v_idx], V_E_z[v_idx + n_vert_x], V_E_y[v_idx + n_vert_xy]});
+            V_F_x[v_idx] = F.size() - 1;
+            ++v_idx;
+        }
+        // j == n_cell_y
+        for (int k = 0; k < n_cell_x; ++k) {
+            // f_y
+            F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_x[v_idx], V_E_z[v_idx +1], V_E_x[v_idx + n_vert_xy]});
+            V_F_y[v_idx] = F.size() - 1;
+            ++v_idx;
+        }
+        // j == n_cell_y && k == n_cell_x
+        ++v_idx;
+    }
+    // i == n_cell_z
+    for (int j = 0; j < n_cell_y; ++j) {
+        for (int k = 0; k < n_cell_x; ++k) {
+            // f_z
+            F.emplace_back(std::vector<int>{V_E_y[v_idx], V_E_x[v_idx], V_E_y[v_idx+1], V_E_x[v_idx + n_vert_x]});
+            V_F_z[v_idx] = F.size() - 1;
+            ++v_idx;
+        }
+        // i == n_cell_z && k == n_cell_x
+        ++v_idx;
+    }
+
+    /// step 4: create cells
+    C.reserve(n_cell_x * n_cell_y * n_cell_z);
+
+    v_idx = 0;
+    for (int i = 0; i < n_cell_z; ++i) {
+        for (int j = 0; j < n_cell_y; ++j) {
+            for (int k = 0; k < n_cell_x; ++k) {
+                C.emplace_back(std::vector<int>{V_F_x[v_idx], V_F_y[v_idx], V_F_z[v_idx],
+                                                V_F_x[v_idx +1], V_F_y[v_idx + n_vert_x], V_F_z[v_idx + n_vert_xy]});
+                ++v_idx;
+            }
+            // k == n_cell_x
+            ++v_idx;
+        }
+        // j == n_cell_y
+        v_idx += n_vert_x;
+    }
+    ///
+
 }
