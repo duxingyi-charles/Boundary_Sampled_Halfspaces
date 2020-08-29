@@ -42,9 +42,51 @@ void test2() {
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/result.grid");
 }
 
+// uniform grid initialization
+void test3() {
+    Grid grid(Point(-1,-1,-1), Point(1,1,1), 1, 2, 3);
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
+}
+
+// arrangement in uniform grid (planar implicits)
+// 2020/08/29 known issues: implicit surfaces passing grid vertex/edge/face will produce near degenerate cells
+void test4() {
+    Plane_sImplicit plane1(Point(0,-1,1), Point(-1,0,1), Point(1,-1,0));
+    Plane_sImplicit plane2(Point(-1,-1,1), Point(1,1,-1), Point(-1,1,-1));
+    Plane_sImplicit plane3(Point(0,0,0), Point(1,0,0), Point(0,1,0));
+
+    Grid grid(Point(-1,-1,-1), Point(1,1,1), 2, 2, 2);
+    // before
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
+    // compute arrangement
+    grid.compute_arrangement(plane1);
+    grid.compute_arrangement(plane2);
+    grid.compute_arrangement(plane3);
+    // after
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/result.grid");
+}
+
+// arrangement in uniform grid (RBF implicits)
+void test5() {
+    // import RBF
+    Hermite_RBF_sImplicit rbf;
+    std::string pts_file = "/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/input.xyz";
+    std::string coeff_file = "/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/input_rbfCoeff";
+    rbf.import_Hermite_RBF(pts_file,coeff_file);
+
+    // init grid
+    Grid grid(Point(-2,-2,-2), Point(2,2,2), 11, 11, 11);
+    // before
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
+    // compute arrangement
+    grid.compute_arrangement(rbf);
+    // after
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/result.grid");
+}
+
 int main()
 {
-    test2();
+    test5();
     return 0;
 }
 
