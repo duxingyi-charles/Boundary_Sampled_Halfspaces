@@ -19,40 +19,6 @@ Grid::Grid(const Point &p_min, const Point &p_max) {
     init_grid(p_min, p_max, 1, 1, 1);
 }
 
-//Grid::Grid(const Point &p_min, const Point &p_max) {
-//    // 8 vertices
-//    std::vector<Point> p_min_max = {p_min, p_max};
-//    for (int i = 0; i < 2; ++i) {
-//        for (int j = 0; j < 2; ++j) {
-//            for (int k = 0; k < 2; ++k) {
-//                V.emplace_back(p_min_max[i].x(), p_min_max[j].y(), p_min_max[k].z());
-//            }
-//        }
-//    }
-//
-//   // 12 edges
-//   for (int i : {0, 1, 2, 3}) {
-//       E.emplace_back(i, i+4);
-//   }
-//   for (int i : {0, 1, 4, 5}) {
-//       E.emplace_back(i, i+2);
-//   }
-//   for (int i : {0, 2, 4, 6}) {
-//       E.emplace_back(i, i+1);
-//   }
-//
-//   // 6 faces
-//   F.emplace_back(std::vector<int>{4,9,5,8});
-//   F.emplace_back(std::vector<int>{0,8,1,10});
-//   F.emplace_back(std::vector<int>{0,6,2,4});
-//   F.emplace_back(std::vector<int>{6,11,7,10});
-//   F.emplace_back(std::vector<int>{2,9,3,11});
-//   F.emplace_back(std::vector<int>{7,3,5,1});
-//
-//   // 1 cell
-//   C.emplace_back(std::vector<int>{0,1,2,3,4,5});
-//}
-
 
 
 
