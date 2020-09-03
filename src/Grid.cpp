@@ -602,6 +602,13 @@ void Grid::init_grid(const Point &p_min, const Point &p_max,
         // j == n_cell_y
         v_idx += n_vert_x;
     }
+
+    // step 5: initialize implicits
+    Impl.clear();
+    V_Impl.clear(); E_Impl.clear(); F_Impl.clear();
+    V_Impl.resize(V.size(), std::vector<int>{-1});
+    E_Impl.resize(E.size(), std::vector<int>{-1});
+    F_Impl.resize(F.size(), -1); // -1: faces of the regular grid
     ///
 
 }
