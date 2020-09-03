@@ -408,6 +408,35 @@ bool Grid::export_grid(const std::string &filename) const {
         fout << std::endl;
     }
 
+    // V_Impl
+    fout << "vert_implicit ";
+    fout << V_Impl.size() << std::endl;
+    for (auto &v_impl : V_Impl) {
+        for (auto &impl : v_impl) {
+            fout << impl << " ";
+        }
+        fout << std::endl;
+    }
+
+    // E_Impl
+    fout << "edge_implicit ";
+    fout << E_Impl.size() << std::endl;
+    for (auto &e_impl : E_Impl) {
+        for (auto &impl : e_impl) {
+            fout << impl << " ";
+        }
+        fout << std::endl;
+    }
+
+    // F_Impl
+    fout << "face_implicit ";
+    fout << F_Impl.size() << std::endl;
+    for (auto &impl : F_Impl) {
+        fout << impl << " ";
+    }
+    fout << std::endl;
+
+
     fout.close();
     std::cout << "export_grid finish: " << filename << std::endl;
     return true;
