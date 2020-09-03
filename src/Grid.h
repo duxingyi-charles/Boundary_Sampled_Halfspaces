@@ -36,6 +36,16 @@ private:
     // cells
     std::vector<std::vector<int>> C;
 
+    // implicits
+    std::vector<const Sampled_Implicit*> Impl;
+    // indices of implicits passing each vertex
+    std::vector<std::vector<int>> V_Impl;
+    // indices of implicits passing each edge
+    std::vector<std::vector<int>> E_Impl;
+    // the index of the implicit surface passing each face
+    std::vector<int> F_Impl;
+
+
     // initialize V,E,F,G as a uniform n_cell_x * n_cell_y * n_cell_z grid with lower corner p_min and upper corner p_max
     void init_grid(const Point &p_min, const Point &p_max,
                    int n_cell_x, int n_cell_y, int n_cell_z);
