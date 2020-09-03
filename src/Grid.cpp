@@ -23,11 +23,19 @@ Grid::Grid(const Point &p_min, const Point &p_max) {
 
 
 void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
+    // record the implicit
+    Impl.push_back(&sImplicit);
+    int cur_Impl = Impl.size() -1;
+
     // initialize
     std::vector<Point> Vertices = V;
     std::vector<Edge>  Edges = E;
     std::vector<std::vector<int>> Faces = F;
     std::vector<std::vector<int>> Cells = C;
+
+//    std::vector<std::vector<int>> Vert_Implicits = V_Impl;
+    std::vector<std::vector<int>> Edge_Implicits = E_Impl;
+    std::vector<int> Face_Implicit = F_Impl;
 
     std::vector<int> E_vert(E.size(), -1); // -1 for null
     std::vector<std::pair<int,int>> E_new(E.size());
@@ -60,11 +68,14 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
             Point v = (1-s) * V[vi] + s * V[vj];
             int v_index = Vertices.size();
             Vertices.push_back(v);
+            V_Impl.emplace_back(std::vector<int>{cur_Impl});
             // split edge
             Edges.emplace_back(vi, v_index);
             Edges.emplace_back(v_index, vj);
             is_split_edge.push_back(false);
             is_split_edge.push_back(false);
+            Edge_Implicits.emplace_back(E_Impl[e]);
+            Edge_Implicits.emplace_back(E_Impl[e]);
             // record
             E_vert[e] = v_index;
             E_new[e].first  = Edges.size() - 1;
@@ -120,12 +131,14 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
                     //
                     int e_split = Edges.size();
                     Edges.emplace_back(v_start, v_end);
+                    Edge_Implicits.emplace_back(std::vector<int>{F_Impl[f],cur_Impl});
                     is_split_edge.push_back(true);
                     F_edge[f].push_back(e_split);
                     split_face.push_back(e_split);
                     //
                     int f_split = Faces.size();
                     Faces.push_back(split_face);
+                    Face_Implicit.push_back(F_Impl[f]);
                     F_new[f].push_back(f_split);
                     split_face.clear();
                     //
@@ -148,6 +161,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
         if (is_split) {
             int f_remain = Faces.size();
             Faces.push_back(remain_face);
+            Face_Implicit.push_back(F_Impl[f]);
             F_new[f].push_back(f_remain);
         }
     }
@@ -212,6 +226,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
             for (auto &loop : loops) {
                 int f_loop = Faces.size();
                 Faces.push_back(loop);
+                Face_Implicit.push_back(cur_Impl);
                 for (auto &e : loop) {
                     split_edge_to_loop[e] = f_loop;
                 }
@@ -279,35 +294,44 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     std::vector<int> E_new_index(Edges.size());
     int n_E = E.size();
     E.clear();
+    E_Impl.clear();
     int cur_index = 0;
     for (int e = 0; e < n_E; ++e) {
         if (E_vert[e] == -1) { // edge e is not split
             E.emplace_back(Edges[e]);
+            E_Impl.emplace_back(Edge_Implicits[e]);
             E_new_index[e] = cur_index;
             ++cur_index;
         }
     }
     auto eit = Edges.begin() + n_E;
     E.insert(E.end(), eit, Edges.end());
+    auto eiIt = Edge_Implicits.begin() + n_E;
+    E_Impl.insert(E_Impl.end(), eiIt, Edge_Implicits.end());
     for (int e = n_E; e < Edges.size(); ++e) {
         E_new_index[e] = cur_index;
         ++cur_index;
     }
 
+
     // update faces F
     std::vector<int> F_new_indices(Faces.size());
     int n_F = F.size();
     F.clear();
+    F_Impl.clear();
     cur_index = 0;
     for (int f = 0; f < n_F; ++f) {
         if (F_edge[f].empty()) { // face f is not split
             F.emplace_back(Faces[f]);
+            F_Impl.emplace_back(Face_Implicit[f]);
             F_new_indices[f] = cur_index;
             ++cur_index;
         }
     }
     auto fit = Faces.begin() + n_F;
     F.insert(F.end(), fit, Faces.end());
+    auto fiIt = Face_Implicit.begin() + n_F;
+    F_Impl.insert(F_Impl.end(), fiIt, Face_Implicit.end());
     for (int f = n_F; f < Faces.size(); ++f) {
         F_new_indices[f] = cur_index;
         ++cur_index;
