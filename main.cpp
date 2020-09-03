@@ -75,7 +75,7 @@ void test5() {
     rbf.import_Hermite_RBF(pts_file,coeff_file);
 
     // init grid
-    Grid grid(Point(-2,-2,-2), Point(2,2,2), 11, 11, 11);
+    Grid grid(Point(-2,-2,-2), Point(2,2,2), 64, 64, 64);
     // before
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
     // compute arrangement
@@ -96,7 +96,7 @@ void test6() {
     Plane_sImplicit plane1(Point(0,-1,1), Point(-1,0,1), Point(1,-1,0));
 
     // init grid
-    Grid grid(Point(-2,-2,-2), Point(2,2,2), 15, 15, 15);
+    Grid grid(Point(-2,-2,-2), Point(2,2,2), 16, 16, 16);
     // before
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
     // compute arrangement
