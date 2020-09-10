@@ -24,6 +24,8 @@ public:
 
     void compute_arrangement(const Sampled_Implicit &);
 
+    void prepare_graph_data();
+
     bool export_grid(const std::string &filename) const;
 
 private:
@@ -44,6 +46,25 @@ private:
     std::vector<std::vector<int>> E_Impl;
     // the index of the implicit surface passing each face
     std::vector<int> F_Impl;
+
+    // --- data for graph-cut ---
+    // (unordered) list of faces on each patch
+    std::vector<std::vector<int>> P;
+    // index of implicit for each patch
+    std::vector<int> P_Impl;
+    // indices of sample points on each patch
+    std::vector<std::vector<int>> P_samples;
+    // distance weighted area of each patch
+    std::vector<double> P_dist;
+    // (unordered) list of boundary patches of each block
+    std::vector<std::vector<int>> B_patch;
+    // (unordered) list of cells of each block
+    std::vector<std::vector<int>> B_cell;
+    // blocks incident to each patch
+    std::vector<std::vector<int>> P_block;
+    // sign of implicit on blocks incident to each patch
+    std::vector<std::vector<int>> P_sign;
+
 
 
     // initialize V,E,F,G as a uniform n_cell_x * n_cell_y * n_cell_z grid with lower corner p_min and upper corner p_max
