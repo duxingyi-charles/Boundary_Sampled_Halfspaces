@@ -72,7 +72,12 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
             Point v = (1-s) * V[vi] + s * V[vj];
             int v_index = Vertices.size();
             Vertices.push_back(v);
-            V_Impl.emplace_back(std::vector<int>{cur_Impl});
+            if (E_Impl[e].size() == 1 && E_Impl[e][0] == -1) { // e is a grid edge
+                V_Impl.emplace_back(std::vector<int>{cur_Impl});
+            } else {
+                V_Impl.emplace_back(E_Impl[e]);
+                V_Impl.back().push_back(cur_Impl);
+            }
             // split edge
             Edges.emplace_back(vi, v_index);
             Edges.emplace_back(v_index, vj);
@@ -135,7 +140,12 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
                     //
                     int e_split = Edges.size();
                     Edges.emplace_back(v_start, v_end);
-                    Edge_Implicits.emplace_back(std::vector<int>{F_Impl[f],cur_Impl});
+                    if (F_Impl[f] == -1) {
+                        Edge_Implicits.emplace_back(std::vector<int>{cur_Impl});
+                    }
+                    else {
+                        Edge_Implicits.emplace_back(std::vector<int>{F_Impl[f],cur_Impl});
+                    }
                     is_split_edge.push_back(true);
                     F_edge[f].push_back(e_split);
                     split_face.push_back(e_split);
