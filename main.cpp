@@ -96,7 +96,7 @@ void test6() {
     Plane_sImplicit plane1(Point(0,-1,1), Point(-1,0,1), Point(1,-1,0));
 
     // init grid
-    Grid grid(Point(-2,-2,-2), Point(2,2,2), 16, 16, 16);
+    Grid grid(Point(-2,-2,-2), Point(2,2,2), 8, 8, 8);
     // before
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
     // compute arrangement
@@ -106,10 +106,34 @@ void test6() {
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/result.grid");
 }
 
+// get ready for graph-cut
+void test7() {
+    // import RBF
+    Hermite_RBF_sImplicit rbf;
+    std::string pts_file = "/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/input.xyz";
+    std::string coeff_file = "/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/input_rbfCoeff";
+    rbf.import_Hermite_RBF(pts_file,coeff_file);
+
+    // plane
+    Plane_sImplicit plane1(Point(0,-1,1), Point(-1,0,1), Point(1,-1,0));
+
+    // init grid
+    Grid grid(Point(-2,-2,-2), Point(2,2,2), 15, 15, 15);
+    // before
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
+    // compute arrangement
+    grid.compute_arrangement(rbf);
+    grid.compute_arrangement(plane1);
+    // prepare for graph-cut
+    grid.prepare_graph_data();
+    // after
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/result.grid");
+}
+
 
 int main()
 {
-    test6();
+    test7();
     return 0;
 }
 
