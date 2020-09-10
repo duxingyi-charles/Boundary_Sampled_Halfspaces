@@ -28,6 +28,7 @@ Grid::Grid(const Point &p_min, const Point &p_max) {
 
 void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     // record the implicit
+    int cur_Impl = Impl.size();
     Impl.push_back(&sImplicit);
 
     // initialize
@@ -656,7 +657,7 @@ bool Grid::export_grid(const std::string &filename) const {
 
     // F_Impl
     fout << "face_implicit ";
-    fout << F_Impl.size() << std::endl;
+    fout << 1 << std::endl; // row vector
     for (auto &impl : F_Impl) {
         fout << impl << " ";
     }
