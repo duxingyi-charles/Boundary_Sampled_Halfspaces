@@ -11,6 +11,10 @@
 #include <fstream>
 #include <iostream>
 
+#include <limits>
+#include <eigen3/Eigen/Geometry>
+
+
 Grid::Grid(const Point &p_min, const Point &p_max, int n_cell_x, int n_cell_y, int n_cell_z) {
     init_grid(p_min, p_max, n_cell_x, n_cell_y, n_cell_z);
 }
@@ -25,7 +29,6 @@ Grid::Grid(const Point &p_min, const Point &p_max) {
 void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     // record the implicit
     Impl.push_back(&sImplicit);
-    int cur_Impl = Impl.size() -1;
 
     // initialize
     std::vector<Point> Vertices = V;
@@ -364,6 +367,229 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     }
 
     ///
+}
+
+void Grid::prepare_graph_data() {
+    /// step 1: group faces into patches
+
+    // collect faces on implicit surfaces
+    std::vector<int> implicit_faces;
+    for (int i = 0; i < F.size(); ++i) {
+        if (F_Impl[i] != -1) {
+            implicit_faces.push_back(i);
+        }
+    }
+
+    // for implicit faces, create map: edge -> incident faces
+    std::map<int, std::vector<int>> edge_to_faces;
+    for (int i = 0; i < implicit_faces.size(); ++i) {
+        int f = implicit_faces[i];
+        for (int e : F[f]) {
+            edge_to_faces[e].push_back(i);
+        }
+    }
+
+    // group implicit faces into patches
+    std::vector<int> F_patch(F.size(),-1);
+    std::vector<bool> visited(implicit_faces.size(), false);
+
+    // Patches
+    P.clear();
+
+    std::queue<int> Q;
+    for (int i = 0; i < implicit_faces.size(); ++i) {
+        if (!visited[i]) {
+            int cur_patch_index = P.size();
+            P.emplace_back();
+            auto& patch = P.back();
+
+            visited[i] = true;
+            Q.push(i);
+            while (!Q.empty()) {
+                int i_front = Q.front();
+                Q.pop();
+                int f_front = implicit_faces[i_front];
+                patch.push_back(f_front);
+                F_patch[f_front] = cur_patch_index;
+                for (int e : F[f_front]) {
+                    if (E_Impl[e].size() == 1 && edge_to_faces[e].size()==2) { // edge only belongs to one implicit
+                        int i_neighbor = (edge_to_faces[e][0] == i_front) ? edge_to_faces[e][1] : edge_to_faces[e][0];
+                        if (!visited[i_neighbor]) {
+                            visited[i_neighbor] = true;
+                            Q.push(i_neighbor);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // the implicit index of each patch
+    P_Impl.clear();
+    P_Impl.reserve(P.size());
+    for (auto& patch : P) {
+        P_Impl.push_back(F_Impl[patch.front()]);
+    }
+
+    // compute distance weighted area, as well as sample points of patches
+    std::vector<std::vector<double>> sample_min_dist;
+    std::vector<std::vector<int>> sample_nearest_patch;
+    double infinity = std::numeric_limits<double>::infinity();
+//    for (int i = 0; i < Impl.size(); ++i) {
+//        int num_samples = Impl[i]->get_sample_points().size();
+//        sample_min_dist.emplace_back(num_samples,infinity);
+//        sample_nearest_patch.emplace_back(num_samples,-1);
+//    }
+    for (const auto *impl : Impl) {
+        int num_samples = impl->get_sample_points().size();
+        sample_min_dist.emplace_back(num_samples,infinity);
+        sample_nearest_patch.emplace_back(num_samples,-1);
+    }
+
+    // compute distance weighted area of patches
+    P_dist.clear();
+    P_dist.resize(P.size(), 0);
+    for (int i = 0; i < P.size(); ++i) {
+        auto &patch = P[i];
+        int impl = P_Impl[i];
+        auto samples = Impl[impl]->get_sample_points();
+        for (int f : patch) {
+            // compute center of the face
+            auto &face = F[f];
+            Point face_center(0,0,0);
+            for (int e : face) {
+                face_center += V[E[e].first];
+                face_center += V[E[e].second];
+            }
+            face_center /= (2 * face.size());
+            // distance weighted area
+            double weighted_area = 0;
+            for (int e : face) {
+                const Point &p1 = V[E[e].first];
+                const Point &p2 = V[E[e].second];
+                double area = ((p1-face_center).cross(p2-face_center)).norm()/2;
+                Point tri_center = (p1+p2+face_center)/3;
+                double min_distance = infinity;
+                for (int j = 0; j < samples.size(); ++j) {
+                    double distance = (tri_center - samples[j]).norm();
+                    if (distance < sample_min_dist[impl][j]) {
+                        sample_min_dist[impl][j] = distance;
+                        sample_nearest_patch[impl][j] = i;
+                    }
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                    }
+                }
+                weighted_area += min_distance * area;
+            }
+            //
+            P_dist[i] += weighted_area;
+        }
+    }
+    
+    // extract sample points on patches
+    P_samples.clear();
+    P_samples.resize(P.size());
+    for (auto& nearest_patches : sample_nearest_patch) {
+        for (int i = 0; i < nearest_patches.size(); ++i) {
+            int nearest_patch = nearest_patches[i];
+            if (nearest_patch != -1) {
+                P_samples[nearest_patch].push_back(i);
+            }
+        }
+    }
+
+    /// step 2: group cells into blocks
+
+    // create map: face -> cells
+    std::map<int, std::vector<int>> face_to_cells;
+    for (int i = 0; i < C.size(); ++i) {
+        for (int f : C[i]) {
+            face_to_cells[f].push_back(i);
+        }
+    }
+
+    // group cells into blocks
+    B_cell.clear();
+    B_patch.clear();
+
+    visited.clear();
+    visited.resize(C.size(),false);
+    assert(Q.empty());
+    for (int i = 0; i < C.size(); ++i) {
+        if (!visited[i]) {
+            std::set<int> boundary_patches;
+            B_cell.emplace_back();
+            auto &block_cells = B_cell.back();
+            visited[i] = true;
+            Q.push(i);
+            while (!Q.empty()) {
+                int front_cell = Q.front();
+                Q.pop();
+                block_cells.push_back(front_cell);
+                auto &cell = C[front_cell];
+                for (int f : cell) {
+                    if (F_Impl[f] == -1) { // f is not on implicit surface
+                        for (int c_f : face_to_cells[f]) {
+                            if (c_f != front_cell && !visited[c_f]) {
+                                visited[c_f] = true;
+                                Q.push(c_f);
+                            }
+                        }
+                    }
+                    else { // f is on some implicit surface
+                        boundary_patches.insert(F_patch[f]);
+                    }
+                }
+            }
+            //
+            B_patch.emplace_back(boundary_patches.begin(),boundary_patches.end());
+        }
+    }
+
+    // P_block: neighboring blocks for patches
+    P_block.clear();
+    P_block.resize(P.size());
+    // P_sign:  signs of implicit function on neighboring blocks
+    P_sign.clear();
+    P_sign.resize(P.size());
+
+    // find an interior point for each block
+    std::vector<Point> B_interior;
+    for (auto &cells : B_cell) {
+        bool interior_found = false;
+        for (int c : cells) {
+            for (int f : C[c]) {
+                for (int e : F[f]) {
+                    if (E_Impl[e].size()==1 && E_Impl[e][0]==-1) {
+                        B_interior.emplace_back(0.5 * (V[E[e].first]+V[E[e].second]));
+                        interior_found = true;
+                        break;
+                    }
+                }
+                if (interior_found) break;
+            }
+            if (interior_found) break;
+        }
+        assert(interior_found);
+    }
+
+    for (int i = 0; i < B_patch.size(); ++i) {
+        for (int p : B_patch[i]) {
+            P_block[p].push_back(i);
+            // find sign of p's implicit in block i
+            int impl_index = P_Impl[p];
+            const auto *impl = Impl[impl_index];
+            if (impl->function_at(B_interior[i]) > 0) {
+                P_sign[p].push_back(1);
+            }
+            else {
+                P_sign[p].push_back(-1);
+            }
+        }
+    }
+
+
 }
 
 
