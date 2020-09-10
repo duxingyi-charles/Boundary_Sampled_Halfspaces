@@ -673,6 +673,92 @@ bool Grid::export_grid(const std::string &filename) const {
     }
     fout << std::endl;
 
+    // P
+    fout << "patch_faces ";
+    fout << P.size() << std::endl;
+    for (auto &patch : P) {
+        for (auto & face : patch) {
+            fout << face << " ";
+        }
+        fout << std::endl;
+    }
+
+    // P_Impl
+    fout << "patch_implicit ";
+    fout << 1 << std::endl; // row vector
+    for (auto & impl: P_Impl) {
+        fout << impl << " ";
+    }
+    fout << std::endl;
+
+    // samples
+    fout << "samples ";
+    fout << Impl.size() << std::endl;
+    for (const auto *impl : Impl) {
+        for (auto &point : impl->get_sample_points()) {
+            fout << point.transpose() << " ";
+        }
+        fout << std::endl;
+    }
+
+    // P_samples
+    fout << "patch_samples ";
+    fout << P_samples.size() << std::endl;
+    for (auto &samples : P_samples) {
+        for (auto & sample : samples) {
+            fout << sample << " ";
+        }
+        fout << std::endl;
+    }
+
+    // P_dist
+    fout << "patch_distance_area ";
+    fout << 1 << std::endl; // row vector
+    for (auto & dist: P_dist) {
+        fout << dist << " ";
+    }
+    fout << std::endl;
+
+    // B_patch
+    fout << "block_patches ";
+    fout << B_patch.size() << std::endl;
+    for (auto &patches : B_patch) {
+        for (auto & patch : patches) {
+            fout << patch << " ";
+        }
+        fout << std::endl;
+    }
+
+    // B_cell
+    fout << "block_cells ";
+    fout << B_cell.size() << std::endl;
+    for (auto &cells : B_cell) {
+        for (auto & cell : cells) {
+            fout << cell << " ";
+        }
+        fout << std::endl;
+    }
+
+    // P_block
+    fout << "patch_blocks ";
+    fout << P_block.size() << std::endl;
+    for (auto &blocks : P_block) {
+        for (auto & block : blocks) {
+            fout << block << " ";
+        }
+        fout << std::endl;
+    }
+
+    // P_sign
+    fout << "patch_signs ";
+    fout << P_sign.size() << std::endl;
+    for (auto &signs : P_sign) {
+        for (auto & sign : signs) {
+            fout << sign << " ";
+        }
+        fout << std::endl;
+    }
+
 
     fout.close();
     std::cout << "export_grid finish: " << filename << std::endl;
