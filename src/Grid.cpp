@@ -446,11 +446,6 @@ void Grid::prepare_graph_data() {
     std::vector<std::vector<double>> sample_min_dist;
     std::vector<std::vector<int>> sample_nearest_patch;
     double infinity = std::numeric_limits<double>::infinity();
-//    for (int i = 0; i < Impl.size(); ++i) {
-//        int num_samples = Impl[i]->get_sample_points().size();
-//        sample_min_dist.emplace_back(num_samples,infinity);
-//        sample_nearest_patch.emplace_back(num_samples,-1);
-//    }
     for (const auto *impl : Impl) {
         int num_samples = impl->get_sample_points().size();
         sample_min_dist.emplace_back(num_samples,infinity);
