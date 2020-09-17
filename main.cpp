@@ -130,10 +130,36 @@ void test7() {
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/result.grid");
 }
 
+// within a pipeline
+void test8(int num_rbf) {
+    std::vector<Hermite_RBF_sImplicit> rbf_list;
+    for (int i = 1; i <= num_rbf; ++i) {
+        Hermite_RBF_sImplicit rbf;
+        std::string pts_file = "/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/input_"+std::to_string(i)+".xyz";
+        std::string coeff_file = "/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/input_"+std::to_string(i)+"_rbfCoeff";
+        std::string sample_file = "/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/input_"+std::to_string(i)+"_sample.xyz";
+        rbf.import_sampled_Hermite_RBF(pts_file,coeff_file,sample_file);
+        rbf_list.push_back(rbf);
+    }
 
-int main()
+    // init grid
+    // todo: import range/resolution parameters from file
+    Grid grid(Point(-2,-2,-2), Point(2,2,2), 15, 15, 15);
+    // before
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
+    // compute arrangement
+    for (const auto &rbf : rbf_list) {
+        grid.compute_arrangement(rbf);
+    }
+    // prepare for graph-cut
+    grid.prepare_graph_data();
+    // after
+    grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/result.grid");
+};
+
+int main(int argc, char** argv)
 {
-    test7();
+    test8(atoi(argv[1]));
     return 0;
 }
 
