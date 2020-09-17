@@ -131,7 +131,9 @@ void test7() {
 }
 
 // within a pipeline
-void test8(int num_rbf) {
+void test8(int num_rbf, int grid_resolution) {
+    assert(num_rbf >0 && grid_resolution > 0);
+
     std::vector<Hermite_RBF_sImplicit> rbf_list;
     for (int i = 1; i <= num_rbf; ++i) {
         Hermite_RBF_sImplicit rbf;
@@ -143,8 +145,7 @@ void test8(int num_rbf) {
     }
 
     // init grid
-    // todo: import range/resolution parameters from file
-    Grid grid(Point(-2,-2,-2), Point(2,2,2), 15, 15, 15);
+    Grid grid(Point(-2,-2,-2), Point(2,2,2), grid_resolution, grid_resolution, grid_resolution);
     // before
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
     // compute arrangement
@@ -159,7 +160,7 @@ void test8(int num_rbf) {
 
 int main(int argc, char** argv)
 {
-    test8(atoi(argv[1]));
+    test8(atoi(argv[1]),atoi(argv[2]));
     return 0;
 }
 
