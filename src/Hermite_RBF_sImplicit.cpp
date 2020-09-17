@@ -11,11 +11,11 @@
 
 bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file)
 {
-    // import sample points
+    // import control points
     std::vector<Point> pts;
     bool succeed = import_xyz(pts_file, pts);
     if (!succeed) {
-        std::cout << "Fail to import sample points." << std::endl;
+        std::cout << "Fail to import RBF control points." << std::endl;
         return false;
     }
 
@@ -29,9 +29,30 @@ bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, cons
     }
 
     // succeed == true
-    sample_points = pts;
+    control_points = pts;
     coeff_a = a;
     coeff_b = b;
+    return true;
+}
+
+bool Hermite_RBF_sImplicit::import_sampled_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file,
+                                                       const std::string &sample_file) {
+    bool succeed = import_Hermite_RBF(pts_file, coeff_file);
+    if (!succeed) {
+        std::cout << "Fail to import Hermite RBF control points or coefficients." << std::endl;
+        return false;
+    }
+
+    // import sample points
+    std::vector<Point> pts;
+    succeed = import_xyz(sample_file, pts);
+    if (!succeed) {
+        std::cout << "Fail to import sample points." << std::endl;
+        return false;
+    }
+
+    // succeed == true
+    sample_points = pts;
     return true;
 }
 
@@ -129,16 +150,16 @@ Eigen::Matrix3d Hermite_RBF_sImplicit::kernel_Hessian(const Point &p1, const Poi
 
 
 double Hermite_RBF_sImplicit::function_at(const Point &p) const {
-    size_t npt = sample_points.size();
+    size_t npt = control_points.size();
     int dim = 3;
 
     Eigen::VectorXd kern(npt*(dim+1));
     for (size_t i = 0; i < npt; ++i) {
-        kern(i) = kernel_function(p,sample_points[i]);
+        kern(i) = kernel_function(p,control_points[i]);
     }
     Eigen::Vector3d G;
     for (size_t i = 0; i < npt; ++i) {
-        G = kernel_gradient(p,sample_points[i]);
+        G = kernel_gradient(p,control_points[i]);
         for (int j = 0; j < 3; ++j) {
             kern(npt+i+j*npt) = G(j);
         }
@@ -153,18 +174,18 @@ double Hermite_RBF_sImplicit::function_at(const Point &p) const {
 }
 
 Eigen::Vector3d Hermite_RBF_sImplicit::gradient_at(const Point &p) const {
-    size_t npt = sample_points.size();
+    size_t npt = control_points.size();
 
     Eigen::Vector3d grad;
     grad.setZero();
     // sum(ai * fi)
     for (size_t i = 0; i < npt; ++i) {
-        grad += kernel_gradient(p,sample_points[i]) * coeff_a[i];
+        grad += kernel_gradient(p,control_points[i]) * coeff_a[i];
     }
     // sum(hi * bi)
     Eigen::Matrix3d H;
     for (size_t i = 0; i < npt; ++i) {
-        H = kernel_Hessian(p,sample_points[i]);
+        H = kernel_Hessian(p,control_points[i]);
         grad += H.col(0) * coeff_a[npt+i];
         grad += H.col(1) * coeff_a[2*npt+i];
         grad += H.col(2) * coeff_a[3*npt+i];
