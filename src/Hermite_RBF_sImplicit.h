@@ -16,6 +16,9 @@ public:
     ~Hermite_RBF_sImplicit() override = default;
 
     bool import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file);
+    bool import_sampled_Hermite_RBF(const std::string &pts_file,
+                                    const std::string &coeff_file,
+                                    const std::string &sample_file);
 
 
     double function_at(const Point &) const override;
@@ -28,7 +31,9 @@ private:
     Eigen::VectorXd coeff_a;
     Eigen::Vector4d coeff_b;
 
-    static bool import_sample_points(const std::string &filename, std::vector<Point> &pts);
+    std::vector<Point> control_points;
+
+    static bool import_xyz(const std::string &filename, std::vector<Point> &pts);
     static bool import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b);
 
     // |p1-p2|^3

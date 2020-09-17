@@ -13,7 +13,7 @@ bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, cons
 {
     // import sample points
     std::vector<Point> pts;
-    bool succeed = import_sample_points(pts_file, pts);
+    bool succeed = import_xyz(pts_file, pts);
     if (!succeed) {
         std::cout << "Fail to import sample points." << std::endl;
         return false;
@@ -35,7 +35,7 @@ bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, cons
     return true;
 }
 
-bool Hermite_RBF_sImplicit::import_sample_points(const std::string &filename, std::vector<Point> &pts) {
+bool Hermite_RBF_sImplicit::import_xyz(const std::string &filename, std::vector<Point> &pts) {
 
     std::ifstream reader(filename.data(), std::ofstream::in);
 
