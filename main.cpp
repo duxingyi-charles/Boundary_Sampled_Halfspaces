@@ -145,7 +145,6 @@ void test8(int num_rbf, int grid_resolution) {
     }
 
     // init grid
-    // todo: import range/resolution parameters from file
     Grid grid(Point(-2,-2,-2), Point(2,2,2), grid_resolution, grid_resolution, grid_resolution);
     // before
     grid.export_grid("/Users/charlesdu/Downloads/research/implicit_modeling/code/VIPSS/data/MMA_tmp/init.grid");
