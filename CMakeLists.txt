@@ -1,16 +1,15 @@
 cmake_minimum_required(VERSION 3.15)
 project(PSI VERSION 0.1.0 LANGUAGES CXX)
 
-SET(CMAKE_CXX_STANDARD 11)
+SET(CMAKE_CXX_STANDARD 14)
 
-aux_source_directory(. MAIN)
-aux_source_directory(./src SRC_LIST)
+include(FetchContent)
+include(cmake/Eigen3.cmake)
 
-add_executable(${PROJECT_NAME} ${SRC_LIST} ${MAIN} src/Hermite_RBF_sImplicit.cpp src/Hermite_RBF_sImplicit.h src/Grid.h src/Grid.cpp)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
+add_executable(${PROJECT_NAME} ${SRC_LIST} main.cpp)
 
-# Eigen
-set(EIGEN_INCLUDE_DIR /usr/local/include CACHE PATH "Eigen3 include directory")
-target_include_directories(${PROJECT_NAME} PUBLIC "${EIGEN_INCLUDE_DIR}")
-
-target_include_directories(${PROJECT_NAME} PUBLIC ${SRC_LIST})
+target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(${PROJECT_NAME} PRIVATE Eigen3::Eigen)
+target_compile_options(${PROJECT_NAME} PRIVATE "-Wall")
 
