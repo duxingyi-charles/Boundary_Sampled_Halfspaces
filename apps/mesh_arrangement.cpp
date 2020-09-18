@@ -8,6 +8,7 @@
 
 #include "PyMesh/CellPartition.h"
 #include "config.h"
+#include "ScopedTimer.h"
 
 struct IGL_Mesh {
     Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> vertices;
@@ -15,6 +16,7 @@ struct IGL_Mesh {
 };
 
 IGL_Mesh generate_cube(const GridSpec& grid_spec) {
+    ScopedTimer<> timer("Generate cube");
     constexpr double eps = 0;
     auto bbox_min = grid_spec.bbox_min.array() + eps;
     auto bbox_max = grid_spec.bbox_max.array() - eps;
@@ -38,6 +40,7 @@ IGL_Mesh generate_cube(const GridSpec& grid_spec) {
 }
 
 IGL_Mesh merge_meshes(const std::vector<IGL_Mesh>& meshes) {
+    ScopedTimer<> timer("Merge meshes");
     size_t num_meshes = meshes.size();
     std::vector<size_t> num_vertices(num_meshes + 1, 0);
     std::vector<size_t> num_faces(num_meshes + 1, 0);
@@ -69,6 +72,7 @@ IGL_Mesh merge_meshes(const std::vector<IGL_Mesh>& meshes) {
 }
 
 IGL_Mesh marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec) {
+    ScopedTimer<> timer("Marching cube");
     size_t num_grid_pts = (grid_spec.resolution[0] + 1) *
                           (grid_spec.resolution[1] + 1) *
                           (grid_spec.resolution[2] + 1);
@@ -100,12 +104,11 @@ IGL_Mesh marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec) {
     igl::copyleft::marching_cubes(
         values, grid, grid_spec.resolution[0]+1, grid_spec.resolution[1]+1,
         grid_spec.resolution[2]+1, mesh.vertices, mesh.faces);
-    std::cout << "#V: " << mesh.vertices.rows() << std::endl;
-    std::cout << "#F: " << mesh.faces.rows() << std::endl;
     return mesh;
 }
 
 std::vector<IGL_Mesh> compute_arrangement(const std::vector<IGL_Mesh>& meshes) {
+    ScopedTimer<> timer("mesh arrangement");
     auto merged_mesh = merge_meshes(meshes);
     auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
     engine->run();
