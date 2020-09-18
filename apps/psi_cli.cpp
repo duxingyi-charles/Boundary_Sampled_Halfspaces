@@ -4,6 +4,7 @@
 #include <Grid.h>
 
 #include "config.h"
+#include "ScopedTimer.h"
 
 int main(int argc, char** argv) {
     struct {
@@ -33,15 +34,21 @@ int main(int argc, char** argv) {
         grid_spec.resolution[0], grid_spec.resolution[1], grid_spec.resolution[2]);
 
     // before
-    grid.export_grid("init.grid");
+    //grid.export_grid("init.grid");
 
     // compute arrangement
-    for (const auto& rbf : implicit_functions) {
-        grid.compute_arrangement(*rbf);
+    {
+        ScopedTimer<> timer("topological arrangement");
+        for (const auto& rbf : implicit_functions) {
+            grid.compute_arrangement(*rbf);
+        }
     }
 
     // prepare for graph-cut
-    grid.prepare_graph_data();
+    {
+        ScopedTimer<> timer("graph cut");
+        grid.prepare_graph_data();
+    }
 
     // after
     grid.export_grid(args.output_grid_file);
