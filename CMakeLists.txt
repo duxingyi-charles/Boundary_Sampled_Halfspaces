@@ -5,11 +5,16 @@ SET(CMAKE_CXX_STANDARD 14)
 
 include(FetchContent)
 include(cmake/Eigen3.cmake)
+include(cmake/cli11.cmake)
+include(cmake/nlohmann-json.cmake)
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
-add_executable(${PROJECT_NAME} ${SRC_LIST} main.cpp)
+add_library(psi STATIC ${SRC_LIST})
+target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(psi PUBLIC Eigen3::Eigen)
+target_compile_options(psi PUBLIC "-Wall")
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE Eigen3::Eigen)
-target_compile_options(${PROJECT_NAME} PRIVATE "-Wall")
+add_executable(psi_cli main.cpp)
+target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11 nlohmann::json)
+
 
