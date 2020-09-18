@@ -7,14 +7,15 @@
 
 int main(int argc, char** argv) {
     struct {
+        std::string grid_file;
         std::string config_file;
         std::string output_grid_file;
         int grid_size;
     } args;
 
     CLI::App app{"Piecewise implicit surface demo"};
-    app.add_option("-s,--grid-size", args.grid_size, "Grid size")
-        ->default_val(32);
+    app.add_option("-G,--grid-file", args.grid_file, "Grid spec file")
+        ->required();
     app.add_option("config_file", args.config_file, "Configuration file")
         ->required();
     app.add_option("output_grid_file", args.output_grid_file,
@@ -24,8 +25,12 @@ int main(int argc, char** argv) {
 
     auto implicit_functions =
         initialize_sampled_implicit_functions(args.config_file);
-    Grid grid(Point(-2, -2, -2), Point(2, 2, 2), args.grid_size, args.grid_size,
-              args.grid_size);
+
+    auto grid_spec = parse_grid_spec(args.grid_file);
+    Grid grid(
+        {grid_spec.bbox_min[0], grid_spec.bbox_min[1], grid_spec.bbox_min[2]},
+        {grid_spec.bbox_max[0], grid_spec.bbox_max[1], grid_spec.bbox_max[2]},
+        grid_spec.resolution[0], grid_spec.resolution[1], grid_spec.resolution[2]);
 
     // before
     grid.export_grid("init.grid");
