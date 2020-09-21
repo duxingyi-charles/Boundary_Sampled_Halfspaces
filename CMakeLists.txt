@@ -1,16 +1,30 @@
 cmake_minimum_required(VERSION 3.15)
 project(PSI VERSION 0.1.0 LANGUAGES CXX)
 
-SET(CMAKE_CXX_STANDARD 11)
+SET(CMAKE_CXX_STANDARD 14)
 
-aux_source_directory(. MAIN)
-aux_source_directory(./src SRC_LIST)
+include(FetchContent)
+include(cmake/Eigen3.cmake)
+include(cmake/cli11.cmake)
+include(cmake/nlohmann-json.cmake)
 
-add_executable(${PROJECT_NAME} ${SRC_LIST} ${MAIN} src/Hermite_RBF_sImplicit.cpp src/Hermite_RBF_sImplicit.h src/Grid.h src/Grid.cpp)
+option(LIBIGL_WITH_CGAL "Build CGAL support in libigl" On)
+include(cmake/libigl.cmake)
 
-# Eigen
-set(EIGEN_INCLUDE_DIR /usr/local/include CACHE PATH "Eigen3 include directory")
-target_include_directories(${PROJECT_NAME} PUBLIC "${EIGEN_INCLUDE_DIR}")
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${SRC_LIST})
+aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
+add_library(psi STATIC ${SRC_LIST})
+target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(psi PUBLIC Eigen3::Eigen)
+target_compile_options(psi PUBLIC "-Wall")
 
+add_executable(psi_cli apps/psi_cli.cpp)
+target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11 nlohmann::json)
+
+add_library(cell_partition STATIC
+    ${PROJECT_SOURCE_DIR}/apps/PyMesh/CellPartition.cpp)
+target_link_libraries(cell_partition PUBLIC igl::core igl::cgal)
+
+add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
+target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
+    cell_partition)

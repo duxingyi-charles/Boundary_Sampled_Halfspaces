@@ -2,7 +2,7 @@
 #define SAMPLED_IMPLICIT_H
 
 #include <vector>
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 
 
 typedef Eigen::Vector3d Point;

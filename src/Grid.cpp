@@ -12,7 +12,7 @@
 #include <iostream>
 
 #include <limits>
-#include <eigen3/Eigen/Geometry>
+#include <Eigen/Geometry>
 
 
 Grid::Grid(const Point &p_min, const Point &p_max, int n_cell_x, int n_cell_y, int n_cell_z) {
