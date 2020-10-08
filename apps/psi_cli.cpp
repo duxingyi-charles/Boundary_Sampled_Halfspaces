@@ -44,10 +44,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    // prepare for graph-cut
+    // graph-cut
     {
         ScopedTimer<> timer("graph cut");
         grid.prepare_graph_data();
+        grid.graph_cut();
     }
 
     // after
