@@ -11,11 +11,27 @@ include(cmake/nlohmann-json.cmake)
 option(LIBIGL_WITH_CGAL "Build CGAL support in libigl" On)
 include(cmake/libigl.cmake)
 
+# boost
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(Boost REQUIRED COMPONENTS graph)
+message(STATUS "Boost version: ${Boost_VERSION}")
+
+# This is needed if your Boost version is newer than your CMake version
+# or if you have an old version of CMake (<3.5)
+if(NOT TARGET Boost::graph)
+    add_library(Boost::graph IMPORTED INTERFACE)
+    set_property(TARGET Boost::graph PROPERTY
+            INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
+    set_property(TARGET Boost::graph PROPERTY
+            INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
+endif()
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
 add_library(psi STATIC ${SRC_LIST})
 target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src)
-target_link_libraries(psi PUBLIC Eigen3::Eigen)
+target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph)
 target_compile_options(psi PUBLIC "-Wall")
 
 add_executable(psi_cli apps/psi_cli.cpp)
