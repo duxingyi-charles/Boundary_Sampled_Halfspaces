@@ -26,6 +26,8 @@ public:
 
     void prepare_graph_data();
 
+    void graph_cut();
+
     bool export_grid(const std::string &filename) const;
 
 private:

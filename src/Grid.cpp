@@ -14,6 +14,10 @@
 #include <limits>
 #include <Eigen/Geometry>
 
+// graph cut
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/boykov_kolmogorov_max_flow.hpp>
+
 
 Grid::Grid(const Point &p_min, const Point &p_max, int n_cell_x, int n_cell_y, int n_cell_z) {
     init_grid(p_min, p_max, n_cell_x, n_cell_y, n_cell_z);
@@ -598,6 +602,144 @@ void Grid::prepare_graph_data() {
 
 }
 
+void Grid::graph_cut() {
+    // constants
+    double inf = std::numeric_limits<double>::infinity();
+    double Delta = 0;
+    for (auto d : P_dist) Delta += d;
+    Delta *= 2;
+
+    // define per-cell costs: hPos, hNeg
+    int nBlock = B_patch.size();
+    std::vector<double> hPos(nBlock);
+    std::vector<double> hNeg(nBlock);
+
+    int nPatch = P.size();
+    for (int p = 0; p < nPatch; ++p) {
+        double cost = Delta * P_samples[p].size();
+        //
+        auto b = P_block[p][0];
+        if (P_sign[p][0] > 0) hNeg[b] += cost;
+        else hPos[b] += cost;
+        //
+        b = P_block[p][1];
+        if (P_sign[p][1] > 0) hNeg[b] += cost;
+        else hPos[b] += cost;
+    }
+
+    // define pair-cell costs: hPair
+    std::map<Edge, double> hPair;
+    // init hPair
+    for (int p = 0; p < nPatch; ++p) {
+        int b1 = P_block[p][0];
+        int b2 = P_block[p][1];
+        hPair[Edge(b1,b2)] = 0;
+        hPair[Edge(b2,b1)] = 0;
+    }
+    // compute hPair
+    for (int p = 0; p < nPatch; ++p) {
+        int b1 = P_block[p][0];
+        int b2 = P_block[p][1];
+        //
+        if (P_sign[p][0] == 1) {
+            if (hPair[Edge(b1,b2)] != inf) {
+                hPair[Edge(b1,b2)] += P_dist[p];
+            }
+        }
+        else {
+            hPair[Edge(b1,b2)] = inf;
+        }
+        //
+        if (P_sign[p][1] == 1) {
+            if (hPair[Edge(b2,b1)] != inf) {
+                hPair[Edge(b2,b1)] += P_dist[p];
+            }
+        }
+        else {
+            hPair[Edge(b2,b1)] = inf;
+        }
+    }
+
+    // create the graph
+    typedef boost::adjacency_list_traits<boost::vecS, boost::vecS, boost::directedS> Traits;
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
+            boost::property<boost::vertex_color_t, boost::default_color_type,
+            boost::property<boost::vertex_predecessor_t,Traits::edge_descriptor,
+            boost::property<boost::vertex_distance_t, double,
+            boost::property<boost::vertex_index_t, long> > >
+            >,
+
+            boost::property<boost::edge_capacity_t, double,
+            boost::property<boost::edge_residual_capacity_t, double,
+            boost::property<boost::edge_reverse_t, Traits::edge_descriptor > > > >
+            Graph;
+
+    Graph g(nBlock);
+
+    boost::property_map<Graph,boost::edge_capacity_t>::type
+        e_weights = get(boost::edge_capacity,g);
+    boost::property_map<Graph,boost::edge_residual_capacity_t>::type
+            e_residual = get(boost::edge_residual_capacity,g);
+    boost::property_map<Graph,boost::edge_reverse_t>::type
+        e_reverse = get(boost::edge_reverse,g);
+
+    // add edges between blocks
+    for (int p = 0; p < nPatch; ++p) {
+        int b1 = P_block[p][0];
+        int b2 = P_block[p][1];
+        auto e = add_edge(b1,b2,g).first;
+        e_weights[e] = hPair[Edge(b1,b2)];
+        auto re = add_edge(b2,b1,g).first;
+        e_weights[re] = hPair[Edge(b2,b1)];
+        e_reverse[e] = re;
+        e_reverse[re] = e;
+    }
+
+    // add edges between blocks and terminals (s,t)
+    auto sid = add_vertex(g);
+    auto tid = add_vertex(g);
+    for (int b = 0; b < nBlock; ++b) {
+        auto e = add_edge(sid,b,g).first;
+        e_weights[e] = hNeg[b];
+        auto re = add_edge(b,sid,g).first;
+        e_weights[re] = 0;
+        e_reverse[e] = re;
+        e_reverse[re] = e;
+        //
+        e = add_edge(b,tid,g).first;
+        e_weights[e] = hPos[b];
+        re = add_edge(tid,b,g).first;
+        e_weights[re] = 0;
+        e_reverse[e] = re;
+        e_reverse[re] = e;
+    }
+
+    // max-flow-min-cut
+    double flow = boykov_kolmogorov_max_flow(g ,sid, tid);
+
+    // print max-flow result
+//    std::cout << "c  The total flow:" << std::endl;
+//    std::cout << "s " << flow << std::endl << std::endl;
+//
+//    std::cout << "c flow values:" << std::endl;
+//    boost::graph_traits<Graph>::vertex_iterator u_iter, u_end;
+//    boost::graph_traits <Graph>::out_edge_iterator ei, e_end;
+//    for (boost::tie(u_iter, u_end) = vertices(g); u_iter != u_end; ++u_iter)
+//        for (boost::tie(ei, e_end) = out_edges(*u_iter, g); ei != e_end; ++ei)
+//            if (e_weights[*ei] > 0)
+//                std::cout << "f " << *u_iter << " " << target(*ei, g) << " "
+//                << (e_weights[*ei]) << " "
+//                << (e_weights[*ei] - e_residual[*ei]) << std::endl;
+
+    // print block labels
+//    std::cout << "vertex color:" << std::endl;
+//    boost::property_map<Graph ,boost::vertex_color_t>::type v_color = get(boost::vertex_color,g);
+//    for (boost::tie(u_iter, u_end) = vertices(g); u_iter != u_end; ++u_iter) {
+//        std::cout << *u_iter << " " << v_color[*u_iter] << std::endl;
+//    }
+    //
+
+}
 
 bool Grid::export_grid(const std::string &filename) const {
     std::ofstream fout(filename, std::ofstream::out);
@@ -759,6 +901,8 @@ bool Grid::export_grid(const std::string &filename) const {
     std::cout << "export_grid finish: " << filename << std::endl;
     return true;
 }
+
+
 
 
 void Grid::init_grid(const Point &p_min, const Point &p_max,
