@@ -678,8 +678,6 @@ void Grid::graph_cut() {
 
     boost::property_map<Graph,boost::edge_capacity_t>::type
         e_weights = get(boost::edge_capacity,g);
-    boost::property_map<Graph,boost::edge_residual_capacity_t>::type
-            e_residual = get(boost::edge_residual_capacity,g);
     boost::property_map<Graph,boost::edge_reverse_t>::type
         e_reverse = get(boost::edge_reverse,g);
 
@@ -715,7 +713,7 @@ void Grid::graph_cut() {
     }
 
     // max-flow-min-cut
-    double flow = boykov_kolmogorov_max_flow(g ,sid, tid);
+    /*double flow = */boykov_kolmogorov_max_flow(g ,sid, tid);
 
     // print max-flow result
 //    std::cout << "c  The total flow:" << std::endl;
@@ -738,6 +736,25 @@ void Grid::graph_cut() {
 //        std::cout << *u_iter << " " << v_color[*u_iter] << std::endl;
 //    }
     //
+
+    // get block and patch labels
+    boost::property_map<Graph,boost::vertex_color_t>::type
+        block_labels = get(boost::vertex_color,g);
+    auto s_label = block_labels[sid];
+
+    B_label.clear();
+    P_label.clear();
+
+    B_label.resize(nBlock);
+    for (int b = 0; b < nBlock; ++b) {
+        B_label[b] = (block_labels[b] == s_label);
+    }
+
+    P_label.resize(nPatch);
+    for (int p = 0; p < nPatch; ++p) {
+        P_label[p] = (B_label[P_block[p][0]] != B_label[P_block[p][1]]);
+    }
+
 
 }
 
@@ -773,24 +790,24 @@ bool Grid::export_grid(const std::string &filename) const {
     }
 
     // C
-    fout << "cell ";
-    fout << C.size() << std::endl;
-    for (auto &c : C) {
-        for (auto &f : c) {
-            fout << f << " ";
-        }
-        fout << std::endl;
-    }
+//    fout << "cell ";
+//    fout << C.size() << std::endl;
+//    for (auto &c : C) {
+//        for (auto &f : c) {
+//            fout << f << " ";
+//        }
+//        fout << std::endl;
+//    }
 
     // V_Impl
-    fout << "vert_implicit ";
-    fout << V_Impl.size() << std::endl;
-    for (auto &v_impl : V_Impl) {
-        for (auto &impl : v_impl) {
-            fout << impl << " ";
-        }
-        fout << std::endl;
-    }
+//    fout << "vert_implicit ";
+//    fout << V_Impl.size() << std::endl;
+//    for (auto &v_impl : V_Impl) {
+//        for (auto &impl : v_impl) {
+//            fout << impl << " ";
+//        }
+//        fout << std::endl;
+//    }
 
     // E_Impl
     fout << "edge_implicit ";
@@ -839,22 +856,22 @@ bool Grid::export_grid(const std::string &filename) const {
     }
 
     // P_samples
-    fout << "patch_samples ";
-    fout << P_samples.size() << std::endl;
-    for (auto &samples : P_samples) {
-        for (auto & sample : samples) {
-            fout << sample << " ";
-        }
-        fout << std::endl;
-    }
+//    fout << "patch_samples ";
+//    fout << P_samples.size() << std::endl;
+//    for (auto &samples : P_samples) {
+//        for (auto & sample : samples) {
+//            fout << sample << " ";
+//        }
+//        fout << std::endl;
+//    }
 
     // P_dist
-    fout << "patch_distance_area ";
-    fout << 1 << std::endl; // row vector
-    for (auto & dist: P_dist) {
-        fout << dist << " ";
-    }
-    fout << std::endl;
+//    fout << "patch_distance_area ";
+//    fout << 1 << std::endl; // row vector
+//    for (auto & dist: P_dist) {
+//        fout << dist << " ";
+//    }
+//    fout << std::endl;
 
     // B_patch
     fout << "block_patches ";
@@ -867,34 +884,51 @@ bool Grid::export_grid(const std::string &filename) const {
     }
 
     // B_cell
-    fout << "block_cells ";
-    fout << B_cell.size() << std::endl;
-    for (auto &cells : B_cell) {
-        for (auto & cell : cells) {
-            fout << cell << " ";
-        }
-        fout << std::endl;
-    }
+//    fout << "block_cells ";
+//    fout << B_cell.size() << std::endl;
+//    for (auto &cells : B_cell) {
+//        for (auto & cell : cells) {
+//            fout << cell << " ";
+//        }
+//        fout << std::endl;
+//    }
 
     // P_block
-    fout << "patch_blocks ";
-    fout << P_block.size() << std::endl;
-    for (auto &blocks : P_block) {
-        for (auto & block : blocks) {
-            fout << block << " ";
-        }
-        fout << std::endl;
-    }
+//    fout << "patch_blocks ";
+//    fout << P_block.size() << std::endl;
+//    for (auto &blocks : P_block) {
+//        for (auto & block : blocks) {
+//            fout << block << " ";
+//        }
+//        fout << std::endl;
+//    }
 
     // P_sign
-    fout << "patch_signs ";
-    fout << P_sign.size() << std::endl;
-    for (auto &signs : P_sign) {
-        for (auto & sign : signs) {
-            fout << sign << " ";
-        }
-        fout << std::endl;
+//    fout << "patch_signs ";
+//    fout << P_sign.size() << std::endl;
+//    for (auto &signs : P_sign) {
+//        for (auto & sign : signs) {
+//            fout << sign << " ";
+//        }
+//        fout << std::endl;
+//    }
+
+    // P_label
+    fout << "patch_labels ";
+    fout << 1 << std::endl; // row vector
+    for (auto label : P_label) {
+        fout << label << " ";
     }
+    fout << std::endl;
+
+
+    // B_label
+    fout << "block_labels ";
+    fout << 1 << std::endl; // row vector
+    for (auto label : B_label) {
+        fout << label << " ";
+    }
+    fout << std::endl;
 
 
     fout.close();

@@ -67,6 +67,12 @@ private:
     // sign of implicit on blocks incident to each patch
     std::vector<std::vector<int>> P_sign;
 
+    // --- result of graph-cut ---
+    // block labels: object -> true, background -> false
+    std::vector<bool> B_label;
+    // patch labels: surface -> true, not surface -> false
+    std::vector<bool> P_label;
+
 
 
     // initialize V,E,F,G as a uniform n_cell_x * n_cell_y * n_cell_z grid with lower corner p_min and upper corner p_max
