@@ -33,6 +33,36 @@ std::unique_ptr<Sampled_Implicit> initialize_RBF(const nlohmann::json& entry,
     return fn;
 }
 
+std::unique_ptr<Sampled_Implicit> initialize_Plane(const nlohmann::json& entry,
+                                                    const std::string& path_name) {
+    int dimension = 3;
+
+    assert(entry.contains("point"));
+    assert(entry["point"].size()==dimension);
+    Point p(0,0,0);
+    for (int i = 0; i < dimension; ++i) {
+        p[i] = entry["point"][i].get<double>();
+    }
+
+    assert(entry.contains("normal"));
+    assert(entry["normal"].size()==dimension);
+    Eigen::Vector3d n(0,0,0);
+    for (int i = 0; i < dimension; ++i) {
+        n[i] = entry["normal"][i].get<double>();
+    }
+
+    auto fn = std::make_unique<Plane_sImplicit>(p,n);
+
+    if (entry.contains("samples")) {
+        std::string sample_file = path_name + entry["samples"].get<std::string>();
+        std::vector<Point> pts;
+        fn->import_xyz(sample_file,pts);
+        fn->set_sample_points(pts);
+    }
+
+    return fn;
+}
+
 std::unique_ptr<Sampled_Implicit> initialize_Sphere(const nlohmann::json& entry,
                                                  const std::string& path_name) {
     assert(entry.contains("center"));
@@ -147,6 +177,9 @@ initialize_sampled_implicit_functions(const std::string& config_file) {
     for (auto entry : config["input"]) {
         if (entry["type"] == "rbf") {
             implicit_functions.push_back(initialize_RBF(entry, path_name));
+        }
+        else if (entry["type"] == "plane") {
+            implicit_functions.push_back(initialize_Plane(entry, path_name));
         }
         else if (entry["type"] == "sphere") {
             implicit_functions.push_back(initialize_Sphere(entry, path_name));
