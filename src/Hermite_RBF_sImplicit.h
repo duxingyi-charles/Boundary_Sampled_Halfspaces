@@ -33,7 +33,6 @@ private:
 
     std::vector<Point> control_points;
 
-    static bool import_xyz(const std::string &filename, std::vector<Point> &pts);
     static bool import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b);
 
     // |p1-p2|^3

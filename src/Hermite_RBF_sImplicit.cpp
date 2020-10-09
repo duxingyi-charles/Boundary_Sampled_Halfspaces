@@ -56,36 +56,6 @@ bool Hermite_RBF_sImplicit::import_sampled_Hermite_RBF(const std::string &pts_fi
     return true;
 }
 
-bool Hermite_RBF_sImplicit::import_xyz(const std::string &filename, std::vector<Point> &pts) {
-
-    std::ifstream reader(filename.data(), std::ofstream::in);
-
-    if (!reader.good()) {
-        std::cout << "Can not open the file " << filename << std::endl;
-        return false;
-    }else {
-        std::cout << "Reading: "<<filename<< std::endl;
-    }
-
-    // first number: dimension (2 or 3)
-    int dim;
-    reader >> dim;
-    // read point coordinates
-    if (dim != 3) {
-        std::cout << "Can't handle non-3D points." << std::endl;
-        reader.close();
-        return false;
-    }
-    pts.clear();
-    double x,y,z;
-    while(!reader.eof()){
-        reader >> x >> y >> z;
-        pts.emplace_back(Point(x,y,z));
-    }
-
-    reader.close();
-    return true;
-}
 
 bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b) {
     std::ifstream reader(filename.data(), std::ofstream::in);
