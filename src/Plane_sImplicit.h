@@ -8,7 +8,7 @@ class Plane_sImplicit : public Sampled_Implicit
 {
 public:
 	Plane_sImplicit(const Point &p1, const Point &p2, const Point &p3);
-	~Plane_sImplicit() = default;
+	~Plane_sImplicit() override = default;
 
 	double function_at(const Point &p) const override { return normal.dot(p-sample_points[0]); }
 	Eigen::Vector3d   gradient_at(const Point &p) const override { return normal; }
