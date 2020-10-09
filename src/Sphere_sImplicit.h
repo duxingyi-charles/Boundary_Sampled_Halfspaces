@@ -14,16 +14,16 @@ public:
     Sphere_sImplicit() : Sampled_Implicit(), center(0,0,0), radius(1), is_flipped(false) {};
 
     Sphere_sImplicit(const Point &o, double r, bool flip)
-    : center(o), radius(fabs(r)), is_flipped(flip) {};
+    : Sampled_Implicit(), center(o), radius(fabs(r)), is_flipped(flip) {};
 
     Sphere_sImplicit(const Point &o, double r)
-    : center(o), radius(fabs(r)), is_flipped(false) {};
+    : Sampled_Implicit(), center(o), radius(fabs(r)), is_flipped(false) {};
 
     Sphere_sImplicit(const Point &o, const Point &s, bool flip)
-    : center(o), radius((o-s).norm()), is_flipped(flip) {};
+    : Sampled_Implicit(), center(o), radius((o-s).norm()), is_flipped(flip) {};
 
     Sphere_sImplicit(const Point &o, const Point &s)
-    : center(o), radius((o-s).norm()), is_flipped(false) {};
+    : Sampled_Implicit(), center(o), radius((o-s).norm()), is_flipped(false) {};
 
     ~Sphere_sImplicit() override = default;
 
