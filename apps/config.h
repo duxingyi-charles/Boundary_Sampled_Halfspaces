@@ -3,6 +3,7 @@
 #include <Hermite_RBF_sImplicit.h>
 #include <Plane_sImplicit.h>
 #include <Sphere_sImplicit.h>
+#include <Cylinder_sImplicit.h>
 #include <Sampled_Implicit.h>
 
 #include <cassert>
@@ -57,6 +58,39 @@ std::unique_ptr<Sampled_Implicit> initialize_Sphere(const nlohmann::json& entry,
     return fn;
 }
 
+std::unique_ptr<Sampled_Implicit> initialize_Cylinder(const nlohmann::json& entry,
+                                                    const std::string& path_name) {
+    int dimension = 3;
+
+    assert(entry.contains("axis_point1"));
+    assert(entry["axis_point1"].size()==dimension);
+    Point p1(0,0,0);
+    for (int i = 0; i < dimension; ++i) {
+        p1[i] = entry["axis_point1"][i].get<double>();
+    }
+    assert(entry.contains("axis_point2"));
+    assert(entry["axis_point2"].size()==dimension);
+    Point p2(0,0,0);
+    for (int i = 0; i < dimension; ++i) {
+        p2[i] = entry["axis_point2"][i].get<double>();
+    }
+    assert(entry.contains("radius"));
+    double radius = entry["radius"].get<double>();
+    assert(entry.contains("is_flipped"));
+    bool is_flipped = entry["is_flipped"].get<bool>();
+
+    auto fn = std::make_unique<Cylinder_sImplicit>(std::make_pair(p1,p2),radius,is_flipped);
+
+    if (entry.contains("samples")) {
+        std::string sample_file = path_name + entry["samples"].get<std::string>();
+        std::vector<Point> pts;
+        fn->import_xyz(sample_file,pts);
+        fn->set_sample_points(pts);
+    }
+
+    return fn;
+}
+
 std::vector<std::unique_ptr<Sampled_Implicit>>
 initialize_sampled_implicit_functions(const std::string& config_file) {
     using json = nlohmann::json;
@@ -79,15 +113,18 @@ initialize_sampled_implicit_functions(const std::string& config_file) {
     for (auto entry : config["input"]) {
         if (entry["type"] == "rbf") {
             implicit_functions.push_back(initialize_RBF(entry, path_name));
-        } else {
-            if (entry["type"] == "sphere") {
-                implicit_functions.push_back(initialize_Sphere(entry, path_name));
-            } else {
+        }
+        else if (entry["type"] == "sphere") {
+            implicit_functions.push_back(initialize_Sphere(entry, path_name));
+        }
+        else if (entry["type"] == "cylinder") {
+            implicit_functions.push_back(initialize_Cylinder(entry, path_name));
+        }
+        else {
                 throw std::runtime_error(
                         "Unsupported implicit function type detected");
-            }
-
         }
+
     }
 
     return implicit_functions;
