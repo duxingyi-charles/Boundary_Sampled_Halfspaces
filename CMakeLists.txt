@@ -34,13 +34,14 @@ target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph)
 target_compile_options(psi PUBLIC "-Wall")
 
-add_executable(psi_cli apps/psi_cli.cpp)
+add_executable(psi_cli apps/psi_cli.cpp apps/config.cpp)
 target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11 nlohmann::json)
 
 add_library(cell_partition STATIC
     ${PROJECT_SOURCE_DIR}/apps/PyMesh/CellPartition.cpp)
 target_link_libraries(cell_partition PUBLIC igl::core igl::cgal)
 
-add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
+add_executable(mesh_arrangement apps/mesh_arrangement.cpp
+    apps/mesh_arrangement_utils.cpp apps/config.cpp)
 target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
     cell_partition)
