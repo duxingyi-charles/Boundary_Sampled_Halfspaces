@@ -9,6 +9,9 @@ include(cmake/cli11.cmake)
 include(cmake/nlohmann-json.cmake)
 
 option(LIBIGL_WITH_CGAL "Build CGAL support in libigl" On)
+option(LIBIGL_WITH_OPENGL_GLFW_IMGUI "Build with UI" On)
+option(LIBIGL_WITH_OPENGL "" On)
+option(LIBIGL_WITH_OPENGL_GLFW "" On)
 include(cmake/libigl.cmake)
 
 # boost
@@ -44,4 +47,9 @@ target_link_libraries(cell_partition PUBLIC igl::core igl::cgal)
 add_executable(mesh_arrangement apps/mesh_arrangement.cpp
     apps/mesh_arrangement_utils.cpp apps/config.cpp)
 target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
+    cell_partition)
+
+add_executable(ui apps/ui.cpp
+    apps/mesh_arrangement_utils.cpp apps/config.cpp)
+target_link_libraries(ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
     cell_partition)
