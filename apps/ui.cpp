@@ -35,6 +35,21 @@ class MeshArrangementStates {
         std::vector<IGL_Mesh>& get_cells() { return m_cells; }
         const std::vector<IGL_Mesh>& get_cells() const { return m_cells; }
 
+        Eigen::Matrix<double, 2, 3> get_bbox() const {
+            const auto num_cells = get_num_cells();
+            if (num_cells == 0) {
+                return Eigen::Matrix<double, 2, 3>::Zero();
+            }
+            Eigen::Matrix<double, 2, 3> bbox;
+            bbox.row(0) = m_cells[0].vertices.colwise().minCoeff();
+            bbox.row(1) = m_cells[0].vertices.colwise().maxCoeff();
+            for (size_t i=1; i<num_cells; i++) {
+                bbox.row(0) = bbox.row(0).cwiseMin(m_cells[i].vertices.colwise().minCoeff());
+                bbox.row(1) = bbox.row(1).cwiseMax(m_cells[i].vertices.colwise().maxCoeff());
+            }
+            return bbox;
+        }
+
     private:
         std::vector<IGL_Mesh> m_input_meshes;
         std::vector<IGL_Mesh> m_cells;
@@ -66,6 +81,10 @@ class MeshArrangementMenu {
             viewer.plugins.push_back(&m_menu);
             m_menu.callback_draw_viewer_menu = [&]() {
                 //m_menu.draw_viewer_menu();
+                if (ImGui::Button("Center object", ImVec2(-1, 0))) {
+                    auto bbox = m_states->get_bbox();
+                    viewer.core().align_camera_center(bbox);
+                }
                 if (ImGui::CollapsingHeader("Cells", ImGuiTreeNodeFlags_DefaultOpen)) {
                     for (size_t i=1; i<m_states->get_num_cells(); i++) {
                         std::string name = "Cell " + std::to_string(i);
