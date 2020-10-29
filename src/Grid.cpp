@@ -614,7 +614,7 @@ void Grid::graph_cut() {
     std::vector<double> hPos(nBlock);
     std::vector<double> hNeg(nBlock);
 
-    int nPatch = P.size();
+    int nPatch = P_samples.size();
     for (int p = 0; p < nPatch; ++p) {
         double cost = Delta * P_samples[p].size();
         //
