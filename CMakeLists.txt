@@ -29,18 +29,28 @@ if(NOT TARGET Boost::graph)
 endif()
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
-add_library(psi STATIC ${SRC_LIST})
-target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src)
-target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph)
-target_compile_options(psi PUBLIC "-Wall")
+#add_library(psi STATIC ${SRC_LIST})
+#target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src)
+#
+#target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/apps)
 
-add_executable(psi_cli apps/psi_cli.cpp)
-target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11 nlohmann::json)
+#target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph)
+#target_compile_options(psi PUBLIC "-Wall")
+
+
 
 add_library(cell_partition STATIC
     ${PROJECT_SOURCE_DIR}/apps/PyMesh/CellPartition.cpp)
 target_link_libraries(cell_partition PUBLIC igl::core igl::cgal)
 
+add_library(psi STATIC ${SRC_LIST})
+target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
+target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core cell_partition)
+target_compile_options(psi PUBLIC "-Wall")
+
 add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
 target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
     cell_partition)
+
+add_executable(psi_cli apps/psi_cli.cpp)
+target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11)
