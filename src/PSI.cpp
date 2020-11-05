@@ -231,6 +231,16 @@ bool PSI::export_data(const std::string &filename) const
         fout << std::endl;
     }
 
+    // Face_edge
+//    fout << "face_edge ";
+//    fout << Face_edges.size() << std::endl;
+//    for (auto &f : Face_edges) {
+//        for (auto  &e : f) {
+//            fout << e << " ";
+//        }
+//        fout << std::endl;
+//    }
+
     // C
 //    fout << "cell ";
 //    fout << C.size() << std::endl;
