@@ -13,6 +13,8 @@
 #include "config.h"
 #include "ScopedTimer.h"
 
+#include "GridSpec.h"
+
 // graph cut
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/boykov_kolmogorov_max_flow.hpp>
@@ -157,7 +159,6 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
         num_faces[i + 1] = meshes[i].faces.rows();
     }
 
-
     std::partial_sum(num_vertices.begin(), num_vertices.end(),
                      num_vertices.begin());
     std::partial_sum(num_faces.begin(), num_faces.end(), num_faces.begin());
@@ -187,6 +188,23 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
     auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
     engine->run();
 
+    auto vertices = engine->get_vertices();
+    auto faces = engine->get_faces();
+
+    //vertices
+    V.clear();
+    for (int i = 0; i < vertices.rows(); ++i) {
+        V.emplace_back(vertices(i,0),vertices(i,1),vertices(i,2));
+    }
+    //faces
+    F.clear();
+    F.resize(faces.rows());
+    for (int i = 0; i < faces.rows(); ++i) {
+        for (int j = 0; j < faces.cols(); ++j) {
+            F[i].push_back(faces(i,j));
+        }
+    }
+
     // compute map: result face id -> input implicit id
     auto source_faces = engine->get_source_faces();
     Eigen::VectorXi result_face_to_implicit(source_faces.size());
@@ -195,13 +213,7 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
         result_face_to_implicit(i) = face_to_mesh(source_faces(i)) - 1;
     }
 
-    ///
-    // the implicit index of each patch
-//    P_Impl.clear();
-//    P_Impl.reserve(P.size());
-//    for (auto& patch : P) {
-//        P_Impl.push_back(F_Impl[patch.front()]);
-//    }
+
 
     // compute distance weighted area, as well as sample points of patches
     std::vector<std::vector<double>> sample_min_dist;
@@ -215,17 +227,16 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
 
 
     // compute distance weighted area of patches
-    //distance weighted area of each patch
     auto cells = engine->get_cells();
     int num_patch = cells.rows();
+
+    //distance weighted area of each patch
     std::vector<double> patch_dist(num_patch, 0);
     //index of implicit for each patch
     std::vector<int> patch_impl(num_patch, -1);
 
-
-    auto vertices = engine->get_vertices();
-    auto faces = engine->get_faces();
     auto face_to_patch = engine->get_patches();
+
 
     for (int i=0; i<faces.rows(); i++) {
         int implicit_id = result_face_to_implicit(i);
@@ -235,9 +246,6 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
 
         auto samples = implicit_functions[implicit_id]->get_sample_points();
 
-//        const auto &p1 = vertices.row(faces(i,0));
-//        const auto &p2 = vertices.row(faces(i,1));
-//        const auto &p3 = vertices.row(faces(i,3));
 
         Point p1(vertices(faces(i,0),0),vertices(faces(i,0),1),vertices(faces(i,0),2));
         Point p2(vertices(faces(i,1),0),vertices(faces(i,1),1),vertices(faces(i,1),2));
@@ -358,22 +366,6 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
     for (int i=0; i < P_block.size(); ++i) {
         for (int j=0; j < P_block[i].size(); ++j) {
             B_patch[P_block[i][j]].push_back(i);
-        }
-    }
-
-    //vertices
-//    std::vector<Point> V;
-    V.clear();
-    for (int i = 0; i < vertices.rows(); ++i) {
-        V.emplace_back(vertices(i,0),vertices(i,1),vertices(i,2));
-    }
-    //faces
-//    std::vector<std::vector<int>> F(faces.rows());
-    F.clear();
-    F.resize(faces.rows());
-    for (int i = 0; i < faces.rows(); ++i) {
-        for (int j = 0; j < faces.cols(); ++j) {
-            F[i].push_back(faces(i,j));
         }
     }
 
@@ -758,7 +750,7 @@ int main(int argc, char** argv) {
 
     auto implicit_functions =
         initialize_sampled_implicit_functions(args.config_file);
-    auto grid_spec = parse_grid_spec(args.grid_file);
+    auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
 
 
 
