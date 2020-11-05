@@ -4,6 +4,7 @@
 //#include <Grid.h>
 //#include "PSI.h"
 #include "Mesh_PSI.h"
+#include "Topo_PSI.h"
 
 #include "config.h"
 #include "ScopedTimer.h"
@@ -34,7 +35,8 @@ int main(int argc, char** argv) {
     auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
 
     // PSI
-    Mesh_PSI psi;
+//    Mesh_PSI psi;
+    Topo_PSI psi;
     psi.run(grid_spec, implicit_functions);
 
     // export result
