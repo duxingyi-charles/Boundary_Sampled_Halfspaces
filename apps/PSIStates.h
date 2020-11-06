@@ -27,6 +27,7 @@ public:
     const MapArray& get_face_mapping() const { return m_face_mapping; }
     const auto& get_patches() const { return m_psi->get_patches(); }
     const auto& get_cells() const { return m_psi->get_cells(); }
+    const auto& get_cell_labels() const { return m_psi->get_cell_labels(); }
     const auto& get_bbox() const { return m_bbox; }
 
 private:

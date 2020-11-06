@@ -37,8 +37,10 @@ public:
         const auto& faces = m_states->get_faces();
 
         const auto& cells = m_states->get_cells();
+        m_visible = m_states->get_cell_labels();
         const auto& patches = m_states->get_patches();
         const auto num_cells = cells.size();
+        assert(m_visible.size() == num_cells);
         for (size_t i=0; i<num_cells; i++) {
             const auto cell_size = cells[i].size();
 
@@ -60,19 +62,14 @@ public:
                 }
             }
 
-            //std::string out_name = "cell_" + std::to_string(i) + ".obj";
-            //igl::write_triangle_mesh(out_name, vertices, cell_faces);
-
             viewer.append_mesh();
             viewer.data(i).set_mesh(vertices, cell_faces);
             int id = viewer.data(i).id;
             m_colors.emplace(id, 0.5 * Eigen::RowVector3d::Random().array() + 0.5);
             viewer.data(i).set_colors(m_colors[id]);
-            viewer.data(i).set_visible(true);
+            viewer.data(i).set_visible(m_visible[i]);
             viewer.data(i).double_sided = true;
         }
-
-        m_visible.resize(m_states->get_cells().size(), true);
 
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {

@@ -48,6 +48,7 @@ public:
     const std::vector<std::vector<int>>& get_faces() const { return F; }
     const std::vector<std::vector<int>>& get_patches() const { return P; }
     const std::vector<std::vector<int>>& get_cells() const { return B_patch; }
+    const std::vector<bool>& get_cell_labels() const { return B_label; }
 
 protected:
     // vertices
