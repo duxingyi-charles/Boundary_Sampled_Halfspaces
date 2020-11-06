@@ -7,20 +7,25 @@
 class Plane_sImplicit : public Sampled_Implicit
 {
 public:
+    // standard plane
+    Plane_sImplicit() : Sampled_Implicit(), p(0,0,0), normal(0,0,1) {};
+    // plane from a point and a normal vector
+    Plane_sImplicit(const Point &pt, const Eigen::Vector3d &n) : Sampled_Implicit(), p(pt), normal(n.normalized()) {};
+    // plane from three points
 	Plane_sImplicit(const Point &p1, const Point &p2, const Point &p3);
 	~Plane_sImplicit() override = default;
 
-	double function_at(const Point &p) const override { return normal.dot(p-sample_points[0]); }
-	Eigen::Vector3d   gradient_at(const Point &p) const override { return normal; }
+	double function_at(const Point &x) const override { return normal.dot(x-p); }
+	Eigen::Vector3d   gradient_at(const Point &x) const override { return normal; }
 
-protected:
-	Eigen::Vector3d normal;
-	
+private:
+    Point p;
+    Eigen::Vector3d normal;
 };
 
 
 Plane_sImplicit::Plane_sImplicit(const Point &p1, const Point &p2, const Point &p3)
-	: Sampled_Implicit(std::vector<Point>{p1,p2,p3})
+	: Sampled_Implicit(), p(p1)
 {
     normal = (p2-p1).cross(p3-p1);
 	normal.normalize();

@@ -1,44 +1,57 @@
 //
-// Created by Charles Du on 8/26/20.
+// Created by Charles Du on 11/5/20.
 //
 
-#include "Grid.h"
+#include "Topo_PSI.h"
 
 #include <map>
 #include <queue>
 #include <set>
 
-#include <fstream>
-#include <iostream>
-
 #include <limits>
 #include <Eigen/Geometry>
 
-// graph cut
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/boykov_kolmogorov_max_flow.hpp>
+#include "ScopedTimer.h"
 
 
-Grid::Grid(const Point &p_min, const Point &p_max, int n_cell_x, int n_cell_y, int n_cell_z) {
-    init_grid(p_min, p_max, n_cell_x, n_cell_y, n_cell_z);
+void Topo_PSI::compute_arrangement_for_graph_cut(const GridSpec &grid,
+                                                 const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
+    // initialize grid
+    init_grid({grid.bbox_min[0], grid.bbox_min[1], grid.bbox_min[2]},
+        {grid.bbox_max[0], grid.bbox_max[1], grid.bbox_max[2]},
+        grid.resolution[0], grid.resolution[1], grid.resolution[2]);
+
+    // topological arrangement
+    {
+        ScopedTimer<> timer("topological arrangement");
+        int cur_impl = 0;
+        for (const auto& rbf : implicits) {
+            compute_arrangement(*rbf, cur_impl);
+            ++cur_impl;
+        }
+    }
+
+    // graph-cut
+    {
+        ScopedTimer<> timer("graph cut");
+        prepare_graph_data();
+    }
+
+    // update F
+    update_F();
+
 }
 
-Grid::Grid(const Point &p_min, const Point &p_max) {
-    init_grid(p_min, p_max, 1, 1, 1);
-}
 
-
-
-
-void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
+void Topo_PSI::compute_arrangement(const Sampled_Implicit &sImplicit, int cur_Impl) {
     // record the implicit
-    int cur_Impl = Impl.size();
-    Impl.push_back(&sImplicit);
+//    int cur_Impl = Impl.size();
+//    Impl.push_back(&sImplicit);
 
     // initialize
     std::vector<Point> Vertices = V;
     std::vector<Edge>  Edges = E;
-    std::vector<std::vector<int>> Faces = F;
+    std::vector<std::vector<int>> Faces = Face_edges;
     std::vector<std::vector<int>> Cells = C;
 
 //    std::vector<std::vector<int>> Vert_Implicits = V_Impl;
@@ -49,8 +62,8 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     std::vector<std::pair<int,int>> E_new(E.size());
     std::vector<bool> is_split_edge(E.size(), false);
 
-    std::vector<std::vector<int>> F_edge(F.size());
-    std::vector<std::vector<int>> F_new(F.size());
+    std::vector<std::vector<int>> F_edge(Face_edges.size());
+    std::vector<std::vector<int>> F_new(Face_edges.size());
 
     std::vector<bool> C_split(C.size(), false);
 
@@ -110,7 +123,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
         }
     };
 
-    for (int f = 0; f < F.size(); ++f) {
+    for (int f = 0; f < Face_edges.size(); ++f) {
         int v_start = -1;
         int v_end   = -1;
         std::vector<int> remain_face;    // the remaining face
@@ -120,7 +133,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
         int side = 1;
         bool is_split = false;  // is face f split
 
-        const auto &face = F[f];
+        const auto &face = Face_edges[f];
         int n_edge = face.size();
         for (int i = 0; i < n_edge; ++i) {
             int e = face[i];
@@ -334,20 +347,20 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
 
     // update faces F
     std::vector<int> F_new_indices(Faces.size());
-    int n_F = F.size();
-    F.clear();
+    int n_F = Face_edges.size();
+    Face_edges.clear();
     F_Impl.clear();
     cur_index = 0;
     for (int f = 0; f < n_F; ++f) {
         if (F_edge[f].empty()) { // face f is not split
-            F.emplace_back(Faces[f]);
+            Face_edges.emplace_back(Faces[f]);
             F_Impl.emplace_back(Face_Implicit[f]);
             F_new_indices[f] = cur_index;
             ++cur_index;
         }
     }
     auto fit = Faces.begin() + n_F;
-    F.insert(F.end(), fit, Faces.end());
+    Face_edges.insert(Face_edges.end(), fit, Faces.end());
     auto fiIt = Face_Implicit.begin() + n_F;
     F_Impl.insert(F_Impl.end(), fiIt, Face_Implicit.end());
     for (int f = n_F; f < Faces.size(); ++f) {
@@ -356,7 +369,7 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     }
 
     // update edge indices stored in faces
-    for (auto &face : F) {
+    for (auto &face : Face_edges) {
         for (auto &e : face) {
             e = E_new_index[e];
         }
@@ -384,12 +397,12 @@ void Grid::compute_arrangement(const Sampled_Implicit &sImplicit) {
     ///
 }
 
-void Grid::prepare_graph_data() {
+void Topo_PSI::prepare_graph_data() {
     /// step 1: group faces into patches
 
     // collect faces on implicit surfaces
     std::vector<int> implicit_faces;
-    for (int i = 0; i < F.size(); ++i) {
+    for (int i = 0; i < Face_edges.size(); ++i) {
         if (F_Impl[i] != -1) {
             implicit_faces.push_back(i);
         }
@@ -399,13 +412,13 @@ void Grid::prepare_graph_data() {
     std::map<int, std::vector<int>> edge_to_faces;
     for (int i = 0; i < implicit_faces.size(); ++i) {
         int f = implicit_faces[i];
-        for (int e : F[f]) {
+        for (int e : Face_edges[f]) {
             edge_to_faces[e].push_back(i);
         }
     }
 
     // group implicit faces into patches
-    std::vector<int> F_patch(F.size(),-1);
+    std::vector<int> F_patch(Face_edges.size(),-1);
     std::vector<bool> visited(implicit_faces.size(), false);
 
     // Patches
@@ -426,7 +439,7 @@ void Grid::prepare_graph_data() {
                 int f_front = implicit_faces[i_front];
                 patch.push_back(f_front);
                 F_patch[f_front] = cur_patch_index;
-                for (int e : F[f_front]) {
+                for (int e : Face_edges[f_front]) {
                     if (E_Impl[e].size() == 1 && edge_to_faces[e].size()==2) { // edge only belongs to one implicit
                         int i_neighbor = (edge_to_faces[e][0] == i_front) ? edge_to_faces[e][1] : edge_to_faces[e][0];
                         if (!visited[i_neighbor]) {
@@ -450,7 +463,7 @@ void Grid::prepare_graph_data() {
     std::vector<std::vector<double>> sample_min_dist;
     std::vector<std::vector<int>> sample_nearest_patch;
     double infinity = std::numeric_limits<double>::infinity();
-    for (const auto *impl : Impl) {
+    for (const auto &impl : (*Impl_ptr)) {
         int num_samples = impl->get_sample_points().size();
         sample_min_dist.emplace_back(num_samples,infinity);
         sample_nearest_patch.emplace_back(num_samples,-1);
@@ -462,10 +475,10 @@ void Grid::prepare_graph_data() {
     for (int i = 0; i < P.size(); ++i) {
         auto &patch = P[i];
         int impl = P_Impl[i];
-        auto samples = Impl[impl]->get_sample_points();
+        auto samples = (*Impl_ptr)[impl]->get_sample_points();
         for (int f : patch) {
             // compute center of the face
-            auto &face = F[f];
+            auto &face = Face_edges[f];
             Point face_center(0,0,0);
             for (int e : face) {
                 face_center += V[E[e].first];
@@ -496,7 +509,7 @@ void Grid::prepare_graph_data() {
             P_dist[i] += weighted_area;
         }
     }
-    
+
     // extract sample points on patches
     P_samples.clear();
     P_samples.resize(P.size());
@@ -570,7 +583,7 @@ void Grid::prepare_graph_data() {
         bool interior_found = false;
         for (int c : cells) {
             for (int f : C[c]) {
-                for (int e : F[f]) {
+                for (int e : Face_edges[f]) {
                     if (E_Impl[e].size()==1 && E_Impl[e][0]==-1) {
                         B_interior.emplace_back(0.5 * (V[E[e].first]+V[E[e].second]));
                         interior_found = true;
@@ -589,7 +602,7 @@ void Grid::prepare_graph_data() {
             P_block[p].push_back(i);
             // find sign of p's implicit in block i
             int impl_index = P_Impl[p];
-            const auto *impl = Impl[impl_index];
+            const auto &impl = (*Impl_ptr)[impl_index];
             if (impl->function_at(B_interior[i]) > 0) {
                 P_sign[p].push_back(1);
             }
@@ -602,344 +615,9 @@ void Grid::prepare_graph_data() {
 
 }
 
-void Grid::graph_cut() {
-    // constants
-    double inf = std::numeric_limits<double>::infinity();
-    double Delta = 0;
-    for (auto d : P_dist) Delta += d;
-    Delta *= 2;
-
-    // define per-cell costs: hPos, hNeg
-    int nBlock = B_patch.size();
-    std::vector<double> hPos(nBlock);
-    std::vector<double> hNeg(nBlock);
-
-    int nPatch = P_samples.size();
-    for (int p = 0; p < nPatch; ++p) {
-        double cost = Delta * P_samples[p].size();
-        //
-        auto b = P_block[p][0];
-        if (P_sign[p][0] > 0) hNeg[b] += cost;
-        else hPos[b] += cost;
-        //
-        b = P_block[p][1];
-        if (P_sign[p][1] > 0) hNeg[b] += cost;
-        else hPos[b] += cost;
-    }
-
-    // define pair-cell costs: hPair
-    std::map<Edge, double> hPair;
-    // init hPair
-    for (int p = 0; p < nPatch; ++p) {
-        int b1 = P_block[p][0];
-        int b2 = P_block[p][1];
-        hPair[Edge(b1,b2)] = 0;
-        hPair[Edge(b2,b1)] = 0;
-    }
-    // compute hPair
-    for (int p = 0; p < nPatch; ++p) {
-        int b1 = P_block[p][0];
-        int b2 = P_block[p][1];
-        //
-        if (P_sign[p][0] == 1) {
-            if (hPair[Edge(b1,b2)] != inf) {
-                hPair[Edge(b1,b2)] += P_dist[p];
-            }
-        }
-        else {
-            hPair[Edge(b1,b2)] = inf;
-        }
-        //
-        if (P_sign[p][1] == 1) {
-            if (hPair[Edge(b2,b1)] != inf) {
-                hPair[Edge(b2,b1)] += P_dist[p];
-            }
-        }
-        else {
-            hPair[Edge(b2,b1)] = inf;
-        }
-    }
-
-    // create the graph
-    typedef boost::adjacency_list_traits<boost::vecS, boost::vecS, boost::directedS> Traits;
-    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
-            boost::property<boost::vertex_color_t, boost::default_color_type,
-            boost::property<boost::vertex_predecessor_t,Traits::edge_descriptor,
-            boost::property<boost::vertex_distance_t, double,
-            boost::property<boost::vertex_index_t, long> > >
-            >,
-
-            boost::property<boost::edge_capacity_t, double,
-            boost::property<boost::edge_residual_capacity_t, double,
-            boost::property<boost::edge_reverse_t, Traits::edge_descriptor > > > >
-            Graph;
-
-    Graph g(nBlock);
-
-    boost::property_map<Graph,boost::edge_capacity_t>::type
-        e_weights = get(boost::edge_capacity,g);
-    boost::property_map<Graph,boost::edge_reverse_t>::type
-        e_reverse = get(boost::edge_reverse,g);
-
-    // add edges between blocks
-    for (int p = 0; p < nPatch; ++p) {
-        int b1 = P_block[p][0];
-        int b2 = P_block[p][1];
-        auto e = add_edge(b1,b2,g).first;
-        e_weights[e] = hPair[Edge(b1,b2)];
-        auto re = add_edge(b2,b1,g).first;
-        e_weights[re] = hPair[Edge(b2,b1)];
-        e_reverse[e] = re;
-        e_reverse[re] = e;
-    }
-
-    // add edges between blocks and terminals (s,t)
-    auto sid = add_vertex(g);
-    auto tid = add_vertex(g);
-    for (int b = 0; b < nBlock; ++b) {
-        auto e = add_edge(sid,b,g).first;
-        e_weights[e] = hNeg[b];
-        auto re = add_edge(b,sid,g).first;
-        e_weights[re] = 0;
-        e_reverse[e] = re;
-        e_reverse[re] = e;
-        //
-        e = add_edge(b,tid,g).first;
-        e_weights[e] = hPos[b];
-        re = add_edge(tid,b,g).first;
-        e_weights[re] = 0;
-        e_reverse[e] = re;
-        e_reverse[re] = e;
-    }
-
-    // max-flow-min-cut
-    /*double flow = */boykov_kolmogorov_max_flow(g ,sid, tid);
-
-    // print max-flow result
-//    std::cout << "c  The total flow:" << std::endl;
-//    std::cout << "s " << flow << std::endl << std::endl;
-//
-//    std::cout << "c flow values:" << std::endl;
-//    boost::graph_traits<Graph>::vertex_iterator u_iter, u_end;
-//    boost::graph_traits <Graph>::out_edge_iterator ei, e_end;
-//    for (boost::tie(u_iter, u_end) = vertices(g); u_iter != u_end; ++u_iter)
-//        for (boost::tie(ei, e_end) = out_edges(*u_iter, g); ei != e_end; ++ei)
-//            if (e_weights[*ei] > 0)
-//                std::cout << "f " << *u_iter << " " << target(*ei, g) << " "
-//                << (e_weights[*ei]) << " "
-//                << (e_weights[*ei] - e_residual[*ei]) << std::endl;
-
-    // print block labels
-//    std::cout << "vertex color:" << std::endl;
-//    boost::property_map<Graph ,boost::vertex_color_t>::type v_color = get(boost::vertex_color,g);
-//    for (boost::tie(u_iter, u_end) = vertices(g); u_iter != u_end; ++u_iter) {
-//        std::cout << *u_iter << " " << v_color[*u_iter] << std::endl;
-//    }
-    //
-
-    // get block and patch labels
-    boost::property_map<Graph,boost::vertex_color_t>::type
-        block_labels = get(boost::vertex_color,g);
-    auto s_label = block_labels[sid];
-
-    B_label.clear();
-    P_label.clear();
-
-    B_label.resize(nBlock);
-    for (int b = 0; b < nBlock; ++b) {
-        B_label[b] = (block_labels[b] == s_label);
-    }
-
-    P_label.resize(nPatch);
-    for (int p = 0; p < nPatch; ++p) {
-        P_label[p] = (B_label[P_block[p][0]] != B_label[P_block[p][1]]);
-    }
 
 
-}
-
-bool Grid::export_grid(const std::string &filename) const {
-    std::ofstream fout(filename, std::ofstream::out);
-    if (!fout.good()) {
-        std::cout << "Can not create output file " << filename << std::endl;
-        return false;
-    }
-
-    // V
-    fout << "vert ";
-    fout << V.size() << " " << V[0].size() << std::endl;
-    for (auto &v : V) {
-        fout << v.transpose() << std::endl;
-    }
-
-    // E
-    fout << "edge ";
-    fout << E.size() << " " << "2" << std::endl;
-    for (auto &e : E) {
-        fout << e.first << " " << e.second << std::endl;
-    }
-
-    // F
-    fout << "face ";
-    fout << F.size() << std::endl;
-    for (auto &f : F) {
-        for (auto  &e : f) {
-            fout << e << " ";
-        }
-        fout << std::endl;
-    }
-
-    // C
-//    fout << "cell ";
-//    fout << C.size() << std::endl;
-//    for (auto &c : C) {
-//        for (auto &f : c) {
-//            fout << f << " ";
-//        }
-//        fout << std::endl;
-//    }
-
-    // V_Impl
-//    fout << "vert_implicit ";
-//    fout << V_Impl.size() << std::endl;
-//    for (auto &v_impl : V_Impl) {
-//        for (auto &impl : v_impl) {
-//            fout << impl << " ";
-//        }
-//        fout << std::endl;
-//    }
-
-    // E_Impl
-    fout << "edge_implicit ";
-    fout << E_Impl.size() << std::endl;
-    for (auto &e_impl : E_Impl) {
-        for (auto &impl : e_impl) {
-            fout << impl << " ";
-        }
-        fout << std::endl;
-    }
-
-    // F_Impl
-    fout << "face_implicit ";
-    fout << 1 << std::endl; // row vector
-    for (auto &impl : F_Impl) {
-        fout << impl << " ";
-    }
-    fout << std::endl;
-
-    // P
-    fout << "patch_faces ";
-    fout << P.size() << std::endl;
-    for (auto &patch : P) {
-        for (auto & face : patch) {
-            fout << face << " ";
-        }
-        fout << std::endl;
-    }
-
-    // P_Impl
-    fout << "patch_implicit ";
-    fout << 1 << std::endl; // row vector
-    for (auto & impl: P_Impl) {
-        fout << impl << " ";
-    }
-    fout << std::endl;
-
-    // samples
-    fout << "samples ";
-    fout << Impl.size() << std::endl;
-    for (const auto *impl : Impl) {
-        for (auto &point : impl->get_sample_points()) {
-            fout << point.transpose() << " ";
-        }
-        fout << std::endl;
-    }
-
-    // P_samples
-//    fout << "patch_samples ";
-//    fout << P_samples.size() << std::endl;
-//    for (auto &samples : P_samples) {
-//        for (auto & sample : samples) {
-//            fout << sample << " ";
-//        }
-//        fout << std::endl;
-//    }
-
-    // P_dist
-//    fout << "patch_distance_area ";
-//    fout << 1 << std::endl; // row vector
-//    for (auto & dist: P_dist) {
-//        fout << dist << " ";
-//    }
-//    fout << std::endl;
-
-    // B_patch
-    fout << "block_patches ";
-    fout << B_patch.size() << std::endl;
-    for (auto &patches : B_patch) {
-        for (auto & patch : patches) {
-            fout << patch << " ";
-        }
-        fout << std::endl;
-    }
-
-    // B_cell
-//    fout << "block_cells ";
-//    fout << B_cell.size() << std::endl;
-//    for (auto &cells : B_cell) {
-//        for (auto & cell : cells) {
-//            fout << cell << " ";
-//        }
-//        fout << std::endl;
-//    }
-
-    // P_block
-//    fout << "patch_blocks ";
-//    fout << P_block.size() << std::endl;
-//    for (auto &blocks : P_block) {
-//        for (auto & block : blocks) {
-//            fout << block << " ";
-//        }
-//        fout << std::endl;
-//    }
-
-    // P_sign
-//    fout << "patch_signs ";
-//    fout << P_sign.size() << std::endl;
-//    for (auto &signs : P_sign) {
-//        for (auto & sign : signs) {
-//            fout << sign << " ";
-//        }
-//        fout << std::endl;
-//    }
-
-    // P_label
-    fout << "patch_labels ";
-    fout << 1 << std::endl; // row vector
-    for (auto label : P_label) {
-        fout << label << " ";
-    }
-    fout << std::endl;
-
-
-    // B_label
-    fout << "block_labels ";
-    fout << 1 << std::endl; // row vector
-    for (auto label : B_label) {
-        fout << label << " ";
-    }
-    fout << std::endl;
-
-
-    fout.close();
-    std::cout << "export_grid finish: " << filename << std::endl;
-    return true;
-}
-
-
-
-
-void Grid::init_grid(const Point &p_min, const Point &p_max,
+void Topo_PSI::init_grid(const Point &p_min, const Point &p_max,
                      int n_cell_x, int n_cell_y, int n_cell_z) {
     // make sure grid resolution is non-negative
     n_cell_x = abs(n_cell_x);
@@ -947,7 +625,7 @@ void Grid::init_grid(const Point &p_min, const Point &p_max,
     n_cell_z = abs(n_cell_z);
 
     // clear grid data
-    V.clear(); E.clear(); F.clear(); C.clear();
+    V.clear(); E.clear(); Face_edges.clear(); C.clear();
 
     /// step 1:  create vertices
     double dx = (p_max.x() - p_min.x()) / n_cell_x;
@@ -1043,27 +721,27 @@ void Grid::init_grid(const Point &p_min, const Point &p_max,
         for (int j = 0; j < n_cell_y; ++j) {
             for (int k = 0; k < n_cell_x; ++k) {
                 // f_x
-                F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_y[v_idx], V_E_z[v_idx + n_vert_x], V_E_y[v_idx + n_vert_xy]});
+                Face_edges.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_y[v_idx], V_E_z[v_idx + n_vert_x], V_E_y[v_idx + n_vert_xy]});
                 // f_y
-                F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_x[v_idx], V_E_z[v_idx +1], V_E_x[v_idx + n_vert_xy]});
+                Face_edges.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_x[v_idx], V_E_z[v_idx +1], V_E_x[v_idx + n_vert_xy]});
                 // f_z
-                F.emplace_back(std::vector<int>{V_E_y[v_idx], V_E_x[v_idx], V_E_y[v_idx+1], V_E_x[v_idx + n_vert_x]});
-                V_F_x[v_idx] = F.size() - 3;
-                V_F_y[v_idx] = F.size() - 2;
-                V_F_z[v_idx] = F.size() - 1;
+                Face_edges.emplace_back(std::vector<int>{V_E_y[v_idx], V_E_x[v_idx], V_E_y[v_idx+1], V_E_x[v_idx + n_vert_x]});
+                V_F_x[v_idx] = Face_edges.size() - 3;
+                V_F_y[v_idx] = Face_edges.size() - 2;
+                V_F_z[v_idx] = Face_edges.size() - 1;
                 ++v_idx;
             }
             // k == n_cell_x
             // f_x
-            F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_y[v_idx], V_E_z[v_idx + n_vert_x], V_E_y[v_idx + n_vert_xy]});
-            V_F_x[v_idx] = F.size() - 1;
+            Face_edges.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_y[v_idx], V_E_z[v_idx + n_vert_x], V_E_y[v_idx + n_vert_xy]});
+            V_F_x[v_idx] = Face_edges.size() - 1;
             ++v_idx;
         }
         // j == n_cell_y
         for (int k = 0; k < n_cell_x; ++k) {
             // f_y
-            F.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_x[v_idx], V_E_z[v_idx +1], V_E_x[v_idx + n_vert_xy]});
-            V_F_y[v_idx] = F.size() - 1;
+            Face_edges.emplace_back(std::vector<int>{V_E_z[v_idx], V_E_x[v_idx], V_E_z[v_idx +1], V_E_x[v_idx + n_vert_xy]});
+            V_F_y[v_idx] = Face_edges.size() - 1;
             ++v_idx;
         }
         // j == n_cell_y && k == n_cell_x
@@ -1073,8 +751,8 @@ void Grid::init_grid(const Point &p_min, const Point &p_max,
     for (int j = 0; j < n_cell_y; ++j) {
         for (int k = 0; k < n_cell_x; ++k) {
             // f_z
-            F.emplace_back(std::vector<int>{V_E_y[v_idx], V_E_x[v_idx], V_E_y[v_idx+1], V_E_x[v_idx + n_vert_x]});
-            V_F_z[v_idx] = F.size() - 1;
+            Face_edges.emplace_back(std::vector<int>{V_E_y[v_idx], V_E_x[v_idx], V_E_y[v_idx+1], V_E_x[v_idx + n_vert_x]});
+            V_F_z[v_idx] = Face_edges.size() - 1;
             ++v_idx;
         }
         // i == n_cell_z && k == n_cell_x
@@ -1100,11 +778,52 @@ void Grid::init_grid(const Point &p_min, const Point &p_max,
     }
 
     // step 5: initialize implicits
-    Impl.clear();
+//    Impl.clear();
     V_Impl.clear(); E_Impl.clear(); F_Impl.clear();
     V_Impl.resize(V.size(), std::vector<int>{-1});
     E_Impl.resize(E.size(), std::vector<int>{-1});
-    F_Impl.resize(F.size(), -1); // -1: faces of the regular grid
+    F_Impl.resize(Face_edges.size(), -1); // -1: faces of the regular grid
     ///
 
 }
+
+void Topo_PSI::update_F() {
+    F.clear();
+    F.reserve(Face_edges.size());
+
+    for (const auto& edges : Face_edges) {
+        F.emplace_back();
+        auto &vertex_indices = F.back();
+
+        int i = 0;
+        int e = edges[i];
+
+        int v0 = E[e].first;
+        int v1 = E[e].second;
+
+        i = 1;
+        e = edges[i];
+
+        int v;
+        if (E[e].first == v1 || E[e].second == v1) {
+            vertex_indices.push_back(v1);
+            v = v1;
+        } else { // v0 is in E[e]
+            vertex_indices.push_back(v0);
+            v = v0;
+        }
+
+        for (i = 1; i < edges.size(); ++i) {
+            e = edges[i];
+            if (E[e].first == v) {
+                v = E[e].second;
+            }
+            else {
+                v = E[e].first;
+            }
+            vertex_indices.push_back(v);
+        }
+
+    }
+}
+
