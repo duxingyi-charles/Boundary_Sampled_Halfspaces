@@ -6,7 +6,7 @@
 #include "Topo_PSI.h"
 
 #include "config.h"
-#include "ScopedTimer.h"
+//#include "ScopedTimer.h"
 
 int main(int argc, char** argv) {
     struct {
@@ -14,10 +14,13 @@ int main(int argc, char** argv) {
         std::string config_file;
         std::string output_grid_file;
         int grid_size;
+        std::string arrangement_algorithm;
     } args;
 
     CLI::App app{"Piecewise implicit surface demo"};
     app.add_option("-G,--grid-file", args.grid_file, "Grid spec file")
+        ->required();
+    app.add_option("-A,--arr-algo", args.arrangement_algorithm, "Arrangement algorithm " )
         ->required();
     app.add_option("config_file", args.config_file, "Configuration file")
         ->required();
@@ -34,12 +37,20 @@ int main(int argc, char** argv) {
     auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
 
     // PSI
-//    Mesh_PSI psi;
-    Topo_PSI psi;
-    psi.run(grid_spec, implicit_functions);
+    Topo_PSI topo_psi;
+    Mesh_PSI mesh_psi;
+
+    PSI *psi;
+    if (args.arrangement_algorithm[0] == 't') {
+        psi = &topo_psi;
+    } else {
+        psi = &mesh_psi;
+    }
+
+    psi->run(grid_spec, implicit_functions);
 
     // export result
-    psi.export_data(args.output_grid_file);
+    psi->export_data(args.output_grid_file);
 
 
     return 0;
