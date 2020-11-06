@@ -40,7 +40,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
 
 
 add_library(cell_partition STATIC
-    ${PROJECT_SOURCE_DIR}/apps/PyMesh/CellPartition.cpp)
+    ${PROJECT_SOURCE_DIR}/src/PyMesh/CellPartition.cpp)
 target_link_libraries(cell_partition PUBLIC igl::core igl::cgal)
 
 add_library(psi STATIC ${SRC_LIST})
