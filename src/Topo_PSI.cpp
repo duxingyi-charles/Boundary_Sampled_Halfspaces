@@ -793,7 +793,7 @@ void Topo_PSI::update_F() {
 
     for (const auto& edges : Face_edges) {
         F.emplace_back();
-        auto &verts = F.back();
+        auto &vertex_indices = F.back();
 
         int i = 0;
         int e = edges[i];
@@ -806,10 +806,10 @@ void Topo_PSI::update_F() {
 
         int v;
         if (E[e].first == v1 || E[e].second == v1) {
-            verts.push_back(v1);
+            vertex_indices.push_back(v1);
             v = v1;
         } else { // v0 is in E[e]
-            verts.push_back(v0);
+            vertex_indices.push_back(v0);
             v = v0;
         }
 
@@ -821,7 +821,7 @@ void Topo_PSI::update_F() {
             else {
                 v = E[e].first;
             }
-            verts.push_back(v);
+            vertex_indices.push_back(v);
         }
 
     }
