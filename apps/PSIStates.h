@@ -1,5 +1,6 @@
 #include <Mesh_PSI.h>
 #include <PSI.h>
+#include <Sphere_sImplicit.h>
 
 #include <Eigen/Core>
 
@@ -14,11 +15,11 @@ public:
     using MapArray = Eigen::Matrix<int, Eigen::Dynamic, 1>;
 
 public:
-    PSIStates(
-        const GridSpec& grid, std::vector<std::unique_ptr<Sampled_Implicit>>& implicit_fns)
+    PSIStates(const GridSpec& grid, std::vector<std::unique_ptr<Sampled_Implicit>>& implicits)
+        : m_grid(grid), m_implicits(implicits)
     {
         m_psi = std::make_unique<Mesh_PSI>();
-        m_psi->run(grid, implicit_fns);
+        m_psi->run(grid, implicits);
         initialize_states();
     }
 
@@ -29,6 +30,12 @@ public:
     const auto& get_cells() const { return m_psi->get_cells(); }
     const auto& get_cell_labels() const { return m_psi->get_cell_labels(); }
     const auto& get_bbox() const { return m_bbox; }
+
+    void add_sphere(const Point& center, double radius) {
+        //m_implicits.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+    }
 
 private:
     void initialize_states()
@@ -71,5 +78,7 @@ private:
     FaceArray m_faces;
     MapArray m_face_mapping;
     Eigen::Matrix<double, 2, 3> m_bbox;
+    const GridSpec& m_grid;
+    std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
 };
 

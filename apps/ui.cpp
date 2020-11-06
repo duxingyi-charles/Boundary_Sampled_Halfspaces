@@ -33,6 +33,47 @@ public:
 
     void initialize(igl::opengl::glfw::Viewer& viewer)
     {
+        viewer.plugins.push_back(&m_menu);
+        m_menu.callback_draw_viewer_menu = [&]() {
+            // m_menu.draw_viewer_menu();
+            if (ImGui::Button("Center object", ImVec2(-1, 0))) {
+                auto bbox = m_states->get_bbox();
+                viewer.core().align_camera_center(bbox);
+            }
+            if (ImGui::CollapsingHeader("Cells", ImGuiTreeNodeFlags_DefaultOpen)) {
+                const auto& cells = m_states->get_cells();
+                const size_t num_cells = cells.size();
+                for (size_t i = 0; i < num_cells; i++) {
+                    std::string name = "Cell " + std::to_string(i);
+                    if (ImGui::Checkbox(
+                            name.c_str(),
+                            [&]() { return m_visible[i]; },
+                            [&](bool val) { m_visible[i] = val; })) {
+                        viewer.data(i).set_visible(m_visible[i]);
+                    }
+                }
+            }
+            if (ImGui::Button("Add sphere", ImVec2(-1, 0))) {
+                auto bbox = m_states->get_bbox();
+                double diag = (bbox.row(0) - bbox.row(1)).norm();
+                m_states->add_sphere(0.5 * (bbox.row(0) + bbox.row(1)), diag / 5);
+                initialize_data(viewer);
+            }
+        };
+
+        initialize_data(viewer);
+        initialize_picking(viewer);
+    }
+
+private:
+    void initialize_data(igl::opengl::glfw::Viewer& viewer)
+    {
+        // Clear viewer data.
+        viewer.selected_data_index = viewer.data_list.size()-1;
+        while(viewer.erase_mesh(viewer.selected_data_index)){};
+        viewer.data().clear();
+        m_colors.clear();
+
         const auto& vertices = m_states->get_vertices();
         const auto& faces = m_states->get_faces();
 
@@ -62,41 +103,22 @@ public:
                 }
             }
 
+            std::string filename = "cell_" + std::to_string(i) + ".obj";
+            igl::write_triangle_mesh(filename, vertices, cell_faces);
+
             viewer.append_mesh();
+            viewer.data(i).V.resize(0, 3);
+            viewer.data(i).F.resize(0, 3);
             viewer.data(i).set_mesh(vertices, cell_faces);
             int id = viewer.data(i).id;
+            std::cout << i << " " << id << std::endl;
             m_colors.emplace(id, 0.5 * Eigen::RowVector3d::Random().array() + 0.5);
             viewer.data(i).set_colors(m_colors[id]);
             viewer.data(i).set_visible(m_visible[i]);
             viewer.data(i).double_sided = true;
         }
-
-        viewer.plugins.push_back(&m_menu);
-        m_menu.callback_draw_viewer_menu = [&]() {
-            // m_menu.draw_viewer_menu();
-            if (ImGui::Button("Center object", ImVec2(-1, 0))) {
-                auto bbox = m_states->get_bbox();
-                viewer.core().align_camera_center(bbox);
-            }
-            if (ImGui::CollapsingHeader("Cells", ImGuiTreeNodeFlags_DefaultOpen)) {
-                const auto& cells = m_states->get_cells();
-                const size_t num_cells = cells.size();
-                for (size_t i = 0; i < num_cells; i++) {
-                    std::string name = "Cell " + std::to_string(i);
-                    if (ImGui::Checkbox(
-                            name.c_str(),
-                            [&]() { return m_visible[i]; },
-                            [&](bool val) { m_visible[i] = val; })) {
-                        viewer.data(i).set_visible(m_visible[i]);
-                    }
-                }
-            }
-        };
-
-        initialize_picking(viewer);
     }
 
-private:
     void initialize_picking(igl::opengl::glfw::Viewer& viewer)
     {
         viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
