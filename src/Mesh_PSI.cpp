@@ -135,7 +135,7 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
 
 
     // compute arrangement
-//    ScopedTimer<> timer("mesh arrangement");
+    ScopedTimer<> timer("mesh arrangement for graph-cut");
     auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
     engine->run();
 
@@ -194,11 +194,6 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
         patch_impl[patch_id] = implicit_id;
 
         auto samples = implicits[implicit_id]->get_sample_points();
-
-
-//        Point p1(vertices(faces(i,0),0),vertices(faces(i,0),1),vertices(faces(i,0),2));
-//        Point p2(vertices(faces(i,1),0),vertices(faces(i,1),1),vertices(faces(i,1),2));
-//        Point p3(vertices(faces(i,2),0),vertices(faces(i,2),1),vertices(faces(i,2),2));
 
         Point p1 = V[F[i][0]];
         Point p2 = V[F[i][1]];
@@ -272,12 +267,6 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
     // P_block: make sure the minimal index is 0
     int min_block_index = std::numeric_limits<int>::max();
     int max_block_index = -1;
-//    for (int i=0; i<P_block.size(); ++i) {
-//        for (int j=0; j<P_block[i].size(); ++j) {
-//            min_block_index = (P_block[i][j] < min_block_index) ? P_block[i][j] : min_block_index;
-//            max_block_index = (P_block[i][j] > max_block_index) ? P_block[i][j] : max_block_index;
-//        }
-//    }
     for (auto &blocks : P_block) {
         for (auto b : blocks) {
             min_block_index = (b < min_block_index) ? b : min_block_index;
@@ -285,11 +274,6 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
         }
     }
     if (min_block_index > 0) {
-//        for (int i=0; i<P_block.size(); ++i) {
-//            for (int j=0; j<P_block[i].size(); ++j) {
-//                P_block[i][j] -= min_block_index;
-//            }
-//        }
         for (auto &blocks : P_block) {
             for (auto &b : blocks) {
                 b -= min_block_index;
