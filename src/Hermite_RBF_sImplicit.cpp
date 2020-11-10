@@ -7,6 +7,45 @@
 #include <cmath>
 #include "Hermite_RBF_sImplicit.h"
 
+#include "vipss/rbfcore.h"
+
+
+void Hermite_RBF_sImplicit::compute_RBF_coeff(const std::vector<Point> &points, Eigen::VectorXd &a, Eigen::Vector4d &b) {
+    //
+    vector<double> Vs;
+    RBF_Core rbf_core;
+    RBF_Paras para = RBF_Paras::Set_RBF_PARA();
+
+    // read points into Vs
+    para.point_dimension = points[0].size();
+    for (const auto &p : points) {
+        for (int i=0; i<p.size(); ++i) {
+            Vs.push_back(p(i));
+        }
+    }
+    // vipss computation
+    rbf_core.InjectData(Vs,para);
+    rbf_core.BuildK(para);
+    rbf_core.InitNormal(para);
+    rbf_core.OptNormal(0);
+
+    // read result of vipss
+    if (rbf_core.b.size() != 4) {
+        std::cout << "coeff_b should have 4 elements (in 3D)." << std::endl;
+        return;
+    }
+
+    // coefficient a
+    a.resize(rbf_core.a.size());
+    for (int i = 0; i < rbf_core.a.size(); ++i) {
+        a(i) = rbf_core.a(i);
+    }
+    // coefficient b
+    for (int i = 0; i < rbf_core.b.size(); ++i) {
+        b(i) = rbf_core.b(i);
+    }
+
+}
 
 
 bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file)
