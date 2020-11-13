@@ -49,6 +49,11 @@ public:
     const std::vector<std::vector<int>>& get_patches() const { return P; }
     const std::vector<std::vector<int>>& get_cells() const { return B_patch; }
     const std::vector<bool>& get_cell_labels() const { return B_label; }
+    const std::vector<std::vector<int>>& get_cell_patch_adjacency() const { return P_block; }
+    const std::vector<std::vector<int>>& get_cell_patch_sign() const { return P_sign; }
+    const std::vector<bool>& get_patch_labels() const { return P_label; }
+    const std::vector<int>& get_patch_implicit() const { return P_Impl; }
+    size_t get_num_implicits() const { return Impl_ptr->size(); }
 
 protected:
     // vertices

@@ -29,10 +29,14 @@ public:
     const auto& get_patches() const { return m_psi->get_patches(); }
     const auto& get_cells() const { return m_psi->get_cells(); }
     const auto& get_cell_labels() const { return m_psi->get_cell_labels(); }
+    const auto& get_patch_labels() const { return m_psi->get_patch_labels(); }
+    const auto& get_patch_implicit() const { return m_psi->get_patch_implicit(); }
+    const auto& get_cell_patch_adjacency() const { return m_psi->get_cell_patch_adjacency(); }
+    const size_t get_num_implicits() const { return m_psi->get_num_implicits(); }
     const auto& get_bbox() const { return m_bbox; }
 
     void add_sphere(const Point& center, double radius) {
-        //m_implicits.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
+        m_implicits.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
         m_psi->run(m_grid, m_implicits);
         initialize_states();
     }
