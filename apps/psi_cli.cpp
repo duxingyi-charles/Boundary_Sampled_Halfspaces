@@ -8,6 +8,8 @@
 #include "config.h"
 //#include "ScopedTimer.h"
 
+#include "Sphere_sImplicit.h"
+
 int main(int argc, char** argv) {
     struct {
         std::string grid_file;
@@ -47,6 +49,12 @@ int main(int argc, char** argv) {
         psi = &mesh_psi;
     }
 
+    psi->run(grid_spec, implicit_functions);
+
+    // add implicit
+    Point center(0,0,0);
+    double radius = 1.0;
+    implicit_functions.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
     psi->run(grid_spec, implicit_functions);
 
     // export result
