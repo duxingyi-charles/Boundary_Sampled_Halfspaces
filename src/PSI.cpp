@@ -44,12 +44,16 @@ void PSI::graph_cut(
         // output
         std::vector<bool> &B_label,
         std::vector<bool> &P_label) {
-
     // constants
     double inf = std::numeric_limits<double>::infinity();
     double Delta = 0;
-    for (auto d : P_dist) Delta += d;
+//    for (auto d : P_dist) Delta += d;
+    for (auto &d: P_dist) {
+        if (isfinite(d)) Delta += d;
+    }
     Delta *= 2;
+
+
 
     // define per-cell costs: hPos, hNeg
     int nBlock = B_patch.size();
@@ -155,7 +159,7 @@ void PSI::graph_cut(
     }
 
     // max-flow-min-cut
-    /*double flow = */boykov_kolmogorov_max_flow(g ,sid, tid);
+    /*double flow =*/ boykov_kolmogorov_max_flow(g ,sid, tid);
 
     // print max-flow result
 //    std::cout << "c  The total flow:" << std::endl;
@@ -168,7 +172,7 @@ void PSI::graph_cut(
 //        for (boost::tie(ei, e_end) = out_edges(*u_iter, g); ei != e_end; ++ei)
 //            if (e_weights[*ei] > 0)
 //                std::cout << "f " << *u_iter << " " << target(*ei, g) << " "
-//                << (e_weights[*ei]) << " "
+//                << (e_weights[*ei]) << " " << std::endl;
 //                << (e_weights[*ei] - e_residual[*ei]) << std::endl;
 
     // print block labels
