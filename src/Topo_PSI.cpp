@@ -512,6 +512,9 @@ void Topo_PSI::prepare_graph_data() {
             P_dist[i] += weighted_area;
         }
     }
+    for (auto &d : P_dist) {
+        if (!isfinite((d))) d = infinity;
+    }
 
     // extract sample points on patches
     P_samples.clear();

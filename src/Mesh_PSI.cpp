@@ -251,7 +251,11 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
     for (int i=0; i < patch_impl.size(); ++i) {
         if (patch_impl[i] != -1) {
             P_old_to_new_index[i] = patch_count;
-            P_dist.push_back(patch_dist[i]);
+            if (isfinite(patch_dist[i])) {
+                P_dist.push_back(patch_dist[i]);
+            } else {
+                P_dist.push_back(infinity);
+            }
             P_samples.emplace_back(patch_samples[i]);
             P_block.emplace_back(patch_block[i]);
             P_sign.emplace_back(patch_sign[i]);
