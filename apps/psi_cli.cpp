@@ -52,9 +52,13 @@ int main(int argc, char** argv) {
     psi->run(grid_spec, implicit_functions);
 
     // add implicit
-    Point center(0,0,0);
+    Point center(1,1,0);
+//    Point center(0,0,0);
     double radius = 1.0;
+    std::vector<Point> samples;
+    samples.push_back(Point(1,0,0));
     implicit_functions.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
+    implicit_functions.back()->set_sample_points(samples);
     psi->run(grid_spec, implicit_functions);
 
     // export result
