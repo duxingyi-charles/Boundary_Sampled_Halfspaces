@@ -31,14 +31,17 @@ void Topo_PSI::compute_arrangement_for_graph_cut(const GridSpec &grid,
         }
     }
 
-    // graph-cut
+    // prepare for graph-cut
     {
         ScopedTimer<> timer("graph cut");
         prepare_graph_data();
     }
 
     // update F
-    update_F();
+    {
+        ScopedTimer<> timer("update F");
+        update_F();
+    }
 
 }
 
@@ -508,6 +511,9 @@ void Topo_PSI::prepare_graph_data() {
             //
             P_dist[i] += weighted_area;
         }
+    }
+    for (auto &d : P_dist) {
+        if (!isfinite((d))) d = infinity;
     }
 
     // extract sample points on patches

@@ -40,6 +40,29 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
 #target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph)
 #target_compile_options(psi PUBLIC "-Wall")
 
+# VIPSS
+find_package(nlopt REQUIRED)
+set(NLOPT_LIB_DIR "")
+set(NLOPT_LIB ${NLOPT_LIBRARIES})
+
+find_package(Armadillo REQUIRED)
+set(ARMADILLO_LIB_DIRS "")
+set(ARMADILLO_LIB ${ARMADILLO_LIBRARIES})
+
+include_directories(${NLOPT_INCLUDE_DIRS} ${ARMADILLO_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src/vipss/surfacer)
+#aux_source_directory(. MAIN)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/vipss VIPSS_SRC_LIST)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/vipss/surfacer VIPSS_SURFACER_LIST)
+
+LINK_DIRECTORIES(${ARMADILLO_LIB_DIRS} ${NLOPT_LIB_DIR})
+#add_executable(${PROJECT_NAME} ${SRC_LIST} ${MAIN} ${SURFACER_LIST})
+
+add_library(vipss STATIC
+        ${VIPSS_SRC_LIST}
+        ${VIPSS_SURFACER_LIST})
+target_link_libraries(vipss PUBLIC ${ARMADILLO_LIB} ${NLOPT_LIB})
+set_target_properties(vipss PROPERTIES LINKER_LANGUAGE CXX)
+
 
 add_library(cell_partition STATIC
     ${PROJECT_SOURCE_DIR}/src/PyMesh/CellPartition.cpp)
@@ -47,7 +70,7 @@ target_link_libraries(cell_partition PUBLIC igl::core igl::cgal)
 
 add_library(psi STATIC ${SRC_LIST})
 target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
-target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core cell_partition)
+target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core cell_partition vipss)
 target_compile_options(psi PUBLIC "-Wall")
 
 add_executable(mesh_arrangement apps/mesh_arrangement.cpp)

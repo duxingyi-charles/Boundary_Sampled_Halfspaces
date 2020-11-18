@@ -15,6 +15,11 @@ public:
 
     ~Hermite_RBF_sImplicit() override = default;
 
+    // initialize with control points
+    Hermite_RBF_sImplicit(const std::vector<Point> &control_pts,
+                          const std::vector<Point> &sample_pts)
+                          : Sampled_Implicit(sample_pts) { update_RBF_coeff(control_pts);}
+
     bool import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file);
     bool import_sampled_Hermite_RBF(const std::string &pts_file,
                                     const std::string &coeff_file,
@@ -23,6 +28,18 @@ public:
 
     double function_at(const Point &) const override;
     Eigen::Vector3d gradient_at(const Point &) const override;
+
+    static void compute_RBF_coeff(const std::vector<Point> &points, Eigen::VectorXd &a, Eigen::Vector4d &b);
+
+    void update_RBF_coeff(const std::vector<Point> &points) {
+        control_points = points;
+        compute_RBF_coeff(points, coeff_a, coeff_b);
+    }
+
+    void flip_sign() {
+        coeff_a *= -1;
+        coeff_b *= -1;
+    }
 
 protected:
 
