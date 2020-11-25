@@ -80,6 +80,9 @@ target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
 add_executable(psi_cli apps/psi_cli.cpp)
 target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11)
 
+add_executable(psi_cli_add_new_explicit apps/psi_cli_add_new_implicit.cpp)
+target_link_libraries(psi_cli_add_new_explicit PRIVATE psi CLI11::CLI11)
+
 add_executable(ui apps/ui.cpp)
 target_link_libraries(ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
     cell_partition)
