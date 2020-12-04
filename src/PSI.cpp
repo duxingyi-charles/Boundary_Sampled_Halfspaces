@@ -312,22 +312,22 @@ bool PSI::export_data(const std::string &filename) const
     }
 
     // P_samples
-//    fout << "patch_samples ";
-//    fout << P_samples.size() << std::endl;
-//    for (auto &samples : P_samples) {
-//        for (auto & sample : samples) {
-//            fout << sample << " ";
-//        }
-//        fout << std::endl;
-//    }
+    fout << "patch_samples ";
+    fout << P_samples.size() << std::endl;
+    for (auto &samples : P_samples) {
+        for (auto & sample : samples) {
+            fout << sample << " ";
+        }
+        fout << std::endl;
+    }
 
     // P_dist
-//    fout << "patch_distance_area ";
-//    fout << 1 << std::endl; // row vector
-//    for (auto & dist: P_dist) {
-//        fout << dist << " ";
-//    }
-//    fout << std::endl;
+    fout << "patch_distance_area ";
+    fout << 1 << std::endl; // row vector
+    for (auto & dist: P_dist) {
+        fout << dist << " ";
+    }
+    fout << std::endl;
 
     // B_patch
     fout << "block_patches ";
