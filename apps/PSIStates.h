@@ -16,11 +16,13 @@ public:
 
 public:
     PSIStates(const GridSpec& grid, std::vector<std::unique_ptr<Sampled_Implicit>>& implicits)
-        : m_grid(grid), m_implicits(implicits)
+        : m_grid(grid)
+        , m_implicits(implicits)
     {
         m_psi = std::make_unique<Mesh_PSI>();
         m_psi->run(grid, implicits);
         initialize_states();
+        initialize_colors();
     }
 
     const VertexArray& get_vertices() const { return m_vertices; }
@@ -34,10 +36,23 @@ public:
     const size_t get_num_implicits() const { return m_psi->get_num_implicits(); }
     const auto& get_bbox() const { return m_bbox; }
 
-    void add_sphere(const Point& center, double radius) {
+    const int get_implicit_from_patch(int patch_id) const { return get_patch_implicit()[patch_id]; }
+    const Eigen::RowVector4d get_implicit_color(int implicit_id) const
+    {
+        return m_colors.row(implicit_id);
+    }
+
+    void add_sphere(const Point& center, double radius)
+    {
         m_implicits.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
         m_psi->run(m_grid, m_implicits);
         initialize_states();
+        initialize_colors();
+    }
+
+    const Sampled_Implicit& get_implicit_function(size_t i)
+    {
+        return *m_implicits[i];
     }
 
 private:
@@ -73,12 +88,24 @@ private:
         }
     }
 
+    void initialize_colors()
+    {
+        const auto num_implicits = m_implicits.size();
+        m_colors.setRandom(num_implicits, 4);
+        m_colors = m_colors.array() * 0.5 + 0.5;
+        m_colors.col(3).setOnes();
+    }
+
 private:
+    // Input states.
+    const GridSpec& m_grid;
+    std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
     std::unique_ptr<PSI> m_psi;
+
+    // Derived states.
     VertexArray m_vertices;
     FaceArray m_faces;
     Eigen::Matrix<double, 2, 3> m_bbox;
-    const GridSpec& m_grid;
-    std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
+    Eigen::Matrix<double, Eigen::Dynamic, 4> m_colors;
 };
 

@@ -77,6 +77,18 @@ private:
                     set_patch_visible(viewer, patch_index, m_implicit_visible[i]);
                 }
             }
+
+            const auto implicit_id = m_implicit_data_ids[i];
+            viewer.data(implicit_id).set_visible(m_implicit_visible[i]);
+        };
+
+        static auto hide_control_pts = [&](auto& viewer) {
+            const auto num_implicits = m_states->get_num_implicits();
+            for (size_t i=0; i<num_implicits; i++) {
+                const int id = m_implicit_data_ids[i];
+                viewer.data(id).set_visible(false);
+                m_implicit_visible[i] = false;
+            }
         };
 
         viewer.plugins.push_back(&m_menu);
@@ -95,6 +107,7 @@ private:
             ImGui::RadioButton("Implicits", &view_type, 2);
 
             auto add_cell_menu = [&]() {
+                hide_control_pts(viewer);
                 if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
                     const auto& cells = m_states->get_cells();
                     const size_t num_cells = cells.size();
@@ -122,13 +135,14 @@ private:
             };
 
             auto add_patch_menu = [&]() {
+                hide_control_pts(viewer);
                 if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
                     const auto& patches = m_states->get_patches();
                     const size_t num_patches = patches.size();
 
                     m_patch_visible = m_states->get_patch_labels();
 
-                    for (size_t i=0; i<num_patches; i++) {
+                    for (size_t i = 0; i < num_patches; i++) {
                         set_patch_visible(viewer, i, m_patch_visible[i]);
                     }
                 }
@@ -151,15 +165,11 @@ private:
 
             auto add_implicit_menu = [&]() {
                 if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
-                    const auto& patches = m_states->get_patches();
-                    const size_t num_patches = patches.size();
-
-                    for (size_t i=0; i<num_patches; i++) {
-                        set_patch_visible(viewer, i, false);
-                    }
-
                     const size_t num_implicits = m_states->get_num_implicits();
-                    m_implicit_visible.assign(num_implicits, false);
+                    m_implicit_visible.assign(num_implicits, true);
+                    for (size_t i=0; i<num_implicits; i++) {
+                        update_implicit_visibility(viewer, i);
+                    }
                 }
 
                 if (ImGui::CollapsingHeader("Implicits", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -194,7 +204,7 @@ private:
         };
     }
 
-    void initialize_data(igl::opengl::glfw::Viewer& viewer)
+    void clear_data(igl::opengl::glfw::Viewer& viewer)
     {
         // Clear viewer data.
         viewer.selected_data_index = viewer.data_list.size() - 1;
@@ -202,18 +212,35 @@ private:
         };
         viewer.data().clear();
 
+        m_data_ids.clear();
+        m_implicit_data_ids.clear();
+    }
+
+    void initialize_data(igl::opengl::glfw::Viewer& viewer)
+    {
+        clear_data(viewer);
+        initialize_visibility();
+        initialize_patch_data(viewer);
+        initialize_implicit_data(viewer);
+    }
+
+    void initialize_visibility()
+    {
+        const auto num_implicits = m_states->get_num_implicits();
+        m_patch_visible = m_states->get_patch_labels();
+        m_cell_visible = m_states->get_cell_labels();
+        m_implicit_visible.assign(num_implicits, false);
+    }
+
+    void initialize_patch_data(igl::opengl::glfw::Viewer& viewer)
+    {
         const auto& vertices = m_states->get_vertices();
         const auto& faces = m_states->get_faces();
 
         const auto& patches = m_states->get_patches();
         const auto num_patches = patches.size();
 
-        m_data_ids.clear();
         m_data_ids.reserve(num_patches);
-        m_patch_visible = m_states->get_patch_labels();
-        m_cell_visible = m_states->get_cell_labels();
-        m_implicit_visible.assign(m_states->get_num_implicits(), false);
-
         assert(m_patch_visible.size() == num_patches);
 
         for (size_t i = 0; i < num_patches; i++) {
@@ -227,10 +254,42 @@ private:
             int id = viewer.append_mesh();
             m_data_ids.push_back(id);
 
+            const int implicit_id = m_states->get_implicit_from_patch(i);
+
+            // Change the color intensity for different patches within the same
+            // implicit.
+            Eigen::RowVector4d color = m_states->get_implicit_color(implicit_id);
+            color.template segment<3>(0) +=
+                (Eigen::RowVector3d::Ones() - color.template segment<3>(0)) * (double)(i) /
+                (double)(num_patches * 2 + 1);
+
             viewer.data(id).set_mesh(vertices, patch_faces);
-            viewer.data(id).set_colors(0.5 * Eigen::RowVector3d::Random().array() + 0.5);
+            viewer.data(id).set_colors(color);
             viewer.data(id).set_visible(m_patch_visible[i]);
             viewer.data(id).double_sided = true;
+        }
+    }
+
+    void initialize_implicit_data(igl::opengl::glfw::Viewer& viewer)
+    {
+        const auto num_implicits = m_states->get_num_implicits();
+        m_implicit_data_ids.reserve(num_implicits);
+
+        for (size_t i = 0; i < num_implicits; i++) {
+            int id = viewer.append_mesh();
+            m_implicit_data_ids.push_back(id);
+
+            Eigen::RowVector4d implicit_color = m_states->get_implicit_color(i);
+            Eigen::Vector3d pt_color =
+                implicit_color.template segment<3>(0) +
+                (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.5;
+
+            const auto& fn = m_states->get_implicit_function(i);
+            const auto& pts = fn.get_control_points();
+
+            for (const auto& p : pts) {
+                viewer.data(id).add_points(p.transpose(), pt_color.transpose());
+            }
         }
     }
 
@@ -375,7 +434,8 @@ private:
     }
 
 private:
-    std::vector<int> m_data_ids;
+    std::vector<int> m_data_ids; // data per patch.
+    std::vector<int> m_implicit_data_ids; // data per implicit functions.
 
     std::vector<bool> m_patch_visible;
     std::vector<bool> m_cell_visible;
