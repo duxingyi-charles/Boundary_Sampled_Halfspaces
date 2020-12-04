@@ -25,7 +25,6 @@ public:
 
     const VertexArray& get_vertices() const { return m_vertices; }
     const FaceArray& get_faces() const { return m_faces; }
-    const MapArray& get_face_mapping() const { return m_face_mapping; }
     const auto& get_patches() const { return m_psi->get_patches(); }
     const auto& get_cells() const { return m_psi->get_cells(); }
     const auto& get_cell_labels() const { return m_psi->get_cell_labels(); }
@@ -67,12 +66,10 @@ private:
         }
 
         m_faces.resize(num_triangles, 3);
-        m_face_mapping.resize(num_triangles, 1);
         for (size_t i = 0; i < num_faces; i++) {
             m_faces(i, 0) = F[i][0];
             m_faces(i, 1) = F[i][1];
             m_faces(i, 2) = F[i][2];
-            m_face_mapping[i] = i;
         }
     }
 
@@ -80,7 +77,6 @@ private:
     std::unique_ptr<PSI> m_psi;
     VertexArray m_vertices;
     FaceArray m_faces;
-    MapArray m_face_mapping;
     Eigen::Matrix<double, 2, 3> m_bbox;
     const GridSpec& m_grid;
     std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
