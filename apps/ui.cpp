@@ -84,7 +84,7 @@ private:
 
         static auto hide_control_pts = [&](auto& viewer) {
             const auto num_implicits = m_states->get_num_implicits();
-            for (size_t i=0; i<num_implicits; i++) {
+            for (size_t i = 0; i < num_implicits; i++) {
                 const int id = m_implicit_data_ids[i];
                 viewer.data(id).set_visible(false);
                 m_implicit_visible[i] = false;
@@ -167,7 +167,7 @@ private:
                 if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
                     const size_t num_implicits = m_states->get_num_implicits();
                     m_implicit_visible.assign(num_implicits, true);
-                    for (size_t i=0; i<num_implicits; i++) {
+                    for (size_t i = 0; i < num_implicits; i++) {
                         update_implicit_visibility(viewer, i);
                     }
                 }
@@ -279,16 +279,11 @@ private:
             int id = viewer.append_mesh();
             m_implicit_data_ids.push_back(id);
 
-            Eigen::RowVector4d implicit_color = m_states->get_implicit_color(i);
-            Eigen::Vector3d pt_color =
-                implicit_color.template segment<3>(0) +
-                (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.5;
-
             const auto& fn = m_states->get_implicit_function(i);
             const auto& pts = fn.get_control_points();
 
             for (const auto& p : pts) {
-                viewer.data(id).add_points(p.transpose(), pt_color.transpose());
+                viewer.data(id).add_points(p.transpose(), get_control_pt_color(i));
             }
         }
     }
@@ -304,15 +299,18 @@ private:
             m_down_x = x;
             m_down_y = y;
             m_hit = false;
-            m_hit_patch = -1;
+            m_hit_implicit = -1;
             std::cout << "x: " << x << " y:" << y << std::endl;
+
             const auto num_patches = m_states->get_patches().size();
+            const auto num_implicits = m_states->get_num_implicits();
 
             // Check of points.
             m_active_point = -1;
-            for (size_t i = 0; i < num_patches; i++) {
-                auto pid = m_data_ids[i];
-                const auto& points = viewer.data(pid).points;
+            for (size_t i = 0; i < num_implicits; i++) {
+                if (!m_implicit_visible[i]) continue;
+                auto view_id = m_implicit_data_ids[i];
+                const auto& points = viewer.data(view_id).points;
                 const size_t num_pts = points.rows();
                 for (size_t j = 0; j < num_pts; j++) {
                     const Eigen::RowVector3d p = points.row(j).template segment<3>(0);
@@ -323,7 +321,7 @@ private:
                     if (std::abs(screen_p[0] - x) < 5 && std::abs(screen_p[1] - y) < 5) {
                         m_hit = true;
                         m_active_point = j;
-                        m_hit_patch = i;
+                        m_hit_implicit = i;
                         return false;
                     }
                 }
@@ -335,6 +333,7 @@ private:
             hit_patches.reserve(num_patches);
             for (size_t i = 0; i < num_patches; i++) {
                 if (!m_patch_visible[i]) continue;
+                if (!m_implicit_visible[m_states->get_implicit_from_patch(i)]) continue;
                 const auto pid = m_data_ids[i];
                 const auto& V = viewer.data(pid).V;
                 const auto& F = viewer.data(pid).F;
@@ -369,7 +368,7 @@ private:
                     if (z < best_z) {
                         best_hit = p;
                         best_z = z;
-                        m_hit_patch = patch_index;
+                        m_hit_implicit = m_states->get_implicit_from_patch(patch_index);
                     }
                 }
 
@@ -383,10 +382,10 @@ private:
 
         viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             if (m_hit && m_active_point >= 0) {
-                assert(m_hit_patch >= 0);
-                const auto pid = m_data_ids[m_hit_patch];
+                assert(m_hit_implicit >= 0);
+                const auto view_id = m_implicit_data_ids[m_hit_implicit];
                 Eigen::RowVector3d p =
-                    viewer.data(pid).points.row(m_active_point).template segment<3>(0);
+                    viewer.data(view_id).points.row(m_active_point).template segment<3>(0);
                 Eigen::RowVector3d n(0, 0, 1);
                 n = (viewer.core().view.block(0, 0, 3, 3).template cast<double>().inverse() *
                      n.transpose())
@@ -403,9 +402,8 @@ private:
                     viewer.core().viewport,
                     plane,
                     q);
-                m_points[m_active_point] = q;
-                viewer.data(pid).points.row(m_active_point).template segment<3>(0) = q;
-                viewer.data(pid).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
+                viewer.data(view_id).points.row(m_active_point).template segment<3>(0) = q;
+                viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
                 return true;
             }
             return false;
@@ -416,21 +414,41 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             if (x == m_down_x && y == m_down_y && m_hit) {
                 if (m_active_point < 0) {
-                    m_points.push_back(m_hit_pt);
-                    Eigen::Matrix<double, 1, 3> color(1, 1, 0);
-                    const auto pid = m_data_ids[m_hit_patch];
-                    viewer.data(pid).add_points(m_points.back(), color);
+
+                    const auto view_id = m_implicit_data_ids[m_hit_implicit];
+                    viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
+                    // TODO: Update implict function.
                     m_hit = false;
-                    m_hit_patch = -1;
+                    m_hit_implicit = -1;
                     m_active_point = -1;
                     return true;
                 }
+            } else if (m_hit) {
+                // Control point moved.
+                assert(m_hit_implicit >= 0);
+                assert(m_active_point >= 0);
+                auto view_id = m_implicit_data_ids[m_hit_implicit];
+
+                const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+                auto pts = fn.get_control_points();
+                pts[m_active_point] = viewer.data(view_id).points.row(m_active_point).template segment<3>(0);
+                m_states->update_control_points(m_hit_implicit, pts);
+                initialize_data(viewer);
             }
             m_hit = false;
-            m_hit_patch = -1;
+            m_hit_implicit = -1;
             m_active_point = -1;
             return false;
         };
+    }
+
+    Eigen::RowVector3d get_control_pt_color(int implicit_id) const
+    {
+        Eigen::RowVector4d implicit_color = m_states->get_implicit_color(implicit_id);
+        Eigen::Vector3d pt_color =
+            implicit_color.template segment<3>(0) +
+            (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.5;
+        return pt_color;
     }
 
 private:
@@ -443,10 +461,9 @@ private:
 
     igl::opengl::glfw::imgui::ImGuiMenu m_menu;
     PSIStates* m_states;
-    std::vector<Eigen::RowVector3d> m_points;
     int m_active_point = -1;
     bool m_hit;
-    int m_hit_patch = -1;
+    int m_hit_implicit = -1;
     Eigen::RowVector3d m_hit_pt;
     double m_down_x, m_down_y;
 };

@@ -55,6 +55,13 @@ public:
         return *m_implicits[i];
     }
 
+    void update_control_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts) {
+        m_implicits[implicit_id]->set_control_points(pts);
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
 private:
     void initialize_states()
     {
