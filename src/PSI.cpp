@@ -10,6 +10,9 @@
 #include <limits>
 #include <map>
 
+// cross product
+#include <Eigen/Geometry>
+
 // graph cut
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/boykov_kolmogorov_max_flow.hpp>
@@ -19,9 +22,111 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
     Impl_ptr = &implicits;
 
     compute_arrangement_for_graph_cut(grid, implicits);
+    arrangement_ready = true;
     ready_for_graph_cut = true;
     graph_cut();
 }
+
+void PSI::process_samples() {
+    if (arrangement_ready) {
+        process_samples(V,F,P,P_Impl,Impl_ptr,P_samples,P_dist);
+        ready_for_graph_cut = true;
+    } else {
+        std::cout << "Error: you should compute arrangement before handling samples." << std::endl;
+    }
+}
+
+// static process_samples function
+void PSI::process_samples(
+        //input
+        const std::vector<Point> &V,
+        const std::vector<std::vector<int>> &F,
+        const std::vector<std::vector<int>> &P,
+        const std::vector<int> &P_Impl,
+        const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr,
+        //output
+        std::vector<std::vector<int>> &P_samples,
+        std::vector<double> &P_dist
+){
+    // compute distance weighted area, as well as sample points of patches
+    std::vector<std::vector<double>> sample_min_dist;
+    std::vector<std::vector<int>> sample_nearest_patch;
+    double infinity = std::numeric_limits<double>::infinity();
+    for (const auto &impl : (*Impl_ptr)) {
+        int num_samples = impl->get_sample_points().size();
+        sample_min_dist.emplace_back(num_samples,infinity);
+        sample_nearest_patch.emplace_back(num_samples,-1);
+    }
+
+    // compute distance weighted area of patches
+    P_dist.clear();
+    P_dist.resize(P.size(), 0);
+
+    for (int i = 0; i < P.size(); ++i) {
+        auto &patch = P[i];
+        int impl = P_Impl[i];
+        auto samples = (*Impl_ptr)[impl]->get_sample_points();
+        for (int f : patch) {
+            auto &face = F[f];
+            // compute center of the face
+            Point face_center(0,0,0);
+            for (int v : face) {
+                face_center += V[v];
+            }
+            face_center /= face.size();
+            // compute distance between face center and nearest sample point
+            double min_distance = infinity;
+            for (int j = 0; j < samples.size(); ++j) {
+                double distance = (face_center - samples[j]).norm();
+                if (distance < sample_min_dist[impl][j]) {
+                    sample_min_dist[impl][j] = distance;
+                    sample_nearest_patch[impl][j] = i;
+                }
+                if (distance < min_distance) {
+                    min_distance = distance;
+                }
+            }
+
+            // compute distance weighted area of the face
+            double weighted_area = 0;
+            if (face.size() == 3) {  //triangle
+                const Point &p1 = V[face[0]];
+                const Point &p2 = V[face[1]];
+                const Point &p3 = V[face[2]];
+                double tri_area = (p2-p1).cross(p3-p1).norm()/2;
+                weighted_area = min_distance * tri_area;
+            }
+            else {   // general polygon
+                for (size_t vi=0; vi < face.size(); ++vi) {
+                    size_t vj = (vi + 1) % face.size();
+                    const Point &p1 = V[face[vi]];
+                    const Point &p2 = V[face[vj]];
+                    double area = ((p1 - face_center).cross(p2 - face_center)).norm() / 2;
+
+                    weighted_area += min_distance * area;
+                }
+            }
+            //
+            P_dist[i] += weighted_area;
+        }
+    }
+    for (auto &d : P_dist) {
+        if (!isfinite((d))) d = infinity;
+    }
+
+    // extract sample points on patches
+    P_samples.clear();
+    P_samples.resize(P.size());
+    for (auto& nearest_patches : sample_nearest_patch) {
+        for (int i = 0; i < nearest_patches.size(); ++i) {
+            int nearest_patch = nearest_patches[i];
+            if (nearest_patch != -1) {
+                P_samples[nearest_patch].push_back(i);
+            }
+        }
+    }
+}
+
 
 void PSI::graph_cut() {
     if (ready_for_graph_cut) {
