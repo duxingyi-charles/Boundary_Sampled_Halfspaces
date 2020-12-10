@@ -8,8 +8,7 @@
 #include <queue>
 #include <set>
 
-#include <limits>
-#include <Eigen/Geometry>
+//#include <limits>
 
 #include "ScopedTimer.h"
 
@@ -26,27 +25,25 @@ void Topo_PSI::compute_arrangement_for_graph_cut(const GridSpec &grid,
         ScopedTimer<> timer("topological arrangement");
         int cur_impl = 0;
         for (const auto& rbf : implicits) {
-            compute_arrangement(*rbf, cur_impl);
+            insert_implicit_to_arrangement(*rbf, cur_impl);
             ++cur_impl;
         }
-    }
-
-    // prepare for graph-cut
-    {
-        ScopedTimer<> timer("graph cut");
-        prepare_graph_data();
-    }
-
-    // update F
-    {
-        ScopedTimer<> timer("update F");
+        //
+        collect_patch_block();
         update_F();
+        arrangement_ready = true;
     }
 
+    // process samples, get ready for graph-cut
+    {
+        ScopedTimer<> timer("process samples");
+        process_samples();
+    }
 }
 
 
-void Topo_PSI::compute_arrangement(const Sampled_Implicit &sImplicit, int cur_Impl) {
+
+void Topo_PSI::insert_implicit_to_arrangement(const Sampled_Implicit &sImplicit, int cur_Impl)  {
     // record the implicit
 //    int cur_Impl = Impl.size();
 //    Impl.push_back(&sImplicit);
@@ -400,7 +397,7 @@ void Topo_PSI::compute_arrangement(const Sampled_Implicit &sImplicit, int cur_Im
     ///
 }
 
-void Topo_PSI::prepare_graph_data() {
+void Topo_PSI::collect_patch_block() {
     /// step 1: group faces into patches
 
     // collect faces on implicit surfaces
@@ -460,72 +457,6 @@ void Topo_PSI::prepare_graph_data() {
     P_Impl.reserve(P.size());
     for (auto& patch : P) {
         P_Impl.push_back(F_Impl[patch.front()]);
-    }
-
-    // compute distance weighted area, as well as sample points of patches
-    std::vector<std::vector<double>> sample_min_dist;
-    std::vector<std::vector<int>> sample_nearest_patch;
-    double infinity = std::numeric_limits<double>::infinity();
-    for (const auto &impl : (*Impl_ptr)) {
-        int num_samples = impl->get_sample_points().size();
-        sample_min_dist.emplace_back(num_samples,infinity);
-        sample_nearest_patch.emplace_back(num_samples,-1);
-    }
-
-    // compute distance weighted area of patches
-    P_dist.clear();
-    P_dist.resize(P.size(), 0);
-    for (int i = 0; i < P.size(); ++i) {
-        auto &patch = P[i];
-        int impl = P_Impl[i];
-        auto samples = (*Impl_ptr)[impl]->get_sample_points();
-        for (int f : patch) {
-            // compute center of the face
-            auto &face = Face_edges[f];
-            Point face_center(0,0,0);
-            for (int e : face) {
-                face_center += V[E[e].first];
-                face_center += V[E[e].second];
-            }
-            face_center /= (2 * face.size());
-            // distance weighted area
-            double weighted_area = 0;
-            for (int e : face) {
-                const Point &p1 = V[E[e].first];
-                const Point &p2 = V[E[e].second];
-                double area = ((p1-face_center).cross(p2-face_center)).norm()/2;
-                Point tri_center = (p1+p2+face_center)/3;
-                double min_distance = infinity;
-                for (int j = 0; j < samples.size(); ++j) {
-                    double distance = (tri_center - samples[j]).norm();
-                    if (distance < sample_min_dist[impl][j]) {
-                        sample_min_dist[impl][j] = distance;
-                        sample_nearest_patch[impl][j] = i;
-                    }
-                    if (distance < min_distance) {
-                        min_distance = distance;
-                    }
-                }
-                weighted_area += min_distance * area;
-            }
-            //
-            P_dist[i] += weighted_area;
-        }
-    }
-    for (auto &d : P_dist) {
-        if (!isfinite((d))) d = infinity;
-    }
-
-    // extract sample points on patches
-    P_samples.clear();
-    P_samples.resize(P.size());
-    for (auto& nearest_patches : sample_nearest_patch) {
-        for (int i = 0; i < nearest_patches.size(); ++i) {
-            int nearest_patch = nearest_patches[i];
-            if (nearest_patch != -1) {
-                P_samples[nearest_patch].push_back(i);
-            }
-        }
     }
 
     /// step 2: group cells into blocks
@@ -617,9 +548,8 @@ void Topo_PSI::prepare_graph_data() {
             }
         }
     }
-
-
 }
+
 
 
 
