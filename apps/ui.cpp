@@ -57,12 +57,15 @@ private:
 
         static auto update_cell_visibility = [&](auto& viewer, size_t i) {
             const auto& cell = m_states->get_cells()[i];
+            const bool curr_cell_visible = m_cell_visible[i];
             const auto& adj_list = m_states->get_cell_patch_adjacency();
             for (auto patch_index : cell) {
                 const auto& adj_cells = adj_list[patch_index];
                 bool val = false;
                 for (auto cell_index : adj_cells) {
-                    val |= m_cell_visible[cell_index];
+                    if (m_cell_visible[cell_index] != curr_cell_visible) {
+                        val = true;
+                    }
                 }
 
                 set_patch_visible(viewer, patch_index, val);
@@ -304,7 +307,6 @@ private:
                 viewer.data(id).add_points(p.transpose(), get_sample_pt_color(i));
             }
         }
-
     }
 
     void initialize_picking(igl::opengl::glfw::Viewer& viewer)
@@ -324,8 +326,8 @@ private:
             const auto num_patches = m_states->get_patches().size();
             const auto num_implicits = m_states->get_num_implicits();
 
-            // Check of points.
-            m_active_point = -1;
+            // Check of control points.
+            m_active_control_point = -1;
             for (size_t i = 0; i < num_implicits; i++) {
                 if (!m_implicit_visible[i]) continue;
                 auto view_id = m_control_view_ids[i];
@@ -339,7 +341,28 @@ private:
                         viewer.core().viewport);
                     if (std::abs(screen_p[0] - x) < 5 && std::abs(screen_p[1] - y) < 5) {
                         m_hit = true;
-                        m_active_point = j;
+                        m_active_control_point = j;
+                        m_hit_implicit = i;
+                        return false;
+                    }
+                }
+            }
+
+            // Check of sample points.
+            m_active_sample_point = -1;
+            for (size_t i = 0; i < num_implicits; i++) {
+                auto view_id = m_sample_view_ids[i];
+                const auto& points = viewer.data(view_id).points;
+                const size_t num_pts = points.rows();
+                for (size_t j = 0; j < num_pts; j++) {
+                    const Eigen::RowVector3d p = points.row(j).template segment<3>(0);
+                    auto screen_p = igl::project(p.template cast<float>().transpose().eval(),
+                        viewer.core().view,
+                        viewer.core().proj,
+                        viewer.core().viewport);
+                    if (std::abs(screen_p[0] - x) < 5 && std::abs(screen_p[1] - y) < 5) {
+                        m_hit = true;
+                        m_active_sample_point = j;
                         m_hit_implicit = i;
                         return false;
                     }
@@ -395,16 +418,14 @@ private:
                 m_hit = true;
                 return false;
             }
-            m_active_point = -1;
+            m_active_control_point = -1;
             return false;
         };
 
         viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
-            if (m_hit && m_active_point >= 0) {
-                assert(m_hit_implicit >= 0);
-                const auto view_id = m_control_view_ids[m_hit_implicit];
+            auto update_point = [&](int view_id, int point_id) {
                 Eigen::RowVector3d p =
-                    viewer.data(view_id).points.row(m_active_point).template segment<3>(0);
+                    viewer.data(view_id).points.row(point_id).template segment<3>(0);
                 Eigen::RowVector3d n(0, 0, 1);
                 n = (viewer.core().view.block(0, 0, 3, 3).template cast<double>().inverse() *
                      n.transpose())
@@ -421,9 +442,20 @@ private:
                     viewer.core().viewport,
                     plane,
                     q);
-                viewer.data(view_id).points.row(m_active_point).template segment<3>(0) = q;
+                viewer.data(view_id).points.row(point_id).template segment<3>(0) = q;
                 viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
-                return true;
+            };
+
+            if (m_hit) {
+                if (m_active_control_point >= 0) {
+                    const auto view_id = m_control_view_ids[m_hit_implicit];
+                    update_point(view_id, m_active_control_point);
+                    return true;
+                } else if (m_active_sample_point >= 0) {
+                    const auto view_id = m_sample_view_ids[m_hit_implicit];
+                    update_point(view_id, m_active_sample_point);
+                    return true;
+                }
             }
             return false;
         };
@@ -432,31 +464,42 @@ private:
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             if (x == m_down_x && y == m_down_y && m_hit) {
-                if (m_active_point < 0) {
-
+                if (m_active_control_point < 0 && m_active_sample_point < 0) {
                     const auto view_id = m_control_view_ids[m_hit_implicit];
                     viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
                     // TODO: Update implict function.
                     m_hit = false;
                     m_hit_implicit = -1;
-                    m_active_point = -1;
+                    m_active_control_point = -1;
+                    m_active_sample_point = -1;
                     return true;
                 }
             } else if (m_hit) {
                 // Control point moved.
                 assert(m_hit_implicit >= 0);
-                assert(m_active_point >= 0);
-                auto view_id = m_control_view_ids[m_hit_implicit];
+                assert(m_active_control_point >= 0 || m_active_sample_point >= 0);
 
                 const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                auto pts = fn.get_control_points();
-                pts[m_active_point] = viewer.data(view_id).points.row(m_active_point).template segment<3>(0);
-                m_states->update_control_points(m_hit_implicit, pts);
-                initialize_data(viewer);
+                if (m_active_control_point >= 0) {
+                    auto view_id = m_control_view_ids[m_hit_implicit];
+                    auto pts = fn.get_control_points();
+                    pts[m_active_control_point] =
+                        viewer.data(view_id).points.row(m_active_control_point).template segment<3>(0);
+                    m_states->update_control_points(m_hit_implicit, pts);
+                    initialize_data(viewer);
+                } else {
+                    auto view_id = m_sample_view_ids[m_hit_implicit];
+                    auto pts = fn.get_sample_points();
+                    pts[m_active_sample_point] =
+                        viewer.data(view_id).points.row(m_active_sample_point).template segment<3>(0);
+                    m_states->update_sample_points(m_hit_implicit, pts);
+                    initialize_data(viewer);
+                }
             }
             m_hit = false;
             m_hit_implicit = -1;
-            m_active_point = -1;
+            m_active_control_point = -1;
+            m_active_sample_point = -1;
             return false;
         };
     }
@@ -487,7 +530,8 @@ private:
 
     igl::opengl::glfw::imgui::ImGuiMenu m_menu;
     PSIStates* m_states;
-    int m_active_point = -1;
+    int m_active_control_point = -1;
+    int m_active_sample_point = -1;
     bool m_hit;
     int m_hit_implicit = -1;
     Eigen::RowVector3d m_hit_pt;

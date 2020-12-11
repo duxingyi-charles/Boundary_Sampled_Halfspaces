@@ -62,6 +62,13 @@ public:
         initialize_colors();
     }
 
+    void update_sample_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts) {
+        m_implicits[implicit_id]->set_sample_points(pts);
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
 private:
     void initialize_states()
     {
@@ -100,7 +107,7 @@ private:
         const auto num_implicits = m_implicits.size();
         m_colors.setRandom(num_implicits, 4);
         m_colors = m_colors.array() * 0.5 + 0.5;
-        m_colors.col(3).setConstant(0.75);
+        m_colors.col(3).setConstant(0.5);
     }
 
 private:
