@@ -78,15 +78,19 @@ private:
                 }
             }
 
-            const auto implicit_id = m_implicit_data_ids[i];
-            viewer.data(implicit_id).set_visible(m_implicit_visible[i]);
+            const auto control_id = m_control_view_ids[i];
+            viewer.data(control_id).set_visible(m_implicit_visible[i]);
+            const auto sample_id = m_sample_view_ids[i];
+            viewer.data(sample_id).set_visible(m_implicit_visible[i]);
         };
 
         static auto hide_control_pts = [&](auto& viewer) {
             const auto num_implicits = m_states->get_num_implicits();
             for (size_t i = 0; i < num_implicits; i++) {
-                const int id = m_implicit_data_ids[i];
-                viewer.data(id).set_visible(false);
+                const int control_id = m_control_view_ids[i];
+                viewer.data(control_id).set_visible(false);
+                const int sample_id = m_sample_view_ids[i];
+                viewer.data(sample_id).set_visible(true);
                 m_implicit_visible[i] = false;
             }
         };
@@ -213,7 +217,8 @@ private:
         viewer.data().clear();
 
         m_data_ids.clear();
-        m_implicit_data_ids.clear();
+        m_control_view_ids.clear();
+        m_sample_view_ids.clear();
     }
 
     void initialize_data(igl::opengl::glfw::Viewer& viewer)
@@ -273,11 +278,11 @@ private:
     void initialize_implicit_data(igl::opengl::glfw::Viewer& viewer)
     {
         const auto num_implicits = m_states->get_num_implicits();
-        m_implicit_data_ids.reserve(num_implicits);
+        m_control_view_ids.reserve(num_implicits);
 
         for (size_t i = 0; i < num_implicits; i++) {
             int id = viewer.append_mesh();
-            m_implicit_data_ids.push_back(id);
+            m_control_view_ids.push_back(id);
 
             const auto& fn = m_states->get_implicit_function(i);
             const auto& pts = fn.get_control_points();
@@ -286,6 +291,20 @@ private:
                 viewer.data(id).add_points(p.transpose(), get_control_pt_color(i));
             }
         }
+
+        m_sample_view_ids.reserve(num_implicits);
+        for (size_t i = 0; i < num_implicits; i++) {
+            int id = viewer.append_mesh();
+            m_sample_view_ids.push_back(id);
+
+            const auto& fn = m_states->get_implicit_function(i);
+            const auto& pts = fn.get_sample_points();
+
+            for (const auto& p : pts) {
+                viewer.data(id).add_points(p.transpose(), get_sample_pt_color(i));
+            }
+        }
+
     }
 
     void initialize_picking(igl::opengl::glfw::Viewer& viewer)
@@ -309,7 +328,7 @@ private:
             m_active_point = -1;
             for (size_t i = 0; i < num_implicits; i++) {
                 if (!m_implicit_visible[i]) continue;
-                auto view_id = m_implicit_data_ids[i];
+                auto view_id = m_control_view_ids[i];
                 const auto& points = viewer.data(view_id).points;
                 const size_t num_pts = points.rows();
                 for (size_t j = 0; j < num_pts; j++) {
@@ -383,7 +402,7 @@ private:
         viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             if (m_hit && m_active_point >= 0) {
                 assert(m_hit_implicit >= 0);
-                const auto view_id = m_implicit_data_ids[m_hit_implicit];
+                const auto view_id = m_control_view_ids[m_hit_implicit];
                 Eigen::RowVector3d p =
                     viewer.data(view_id).points.row(m_active_point).template segment<3>(0);
                 Eigen::RowVector3d n(0, 0, 1);
@@ -415,7 +434,7 @@ private:
             if (x == m_down_x && y == m_down_y && m_hit) {
                 if (m_active_point < 0) {
 
-                    const auto view_id = m_implicit_data_ids[m_hit_implicit];
+                    const auto view_id = m_control_view_ids[m_hit_implicit];
                     viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
                     // TODO: Update implict function.
                     m_hit = false;
@@ -427,7 +446,7 @@ private:
                 // Control point moved.
                 assert(m_hit_implicit >= 0);
                 assert(m_active_point >= 0);
-                auto view_id = m_implicit_data_ids[m_hit_implicit];
+                auto view_id = m_control_view_ids[m_hit_implicit];
 
                 const auto& fn = m_states->get_implicit_function(m_hit_implicit);
                 auto pts = fn.get_control_points();
@@ -451,9 +470,16 @@ private:
         return pt_color;
     }
 
+    Eigen::RowVector3d get_sample_pt_color(int implicit_id) const
+    {
+        Eigen::Vector3d pt_color(1, 1, 0);
+        return pt_color;
+    }
+
 private:
     std::vector<int> m_data_ids; // data per patch.
-    std::vector<int> m_implicit_data_ids; // data per implicit functions.
+    std::vector<int> m_control_view_ids; // control point views.
+    std::vector<int> m_sample_view_ids; // sample point views.
 
     std::vector<bool> m_patch_visible;
     std::vector<bool> m_cell_visible;

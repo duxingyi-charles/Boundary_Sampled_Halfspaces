@@ -100,7 +100,7 @@ private:
         const auto num_implicits = m_implicits.size();
         m_colors.setRandom(num_implicits, 4);
         m_colors = m_colors.array() * 0.5 + 0.5;
-        m_colors.col(3).setOnes();
+        m_colors.col(3).setConstant(0.75);
     }
 
 private:
