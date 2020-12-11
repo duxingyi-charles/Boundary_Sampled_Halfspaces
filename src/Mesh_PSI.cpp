@@ -113,8 +113,18 @@ void Mesh_PSI::merge_meshes(const std::vector<IGL_Mesh>& meshes,
 }
 
 
-
 void Mesh_PSI::compute_arrangement_for_graph_cut(
+        const GridSpec &grid,
+        const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
+    // arrangement computation independent of samples
+    compute_arrangement(grid, implicits);
+    arrangement_ready = true;
+    //
+    process_samples();
+}
+
+
+void Mesh_PSI::compute_arrangement(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits)
 {
@@ -164,68 +174,17 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
         result_face_to_implicit(i) = face_to_mesh(source_faces(i)) - 1;
     }
 
-
-    // compute distance weighted area, as well as sample points of patches
-    std::vector<std::vector<double>> sample_min_dist;
-    std::vector<std::vector<int>> sample_nearest_patch;
-    double infinity = std::numeric_limits<double>::infinity();
-    for (const auto& fn : implicits) {
-        int num_samples = fn->get_sample_points().size();
-        sample_min_dist.emplace_back(num_samples,infinity);
-        sample_nearest_patch.emplace_back(num_samples,-1);
-    }
-
-    // compute distance weighted area of patches
     auto cells = engine->get_cells();
     int num_patch = cells.rows();
 
-    //distance weighted area of each patch
-    std::vector<double> patch_dist(num_patch, 0);
-    //index of implicit for each patch
     std::vector<int> patch_impl(num_patch, -1);
-
     auto face_to_patch = engine->get_patches();
-
 
     for (int i=0; i<F.size(); i++) {
         int implicit_id = result_face_to_implicit(i);
         if (implicit_id == -1) continue; // the current face belongs to grid cube
         int patch_id = face_to_patch(i);
         patch_impl[patch_id] = implicit_id;
-
-        auto samples = implicits[implicit_id]->get_sample_points();
-
-        Point p1 = V[F[i][0]];
-        Point p2 = V[F[i][1]];
-        Point p3 = V[F[i][2]];
-
-        auto face_center = (p1 + p2 + p3)/3;
-        // distance weighted area
-        double tri_area = (p2-p1).cross(p3-p1).norm()/2;
-        double min_distance = infinity;
-        for (int j = 0; j < samples.size(); ++j) {
-            double distance = (face_center - samples[j]).norm();
-            if (distance < sample_min_dist[implicit_id][j]) {
-                sample_min_dist[implicit_id][j] = distance;
-                sample_nearest_patch[implicit_id][j] = patch_id;
-            }
-            if (distance < min_distance) {
-                min_distance = distance;
-            }
-        }
-        patch_dist[patch_id] += min_distance * tri_area;
-    }
-
-    // extract sample points on patches
-    std::vector<std::vector<int>> patch_samples(num_patch);
-
-    for (auto& nearest_patches : sample_nearest_patch) {
-        for (int i = 0; i < nearest_patches.size(); ++i) {
-            int nearest_patch = nearest_patches[i];
-            if (nearest_patch != -1) {
-                patch_samples[nearest_patch].push_back(i);
-            }
-        }
     }
 
     //blocks incident to each patch
@@ -241,8 +200,6 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
     // remove patches from the grid cube
     std::vector<int> P_old_to_new_index(patch_impl.size());
 
-    P_dist.clear();
-    P_samples.clear();
     P_block.clear();
     P_sign.clear();
     P_Impl.clear();
@@ -251,12 +208,6 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
     for (int i=0; i < patch_impl.size(); ++i) {
         if (patch_impl[i] != -1) {
             P_old_to_new_index[i] = patch_count;
-            if (isfinite(patch_dist[i])) {
-                P_dist.push_back(patch_dist[i]);
-            } else {
-                P_dist.push_back(infinity);
-            }
-            P_samples.emplace_back(patch_samples[i]);
             P_block.emplace_back(patch_block[i]);
             P_sign.emplace_back(patch_sign[i]);
             P_Impl.push_back(patch_impl[i]);

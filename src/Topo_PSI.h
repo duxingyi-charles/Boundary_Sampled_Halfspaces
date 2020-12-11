@@ -24,11 +24,16 @@ private:
     void init_grid(const Point &p_min, const Point &p_max,
                    int n_cell_x, int n_cell_y, int n_cell_z);
 
-    void compute_arrangement(const Sampled_Implicit &sImplicit, int cur_Impl);
+    // update arrangement when a new sImplicit is inserted
+    void insert_implicit_to_arrangement(const Sampled_Implicit &sImplicit, int cur_Impl);
 
-    void prepare_graph_data();
+    // after arrangement is done:
+    // group faces into patches
+    // group cells into blocks
+    // build links between patches, blocks and implicits
+    void collect_patch_block();
 
-    // the algorithm represent faces as list of boundary edge indices
+    // the arrangement algorithm represent faces as list of boundary edge indices
     // this function convert them to faces represented by a list of boundary vertex indices
     // and save them in F
     void update_F();

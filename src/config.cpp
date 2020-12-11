@@ -4,6 +4,7 @@
 #include <Cylinder_sImplicit.h>
 #include <Hermite_RBF_sImplicit.h>
 #include <Plane_sImplicit.h>
+#include <Quadric_sImplicit.h>
 #include <Sampled_Implicit.h>
 #include <Sphere_sImplicit.h>
 
@@ -70,6 +71,30 @@ std::unique_ptr<Sampled_Implicit> initialize_Plane(
     if (entry.contains("samples")) {
         std::string sample_file =
             path_name + entry["samples"].get<std::string>();
+        std::vector<Point> pts;
+        fn->import_xyz(sample_file, pts);
+        fn->set_sample_points(pts);
+    }
+
+    return fn;
+}
+
+std::unique_ptr<Sampled_Implicit> initialize_Quadric(
+        const nlohmann::json& entry, const std::string& path_name) {
+    int numCoef = 10;
+
+    assert(entry.contains("coef"));
+    assert(entry["coef"].size() == numCoef);
+    Vector10d coef;
+    for (int i = 0; i < numCoef; ++i) {
+        coef[i] = entry["coef"][i].get<double>();
+    }
+
+    auto fn = std::make_unique<Quadric_sImplicit>(coef);
+
+    if (entry.contains("samples")) {
+        std::string sample_file =
+                path_name + entry["samples"].get<std::string>();
         std::vector<Point> pts;
         fn->import_xyz(sample_file, pts);
         fn->set_sample_points(pts);
@@ -204,9 +229,12 @@ initialize_sampled_implicit_functions(const std::string& config_file) {
             implicit_functions.push_back(initialize_Cylinder(entry, path_name));
         } else if (entry["type"] == "cone") {
             implicit_functions.push_back(initialize_Cone(entry, path_name));
+        } else if (entry["type"] == "quadric") {
+            implicit_functions.push_back(initialize_Quadric(entry, path_name));
         } else {
+            std::string type = entry["type"];
             throw std::runtime_error(
-                "Unsupported implicit function type detected");
+                type+":Unsupported implicit function type detected");
         }
     }
 

@@ -17,7 +17,7 @@ typedef std::pair<int,int> Edge;
 class PSI {
 
 public:
-    PSI() : Impl_ptr(), ready_for_graph_cut(false), graph_cut_finished(false) {};
+    PSI() : Impl_ptr(), arrangement_ready(false),ready_for_graph_cut(false), graph_cut_finished(false) {};
     virtual ~PSI() = default;
 
     void run(const GridSpec &grid,
@@ -29,6 +29,19 @@ protected:
     virtual void compute_arrangement_for_graph_cut(
             const GridSpec &grid,
             const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) = 0;
+
+    void process_samples();
+    static void process_samples(
+            //input
+            const std::vector<Point> &V,
+            const std::vector<std::vector<int>> &F,
+            const std::vector<std::vector<int>> &P,
+            const std::vector<int> &P_Impl,
+            const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr,
+            //output
+            std::vector<std::vector<int>> &P_samples,
+            std::vector<double> &P_dist
+    );
 
     void graph_cut();
     static void graph_cut(
@@ -68,6 +81,7 @@ protected:
     std::vector<int> F_Impl;
 
     // --- data for graph-cut ---
+    bool arrangement_ready;
     bool ready_for_graph_cut;
     // (unordered) list of faces on each patch
     std::vector<std::vector<int>> P;

@@ -24,6 +24,10 @@ private:
             const GridSpec &grid,
             const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) override;
 
+    void compute_arrangement(
+            const GridSpec &grid,
+            const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
+
     static IGL_Mesh generate_cube(const GridSpec& grid_spec);
 
     static IGL_Mesh marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec);
