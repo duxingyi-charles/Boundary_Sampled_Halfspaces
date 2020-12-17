@@ -17,13 +17,20 @@ typedef std::pair<int,int> Edge;
 class PSI {
 
 public:
-    PSI() : Impl_ptr(), arrangement_ready(false),ready_for_graph_cut(false), graph_cut_finished(false) {};
+    PSI() : Impl_ptr(), arrangement_ready(false),ready_for_graph_cut(false),use_distance_weighted_area(false),graph_cut_finished(false) {};
     virtual ~PSI() = default;
 
     void run(const GridSpec &grid,
              std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
 
     bool export_data(const std::string &filename) const;
+
+    // Algorithms for reverse engineering
+
+    // after running PSI on a dense sampling,
+    // find a subset of samples that produce the same result as the original dense sampling
+    void reduce_samples();
+
 
 protected:
     virtual void compute_arrangement_for_graph_cut(
@@ -38,6 +45,7 @@ protected:
             const std::vector<std::vector<int>> &P,
             const std::vector<int> &P_Impl,
             const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr,
+            bool  use_distance_weighted_area,
             //output
             std::vector<std::vector<int>> &P_samples,
             std::vector<double> &P_dist
@@ -55,6 +63,10 @@ protected:
             std::vector<bool> &B_label,
             std::vector<bool> &P_label
     );
+
+
+
+
 
 public:
     const std::vector<Point>& get_vertices() const { return V; }
@@ -84,6 +96,8 @@ protected:
     std::vector<int> P_Impl;
     // indices of sample points on each patch
     std::vector<std::vector<int>> P_samples;
+    // flag: use distance weighted area or not
+    bool use_distance_weighted_area;
     // distance weighted area of each patch
     std::vector<double> P_dist;
     // (unordered) list of boundary patches of each block

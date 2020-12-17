@@ -10,6 +10,10 @@
 #include <limits>
 #include <map>
 
+#include <cmath>
+
+#include "ScopedTimer.h"
+
 // cross product
 #include <Eigen/Geometry>
 
@@ -29,7 +33,7 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
 
 void PSI::process_samples() {
     if (arrangement_ready) {
-        process_samples(V,F,P,P_Impl,Impl_ptr,P_samples,P_dist);
+        process_samples(V,F,P,P_Impl,Impl_ptr,use_distance_weighted_area,P_samples,P_dist);
         ready_for_graph_cut = true;
     } else {
         std::cout << "Error: you should compute arrangement before handling samples." << std::endl;
@@ -44,6 +48,7 @@ void PSI::process_samples(
         const std::vector<std::vector<int>> &P,
         const std::vector<int> &P_Impl,
         const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr,
+        bool use_distance_weighted_area,
         //output
         std::vector<std::vector<int>> &P_samples,
         std::vector<double> &P_dist
@@ -94,7 +99,12 @@ void PSI::process_samples(
                 const Point &p2 = V[face[1]];
                 const Point &p3 = V[face[2]];
                 double tri_area = (p2-p1).cross(p3-p1).norm()/2;
-                weighted_area = min_distance * tri_area;
+                if (use_distance_weighted_area) {
+                    weighted_area = min_distance * tri_area;
+                } else {
+                    weighted_area = tri_area;
+                }
+
             }
             else {   // general polygon
                 for (size_t vi=0; vi < face.size(); ++vi) {
@@ -102,8 +112,11 @@ void PSI::process_samples(
                     const Point &p1 = V[face[vi]];
                     const Point &p2 = V[face[vj]];
                     double area = ((p1 - face_center).cross(p2 - face_center)).norm() / 2;
-
-                    weighted_area += min_distance * area;
+                    if (use_distance_weighted_area) {
+                        weighted_area += min_distance * area;
+                    } else {
+                        weighted_area += area;
+                    }
                 }
             }
             //
@@ -130,6 +143,7 @@ void PSI::process_samples(
 
 void PSI::graph_cut() {
     if (ready_for_graph_cut) {
+        ScopedTimer<> timer("graph cut");
         graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,
                   B_label,P_label);
         graph_cut_finished = true;
@@ -496,3 +510,99 @@ bool PSI::export_data(const std::string &filename) const
     std::cout << "export_data finish: " << filename << std::endl;
     return true;
 }
+
+
+// Algorithms for reverse engineering
+
+void PSI::reduce_samples() {
+    // should first run PSI on dense samples
+    if (!graph_cut_finished) {
+        return;
+    }
+    //
+    // Note: current implementation is only suitable for non-distance-weighted patch area
+    // If the patch area is not weighted by distance to samples,
+    // then there is no need to update P_dist
+
+    // init samples
+    int num_patch = P_samples.size();
+    std::vector<std::vector<int>> P_samples_dense = P_samples;
+    std::vector<std::vector<int>> P_samples_sparse(num_patch);  // no samples at all
+
+    std::vector<bool> B_label_sparse;
+    std::vector<bool> P_label_sparse;
+
+    graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,B_label_sparse,P_label_sparse);
+    int num_diff_label = 0;
+    for (int p=0; p<num_patch; ++p) {
+        if (P_label[p] != P_label_sparse[p]) {
+            ++num_diff_label;
+        }
+    }
+
+    int num_iter = 0;
+    while (num_diff_label != 0) {
+        ++num_iter;
+        std::cout << "iter " << num_iter << ": " << num_diff_label << " different patch labels." << std::endl;
+
+        // find missing patch with largest area and some samples on it
+        double max_area = -1;
+        double max_area_patch = -1;
+        for (int p = 0; p < num_patch; ++p) {
+            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty()) {
+                if (P_dist[p] > max_area) {
+                    max_area = P_dist[p];
+                    max_area_patch = p;
+                }
+            }
+        }
+
+        if (max_area_patch == -1) { // no patch found but graph-cut result is not the same
+            std::cout << "sample reduction failed." << std::endl;
+            return;
+        }
+
+        // find the most centered sample on the patch
+        double min_squared_dist = std::numeric_limits<double>::infinity();
+        double min_i = -1;
+
+        int impl = P_Impl[max_area_patch];
+        const auto &samples = (*Impl_ptr)[impl]->get_sample_points();
+
+        const auto &sampleIds = P_samples_dense[max_area_patch];
+        for (int i = 0; i < sampleIds.size(); ++i) {
+            double square_dist_i = 0;
+            for (int j = 0; j < sampleIds.size(); ++j) {
+                square_dist_i += (samples[sampleIds[i]] - samples[sampleIds[j]]).squaredNorm();
+            }
+            if (square_dist_i < min_squared_dist) {
+                min_squared_dist = square_dist_i;
+                min_i = i;
+            }
+        }
+
+        // move the most centered sample to sparse samples
+        P_samples_sparse[max_area_patch].push_back(P_samples_dense[max_area_patch][min_i]);
+        P_samples_dense[max_area_patch].erase(P_samples_dense[max_area_patch].begin() + min_i);
+
+        // re-compute graph-cut
+        graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,B_label_sparse,P_label_sparse);
+        num_diff_label = 0;
+        for (int p=0; p<num_patch; ++p) {
+            if (P_label[p] != P_label_sparse[p]) {
+                ++num_diff_label;
+            }
+        }
+    }
+
+    if (num_diff_label == 0) {
+        P_samples = P_samples_sparse;
+    } else {
+        std::cout << "sample reduction failed." << std::endl;
+    }
+
+}
+
+
+
+
