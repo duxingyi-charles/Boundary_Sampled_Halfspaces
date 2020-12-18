@@ -3,6 +3,7 @@
 //
 
 #include "PSI.h"
+#include "ScopedTimer.h"
 
 #include <fstream>
 #include <iostream>
@@ -28,6 +29,7 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
 }
 
 void PSI::process_samples() {
+    ScopedTimer<> timer("graph-cut");
     if (arrangement_ready) {
         process_samples(V,F,P,P_Impl,Impl_ptr,P_samples,P_dist);
         ready_for_graph_cut = true;

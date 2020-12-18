@@ -19,6 +19,7 @@ public:
 	std::vector<Point> get_sample_points() const { return sample_points; }
 	void set_sample_points(const std::vector<Point> &samples) { sample_points = samples; }
 
+    virtual bool has_control_points() const { return false; }
     virtual const std::vector<Point>& get_control_points() const { throw "Not supported yet!"; }
     virtual void set_control_points(const std::vector<Point>& pts) { }
 

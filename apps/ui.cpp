@@ -1,6 +1,5 @@
 #include <PSI.h>
 #include <config.h>
-#include <igl/copyleft/marching_cubes.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/project.h>
@@ -288,6 +287,7 @@ private:
             m_control_view_ids.push_back(id);
 
             const auto& fn = m_states->get_implicit_function(i);
+            if (!fn.has_control_points()) continue;
             const auto& pts = fn.get_control_points();
 
             for (const auto& p : pts) {
@@ -481,6 +481,7 @@ private:
 
                 const auto& fn = m_states->get_implicit_function(m_hit_implicit);
                 if (m_active_control_point >= 0) {
+                    assert(fn.has_control_points());
                     auto view_id = m_control_view_ids[m_hit_implicit];
                     auto pts = fn.get_control_points();
                     pts[m_active_control_point] =

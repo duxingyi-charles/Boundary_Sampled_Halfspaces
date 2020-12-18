@@ -50,6 +50,7 @@ public:
         coeff_b *= -1;
     }
 
+    bool has_control_points() const override { return true; }
     const std::vector<Point> &get_control_points() const override { return control_points; }
     void set_control_points(const std::vector<Point> &pts) override { update_RBF_coeff(pts); }
 
