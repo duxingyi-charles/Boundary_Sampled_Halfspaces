@@ -29,7 +29,7 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
 }
 
 void PSI::process_samples() {
-    ScopedTimer<> timer("graph-cut");
+    ScopedTimer<> timer("process samples");
     if (arrangement_ready) {
         process_samples(V,F,P,P_Impl,Impl_ptr,P_samples,P_dist);
         ready_for_graph_cut = true;
@@ -131,6 +131,7 @@ void PSI::process_samples(
 
 
 void PSI::graph_cut() {
+    ScopedTimer<> timer("graph-cut");
     if (ready_for_graph_cut) {
         graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,
                   B_label,P_label);

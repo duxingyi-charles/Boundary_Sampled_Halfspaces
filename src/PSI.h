@@ -22,6 +22,8 @@ public:
 
     void run(const GridSpec &grid,
              std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
+    void process_samples();
+    void graph_cut();
 
     bool export_data(const std::string &filename) const;
 
@@ -30,7 +32,6 @@ protected:
             const GridSpec &grid,
             const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) = 0;
 
-    void process_samples();
     static void process_samples(
             //input
             const std::vector<Point> &V,
@@ -43,7 +44,6 @@ protected:
             std::vector<double> &P_dist
     );
 
-    void graph_cut();
     static void graph_cut(
             //input
             const std::vector<double> &P_dist,

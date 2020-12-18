@@ -64,9 +64,8 @@ public:
 
     void update_sample_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts) {
         m_implicits[implicit_id]->set_sample_points(pts);
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
+        m_psi->process_samples();
+        m_psi->graph_cut();
     }
 
 private:

@@ -38,13 +38,32 @@ public:
     }
 
 private:
+    void reset_patch_visibility(igl::opengl::glfw::Viewer& viewer) {
+        static auto set_patch_visible = [&](auto& viewer, size_t i, bool val) {
+            assert(i < m_data_ids.size());
+            m_patch_visible[i] = val;
+            auto pid = m_data_ids[i];
+            viewer.data(pid).set_visible(val);
+            assert(viewer.core().is_set(viewer.data(pid).is_visible) == val);
+        };
+
+        const auto& patches = m_states->get_patches();
+        const size_t num_patches = patches.size();
+
+        m_patch_visible = m_states->get_patch_labels();
+
+        for (size_t i = 0; i < num_patches; i++) {
+            set_patch_visible(viewer, i, m_patch_visible[i]);
+        }
+    }
+
     void initialize_manu(igl::opengl::glfw::Viewer& viewer)
     {
-        static auto is_patch_visible = [&](auto& viewer, size_t i) -> bool {
-            assert(i < m_data_ids.size());
-            auto pid = m_data_ids[i];
-            return viewer.core().is_set(viewer.data(pid).is_visible);
-        };
+        //static auto is_patch_visible = [&](auto& viewer, size_t i) -> bool {
+        //    assert(i < m_data_ids.size());
+        //    auto pid = m_data_ids[i];
+        //    return viewer.core().is_set(viewer.data(pid).is_visible);
+        //};
 
         static auto set_patch_visible = [&](auto& viewer, size_t i, bool val) {
             assert(i < m_data_ids.size());
@@ -143,14 +162,7 @@ private:
             auto add_patch_menu = [&]() {
                 hide_control_pts(viewer);
                 if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
-                    const auto& patches = m_states->get_patches();
-                    const size_t num_patches = patches.size();
-
-                    m_patch_visible = m_states->get_patch_labels();
-
-                    for (size_t i = 0; i < num_patches; i++) {
-                        set_patch_visible(viewer, i, m_patch_visible[i]);
-                    }
+                    reset_patch_visibility(viewer);
                 }
 
                 if (ImGui::CollapsingHeader("Patches", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -465,9 +477,16 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             if (x == m_down_x && y == m_down_y && m_hit) {
                 if (m_active_control_point < 0 && m_active_sample_point < 0) {
-                    const auto view_id = m_control_view_ids[m_hit_implicit];
-                    viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
-                    // TODO: Update implict function.
+                    const auto view_id = m_sample_view_ids[m_hit_implicit];
+                    viewer.data(view_id).add_points(m_hit_pt, get_sample_pt_color(m_hit_implicit));
+
+                    const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+                    auto pts = fn.get_sample_points();
+                    pts.push_back(m_hit_pt);
+
+                    m_states->update_sample_points(m_hit_implicit, pts);
+                    initialize_data(viewer);
+
                     m_hit = false;
                     m_hit_implicit = -1;
                     m_active_control_point = -1;
@@ -475,12 +494,12 @@ private:
                     return true;
                 }
             } else if (m_hit) {
-                // Control point moved.
                 assert(m_hit_implicit >= 0);
                 assert(m_active_control_point >= 0 || m_active_sample_point >= 0);
 
                 const auto& fn = m_states->get_implicit_function(m_hit_implicit);
                 if (m_active_control_point >= 0) {
+                    // Control point moved.
                     assert(fn.has_control_points());
                     auto view_id = m_control_view_ids[m_hit_implicit];
                     auto pts = fn.get_control_points();
@@ -489,12 +508,13 @@ private:
                     m_states->update_control_points(m_hit_implicit, pts);
                     initialize_data(viewer);
                 } else {
+                    // Sample point moved.
                     auto view_id = m_sample_view_ids[m_hit_implicit];
                     auto pts = fn.get_sample_points();
                     pts[m_active_sample_point] =
                         viewer.data(view_id).points.row(m_active_sample_point).template segment<3>(0);
                     m_states->update_sample_points(m_hit_implicit, pts);
-                    initialize_data(viewer);
+                    reset_patch_visibility(viewer);
                 }
             }
             m_hit = false;
