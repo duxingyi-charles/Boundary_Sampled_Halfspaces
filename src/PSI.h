@@ -14,6 +14,13 @@
 
 typedef std::pair<int,int> Edge;
 
+struct PSI_Search_State {
+    std::vector<int> prohibited_patches;
+    std::vector<bool> P_label;
+    std::vector<bool> B_label;
+    double cost;
+};
+
 class PSI {
 
 public:
@@ -25,12 +32,19 @@ public:
 
     bool export_data(const std::string &filename) const;
 
+    bool export_state(const std::string &filename,
+                             const std::vector<bool> &P_label,
+                             const std::vector<std::vector<int>> &components) const;
+
     // Algorithms for reverse engineering
 
     // after running PSI on a dense sampling,
     // find a subset of samples that produce the same result as the original dense sampling
     void reduce_samples();
 
+    void reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr_sparse);
+
+    void search_for_connected_result(int topK);
 
 protected:
     virtual void compute_arrangement_for_graph_cut(
@@ -64,9 +78,42 @@ protected:
             std::vector<bool> &P_label
     );
 
+    static void graph_cut(
+            //input
+            const std::vector<double> &P_dist,
+            const std::vector<std::vector<int>> &P_samples,
+            const std::vector<std::vector<int>> &P_block,
+            const std::vector<std::vector<int>> &P_sign,
+            const std::vector<std::vector<int>> &B_patch,
+            const std::vector<int> &prohibited_patches,
+            // output
+            std::vector<bool> &B_label,
+            std::vector<bool> &P_label,
+            double &cut_cost
+    );
 
+    void compute_patch_adjacency(std::vector<std::vector<int>> &P_Adj_same, std::vector<std::vector<int>> &P_Adj_diff);
 
+    static void compute_patch_adjacency(
+            //input
+            const std::vector<std::vector<int>> &P,
+            const std::vector<std::vector<int>> &F,
+            const std::vector<Point> &V,
+            const std::vector<int> &P_Impl,
+            //output
+            std::vector<std::vector<int>> &P_Adj_same,
+            std::vector<std::vector<int>> &P_Adj_diff
+            );
 
+    static void get_unsampled_patch_components(
+            //input
+            const std::vector<std::vector<int>> &P_Adj_same,
+            const std::vector<std::vector<int>> &P_Adj_diff,
+            const std::vector<std::vector<int>> &P_samples,
+            const std::vector<bool> P_label,
+            //output
+            std::vector<std::vector<int>> &components
+            );
 
 public:
     const std::vector<Point>& get_vertices() const { return V; }
