@@ -18,6 +18,7 @@ int main(int argc, char** argv) {
         std::string grid_file;
         std::string config_file;
         std::string output_grid_file;
+        std::string config_file_sparse;
         int grid_size;
         std::string arrangement_algorithm;
     } args;
@@ -28,6 +29,8 @@ int main(int argc, char** argv) {
     app.add_option("-A,--arr-algo", args.arrangement_algorithm, "Arrangement algorithm " )
             ->required();
     app.add_option("config_file", args.config_file, "Configuration file")
+            ->required();
+    app.add_option("config_file_sparse", args.config_file_sparse, "Configuration file for sparse sampling")
             ->required();
     app.add_option("output_grid_file", args.output_grid_file,
                    "Output grid file")
@@ -53,9 +56,15 @@ int main(int argc, char** argv) {
     }
 
     psi->run(grid_spec, implicit_functions);
+
+    // sparse samples
+    auto implicit_functions_sparse =
+            initialize_sampled_implicit_functions(args.config_file_sparse);
+    //
     {
         ScopedTimer<> timer("sample reduction");
-        psi->reduce_samples();
+//        psi->reduce_samples();
+        psi->reduce_samples(&implicit_functions_sparse);
     }
 
 
