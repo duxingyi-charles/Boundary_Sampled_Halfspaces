@@ -44,7 +44,7 @@ public:
 
     void reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr_sparse);
 
-    void search_for_connected_result(int topK);
+    void search_for_connected_result(int topK, bool consider_adj_diff);
 
 protected:
     virtual void compute_arrangement_for_graph_cut(
@@ -111,6 +111,7 @@ protected:
             const std::vector<std::vector<int>> &P_Adj_diff,
             const std::vector<std::vector<int>> &P_samples,
             const std::vector<bool> P_label,
+            bool consider_adj_diff,
             //output
             std::vector<std::vector<int>> &components
             );
