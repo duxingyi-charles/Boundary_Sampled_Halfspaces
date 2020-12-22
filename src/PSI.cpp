@@ -524,7 +524,7 @@ void PSI::graph_cut(
 
 bool PSI::export_state(const std::string &filename,
                               const std::vector<bool> &P_label,
-                              const std::vector<std::vector<int>> &components) const {
+                              const std::vector<std::vector<int>> &components) {
     std::ofstream fout(filename, std::ofstream::out);
     if (!fout.good()) {
         std::cout << "Can not create output file " << filename << std::endl;
@@ -1049,7 +1049,7 @@ void PSI::get_unsampled_patch_components(
         const std::vector<std::vector<int>> &P_Adj_same,
         const std::vector<std::vector<int>> &P_Adj_diff,
         const std::vector<std::vector<int>> &P_samples,
-        const std::vector<bool> P_label,
+        const std::vector<bool> &P_label,
         bool consider_adj_diff,
         //output
         std::vector<std::vector<int>> &components
@@ -1220,8 +1220,11 @@ void PSI::search_for_connected_result(int topK, bool consider_adj_diff) {
         }
 
         // enqueue
-        for (int si = 0; si < top_children_states.size(); ++si) {
-            Q.push(top_children_states[si]);
+//        for (int si = 0; si < top_children_states.size(); ++si) {
+//            Q.push(top_children_states[si]);
+//        }
+        for (const auto &state : top_children_states) {
+            Q.push(state);
         }
     }
 

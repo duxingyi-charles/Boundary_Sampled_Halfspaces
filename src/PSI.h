@@ -32,9 +32,9 @@ public:
 
     bool export_data(const std::string &filename) const;
 
-    bool export_state(const std::string &filename,
+    static bool export_state(const std::string &filename,
                              const std::vector<bool> &P_label,
-                             const std::vector<std::vector<int>> &components) const;
+                             const std::vector<std::vector<int>> &components);
 
     // Algorithms for reverse engineering
 
@@ -110,7 +110,7 @@ protected:
             const std::vector<std::vector<int>> &P_Adj_same,
             const std::vector<std::vector<int>> &P_Adj_diff,
             const std::vector<std::vector<int>> &P_samples,
-            const std::vector<bool> P_label,
+            const std::vector<bool> &P_label,
             bool consider_adj_diff,
             //output
             std::vector<std::vector<int>> &components
