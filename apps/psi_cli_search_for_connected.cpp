@@ -1,8 +1,4 @@
 //
-// Created by Charles Du on 12/17/20.
-//
-
-//
 // Created by Charles Du on 12/10/20.
 //
 
@@ -25,6 +21,7 @@ int main(int argc, char** argv) {
         int grid_size;
         std::string arrangement_algorithm;
         int topK;
+        bool consider_adj_diff;
     } args;
 
     CLI::App app{"Piecewise implicit surface demo"};
@@ -33,6 +30,9 @@ int main(int argc, char** argv) {
     app.add_option("-A,--arr-algo", args.arrangement_algorithm, "Arrangement algorithm " )
             ->required();
     app.add_option("-k,--top-k", args.topK, "topK " )
+            ->required();
+    app.add_option("-a,--consider-adj-diff", args.consider_adj_diff,
+                   "whether to consider patches adjacent to disconnected components." )
             ->required();
     app.add_option("config_file", args.config_file, "Configuration file")
             ->required();
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     {
         ScopedTimer<> timer("search for connected result");
 //        int topK = 1;
-        psi->search_for_connected_result(args.topK);
+        psi->search_for_connected_result(args.topK, args.consider_adj_diff);
     }
 
 
