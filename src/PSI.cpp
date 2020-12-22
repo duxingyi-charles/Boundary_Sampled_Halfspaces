@@ -175,6 +175,7 @@ void PSI::graph_cut(
         if (isfinite(d)) Delta += d;
     }
     Delta *= 2;
+    std::cout << "Delta: " << Delta << std::endl;
 
 
 
@@ -282,7 +283,9 @@ void PSI::graph_cut(
     }
 
     // max-flow-min-cut
-    /*double flow =*/ boykov_kolmogorov_max_flow(g ,sid, tid);
+    double cut_cost = boykov_kolmogorov_max_flow(g ,sid, tid);
+    std::cout << "s-t cut cost = " << cut_cost << std::endl;
+
 
     // print max-flow result
 //    std::cout << "c  The total flow:" << std::endl;
@@ -505,18 +508,18 @@ void PSI::graph_cut(
     }
 
     // debug
-    double total_area = 0;
-    for (int i = 0; i < P_label.size(); ++i) {
-        if (P_label[i] == 1) {
-            total_area += P_dist[i];
-        }
-    }
-    std::cout << "******" << std::endl;
-    std::cout << "cost = " << cut_cost << std::endl;
-    std::cout << "Delta = " << Delta << std::endl;
-    std::cout << "total area = " << total_area << std::endl;
-    std::cout << "cost Mod Delta = " << fmod(cut_cost, Delta) << std::endl;
-    std::cout << "******" << std::endl;
+//    double total_area = 0;
+//    for (int i = 0; i < P_label.size(); ++i) {
+//        if (P_label[i] == 1) {
+//            total_area += P_dist[i];
+//        }
+//    }
+//    std::cout << "******" << std::endl;
+//    std::cout << "cost = " << cut_cost << std::endl;
+//    std::cout << "Delta = " << Delta << std::endl;
+//    std::cout << "total area = " << total_area << std::endl;
+//    std::cout << "cost Mod Delta = " << fmod(cut_cost, Delta) << std::endl;
+//    std::cout << "******" << std::endl;
 }
 
 bool PSI::export_state(const std::string &filename,
@@ -1047,6 +1050,7 @@ void PSI::get_unsampled_patch_components(
         const std::vector<std::vector<int>> &P_Adj_diff,
         const std::vector<std::vector<int>> &P_samples,
         const std::vector<bool> P_label,
+        bool consider_adj_diff,
         //output
         std::vector<std::vector<int>> &components
 ) {
@@ -1101,16 +1105,41 @@ void PSI::get_unsampled_patch_components(
         }
     }
 
+    //
+    if (consider_adj_diff) {
+        std::vector<bool> patch_selected(P_label.size(), false);
+        for (const auto & comp : components) {
+            for (auto pi : comp) patch_selected[pi] = true;
+        }
+        // find patches adjacent to unsampled components
+        std::vector<int> adj_diff_patches;
+        for (const auto & comp: components) {
+            for (auto pi : comp) {
+                for (auto nei_p: P_Adj_diff[pi]) {
+                    if (P_label[nei_p] && !patch_selected[nei_p]) {
+                        adj_diff_patches.push_back(nei_p);
+                        patch_selected[nei_p] = true;
+                    }
+                }
+            }
+        }
+        //
+        for (auto pi : adj_diff_patches) {
+            components.emplace_back(std::vector<int>{pi});
+        }
+    }
+
 }
 
 
-void PSI::search_for_connected_result(int topK) {
+void PSI::search_for_connected_result(int topK, bool consider_adj_diff) {
     // should first run PSI
     if (!graph_cut_finished) {
         return;
     }
 
     std::cout << "topK = " << topK << std::endl;
+    std::cout << "explore adjacent patches: " << consider_adj_diff << std::endl;
 
     // compute patch adjacency list
     std::vector<std::vector<int>> P_Adj_same, P_Adj_diff;
@@ -1141,7 +1170,7 @@ void PSI::search_for_connected_result(int topK) {
 
         // expand state
         std::vector<std::vector<int>> components;
-        get_unsampled_patch_components(P_Adj_same,P_Adj_diff, P_samples, s.P_label,
+        get_unsampled_patch_components(P_Adj_same,P_Adj_diff, P_samples, s.P_label, consider_adj_diff,
                                        components);
 
         // info
