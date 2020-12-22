@@ -8,7 +8,7 @@
 #include "config.h"
 //#include "ScopedTimer.h"
 
-#include "Sphere_sImplicit.h"
+//#include "Sphere_sImplicit.h"
 
 int main(int argc, char** argv) {
     struct {
