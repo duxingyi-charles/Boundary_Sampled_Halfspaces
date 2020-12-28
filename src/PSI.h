@@ -10,6 +10,7 @@
 #include "Sampled_Implicit.h"
 
 #include "GridSpec.h"
+#include "PSI_Param.h"
 
 
 typedef std::pair<int,int> Edge;
@@ -21,10 +22,16 @@ struct PSI_Search_State {
     double cost;
 };
 
+
 class PSI {
 
 public:
-    PSI() : Impl_ptr(), arrangement_ready(false),ready_for_graph_cut(false),use_distance_weighted_area(false),graph_cut_finished(false) {};
+    PSI() : Impl_ptr(),
+    arrangement_ready(false),ready_for_graph_cut(false),ready_for_connected_graph_cut(false),graph_cut_finished(false),
+    use_distance_weighted_area(false),use_state_space_graph_cut(false),topK(1),consider_adj_diff(true) {};
+
+
+
     virtual ~PSI() = default;
 
     void run(const GridSpec &grid,
@@ -32,19 +39,13 @@ public:
 
     bool export_data(const std::string &filename) const;
 
-    static bool export_state(const std::string &filename,
-                             const std::vector<bool> &P_label,
-                             const std::vector<std::vector<int>> &components);
+    void set_parameters(const PSI_Param &param_spec);
 
     // Algorithms for reverse engineering
 
     // after running PSI on a dense sampling,
     // find a subset of samples that produce the same result as the original dense sampling
-    void reduce_samples();
-
     void reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr_sparse);
-
-    void search_for_connected_result(int topK, bool consider_adj_diff);
 
 protected:
     virtual void compute_arrangement_for_graph_cut(
@@ -66,7 +67,7 @@ protected:
     );
 
     void graph_cut();
-    static void graph_cut(
+    static void simple_graph_cut(
             //input
             const std::vector<double> &P_dist,
             const std::vector<std::vector<int>> &P_samples,
@@ -75,10 +76,11 @@ protected:
             const std::vector<std::vector<int>> &B_patch,
             // output
             std::vector<bool> &B_label,
-            std::vector<bool> &P_label
+            std::vector<bool> &P_label,
+            double &cut_cost
     );
 
-    static void graph_cut(
+    static void simple_graph_cut(
             //input
             const std::vector<double> &P_dist,
             const std::vector<std::vector<int>> &P_samples,
@@ -92,7 +94,43 @@ protected:
             double &cut_cost
     );
 
-    void compute_patch_adjacency(std::vector<std::vector<int>> &P_Adj_same, std::vector<std::vector<int>> &P_Adj_diff);
+    static void simple_graph_cut(
+            //input
+            const std::vector<double> &P_dist,
+            const std::vector<std::vector<int>> &P_samples,
+            const std::vector<std::vector<int>> &P_block,
+            const std::vector<std::vector<int>> &P_sign,
+            const std::vector<std::vector<int>> &B_patch,
+            double Delta,
+            // output
+            std::vector<bool> &B_label,
+            std::vector<bool> &P_label,
+            double &cut_cost
+    );
+
+    void connected_graph_cut();
+
+    static void connected_graph_cut(
+            //input
+            const std::vector<double> &P_dist,
+            const std::vector<std::vector<int>> &P_samples,
+            const std::vector<std::vector<int>> &P_block,
+            const std::vector<std::vector<int>> &P_sign,
+            const std::vector<std::vector<int>> &B_patch,
+            const std::vector<std::vector<int>> &P_Adj_same,
+            const std::vector<std::vector<int>> &P_Adj_diff,
+            int topK, bool consider_adj_diff,
+            //output
+            std::vector<bool> &B_label,
+            std::vector<bool> &P_label
+            );
+
+    // export intermediate state for state-space search
+    static bool export_state(const std::string &filename,
+                             const std::vector<bool> &P_label,
+                             const std::vector<std::vector<int>> &components);
+
+    void compute_patch_adjacency();
 
     static void compute_patch_adjacency(
             //input
@@ -130,7 +168,6 @@ protected:
     std::vector<std::vector<int>> F;
 
     // implicits
-    // todo: is this needed?
     std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr;
     // the index of the implicit surface passing each face
     std::vector<int> F_Impl;
@@ -138,6 +175,8 @@ protected:
     // --- data for graph-cut ---
     bool arrangement_ready;
     bool ready_for_graph_cut;
+    bool ready_for_connected_graph_cut;
+    bool graph_cut_finished;
     // (unordered) list of faces on each patch
     std::vector<std::vector<int>> P;
     // index of implicit for each patch
@@ -155,8 +194,20 @@ protected:
     // sign of implicit on blocks incident to each patch
     std::vector<std::vector<int>> P_sign;
 
+    // --- parameters for connected state search ---
+    // flag: use state-space graph-cut or not
+    bool use_state_space_graph_cut;
+    // in state space search, expand a state into k children states with least graph-cut cost.
+    // if topK=0, explore all children states.
+    int topK;
+    // consider adjacent patches from other implicits or not
+    bool consider_adj_diff;
+    // adjacency list of patches from the same implicit
+    std::vector<std::vector<int>> P_Adj_same;
+    // adjacency list of patches from different implicits
+    std::vector<std::vector<int>> P_Adj_diff;
+
     // --- result of graph-cut ---
-    bool graph_cut_finished;
     // block labels: object -> true, background -> false
     std::vector<bool> B_label;
     // patch labels: surface -> true, not surface -> false

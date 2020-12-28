@@ -148,36 +148,152 @@ void PSI::process_samples(
 void PSI::graph_cut() {
     if (ready_for_graph_cut) {
         ScopedTimer<> timer("graph cut");
-        graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,
-                  B_label,P_label);
+        if (use_state_space_graph_cut) {
+            connected_graph_cut();
+        } else {
+            double cut_cost;
+            simple_graph_cut(P_dist, P_samples, P_block, P_sign, B_patch,
+                             B_label, P_label, cut_cost);
+        }
+
         graph_cut_finished = true;
     } else {
         graph_cut_finished = false;
     }
 }
 
+void PSI::connected_graph_cut() {
+    if (ready_for_graph_cut) {
+        if (!ready_for_connected_graph_cut) {
+            compute_patch_adjacency();
+            ready_for_connected_graph_cut = true;
+        }
+        connected_graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
+                            B_label,P_label);
+        graph_cut_finished = true;
+    } else {
+        graph_cut_finished = false;
+    }
+}
+
+// static connected graph cut function
+void PSI::connected_graph_cut(
+        //input
+        const std::vector<double> &P_dist,
+        const std::vector<std::vector<int>> &P_samples,
+        const std::vector<std::vector<int>> &P_block,
+        const std::vector<std::vector<int>> &P_sign,
+        const std::vector<std::vector<int>> &B_patch,
+        const std::vector<std::vector<int>> &P_Adj_same,
+        const std::vector<std::vector<int>> &P_Adj_diff,
+        int topK, bool consider_adj_diff,
+        //output
+        std::vector<bool> &B_label,
+        std::vector<bool> &P_label
+) {
+    std::cout << "topK = " << topK << std::endl;
+    std::cout << "explore adjacent patches: " << consider_adj_diff << std::endl;
+
+
+    // initial state
+    PSI_Search_State s0;
+    simple_graph_cut(P_dist, P_samples, P_block, P_sign, B_patch, s0.prohibited_patches,
+                     s0.B_label, s0.P_label, s0.cost);
+    std::cout << "initial cost: " << s0.cost << std::endl;
+
+    auto state_cmp = [](const PSI_Search_State &left, const PSI_Search_State &right)
+    { return left.cost > right.cost; };
+    std::priority_queue<PSI_Search_State, std::vector<PSI_Search_State>, decltype(state_cmp)> Q(state_cmp);
+    Q.push(s0);
+
+    std::unordered_set<std::vector<bool>> visited_states;
+    visited_states.insert(s0.B_label);
+
+    int search_count = 0;
+    PSI_Search_State s;
+    while (! Q.empty()) {
+        s = Q.top();
+        Q.pop();
+        ++search_count;
+
+        // expand state
+        std::vector<std::vector<int>> components;
+        get_unsampled_patch_components(P_Adj_same,P_Adj_diff, P_samples, s.P_label, consider_adj_diff,
+                                       components);
+
+        // print info and save states
+        std::cout << "------ state " << search_count << " ------" << std::endl;
+        std::cout << "cost: " << s.cost << ", ";
+        std::cout << components.size() << " unsampled patch components." << std::endl;
+        std::cout << "prohibited patches:" << std::endl;
+        for (auto i : s.prohibited_patches) {
+            std::cout << i << ",";
+        }
+        std::cout << std::endl;
+//        export_state("/Users/charlesdu/Downloads/research/implicit_modeling/code/piecewise_sampled_implicits/data/state_search_test/patch_labels/"+std::to_string(search_count),
+//                     s.P_label, components);
+
+        //
+        if (components.empty()) {
+            std::cout << "no unsampled patch component." << std::endl;
+            break;
+        }
+
+        std::vector<PSI_Search_State> children_states;
+        for (auto &comp : components) {
+            std::vector<int> proh_patches = s.prohibited_patches;
+            proh_patches.insert(proh_patches.end(), comp.begin(), comp.end());
+            PSI_Search_State child_s;
+            child_s.prohibited_patches = proh_patches;
+            simple_graph_cut(P_dist, P_samples, P_block, P_sign, B_patch, child_s.prohibited_patches,
+                             child_s.B_label, child_s.P_label, child_s.cost);
+            if (visited_states.find(child_s.B_label) == visited_states.end()) { // not visited before
+                children_states.push_back(child_s);
+            }
+        }
+        // select topK states with least cost
+        std::vector<PSI_Search_State> top_children_states;
+        if (topK >0 && topK < children_states.size()) {
+            std::sort(children_states.begin(), children_states.end(), state_cmp);
+            top_children_states.insert(top_children_states.begin(), children_states.end()-topK, children_states.end());
+        } else {
+            top_children_states = children_states;
+        }
+
+        // set visited
+        for (auto &state : top_children_states) {
+            visited_states.insert(state.B_label);
+        }
+
+        // enqueue
+        for (const auto &state : top_children_states) {
+            Q.push(state);
+        }
+    }
+
+    // store result
+    P_label = s.P_label;
+    B_label = s.B_label;
+}
+
+
+
 // static graph_cut function
-void PSI::graph_cut(
+void PSI::simple_graph_cut(
         // input
         const std::vector<double> &P_dist,
         const std::vector<std::vector<int>> &P_samples,
         const std::vector<std::vector<int>> &P_block,
         const std::vector<std::vector<int>> &P_sign,
         const std::vector<std::vector<int>> &B_patch,
+        double Delta,
         // output
         std::vector<bool> &B_label,
-        std::vector<bool> &P_label) {
+        std::vector<bool> &P_label,
+        double &cut_cost) {
     // constants
     double inf = std::numeric_limits<double>::infinity();
-    double Delta = 0;
-//    for (auto d : P_dist) Delta += d;
-    for (auto &d: P_dist) {
-        if (isfinite(d)) Delta += d;
-    }
-    Delta *= 2;
     std::cout << "Delta: " << Delta << std::endl;
-
-
 
     // define per-cell costs: hPos, hNeg
     int nBlock = B_patch.size();
@@ -283,7 +399,7 @@ void PSI::graph_cut(
     }
 
     // max-flow-min-cut
-    double cut_cost = boykov_kolmogorov_max_flow(g ,sid, tid);
+    cut_cost = boykov_kolmogorov_max_flow(g ,sid, tid);
     std::cout << "s-t cut cost = " << cut_cost << std::endl;
 
 
@@ -329,8 +445,31 @@ void PSI::graph_cut(
 
 }
 
+//
+void PSI::simple_graph_cut(
+        // input
+        const std::vector<double> &P_dist,
+        const std::vector<std::vector<int>> &P_samples,
+        const std::vector<std::vector<int>> &P_block,
+        const std::vector<std::vector<int>> &P_sign,
+        const std::vector<std::vector<int>> &B_patch,
+        // output
+        std::vector<bool> &B_label,
+        std::vector<bool> &P_label,
+        double &cut_cost) {
+    // constants
+    double Delta = 0;
+    for (auto &d: P_dist) {
+        if (isfinite(d)) Delta += d;
+    }
+    Delta *= 2;
 
-void PSI::graph_cut(
+    //
+    simple_graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,Delta,B_label,P_label,cut_cost);
+}
+
+
+void PSI::simple_graph_cut(
         //input
         const std::vector<double> &P_dist,
         const std::vector<std::vector<int>> &P_samples,
@@ -346,8 +485,6 @@ void PSI::graph_cut(
 {
     // constants
     double Delta = 0;
-//    for (auto d : P_dist) Delta += d;
-//    for (auto &d: patch_dist) {
     for (auto &d : P_dist) {
         if (isfinite(d)) Delta += d;
     }
@@ -360,152 +497,8 @@ void PSI::graph_cut(
         patch_dist[pi] = inf;
     }
 
-
-    // define per-cell costs: hPos, hNeg
-    int nBlock = B_patch.size();
-    std::vector<double> hPos(nBlock);
-    std::vector<double> hNeg(nBlock);
-
-    int nPatch = P_samples.size();
-    for (int p = 0; p < nPatch; ++p) {
-        double cost = Delta * P_samples[p].size();
-        //
-        auto b = P_block[p][0];
-        if (P_sign[p][0] > 0) hNeg[b] += cost;
-        else hPos[b] += cost;
-        //
-        b = P_block[p][1];
-        if (P_sign[p][1] > 0) hNeg[b] += cost;
-        else hPos[b] += cost;
-    }
-
-    // define pair-cell costs: hPair
-    std::map<Edge, double> hPair;
-    // init hPair
-    for (int p = 0; p < nPatch; ++p) {
-        int b1 = P_block[p][0];
-        int b2 = P_block[p][1];
-        hPair[Edge(b1,b2)] = 0;
-        hPair[Edge(b2,b1)] = 0;
-    }
-    // compute hPair
-    for (int p = 0; p < nPatch; ++p) {
-        int b1 = P_block[p][0];
-        int b2 = P_block[p][1];
-        //
-        if (P_sign[p][0] == 1) {
-            if (hPair[Edge(b1,b2)] != inf) {
-                hPair[Edge(b1,b2)] += patch_dist[p];
-            }
-        }
-        else {
-            hPair[Edge(b1,b2)] = inf;
-        }
-        //
-        if (P_sign[p][1] == 1) {
-            if (hPair[Edge(b2,b1)] != inf) {
-                hPair[Edge(b2,b1)] += patch_dist[p];
-            }
-        }
-        else {
-            hPair[Edge(b2,b1)] = inf;
-        }
-    }
-
-    // create the graph
-    typedef boost::adjacency_list_traits<boost::vecS, boost::vecS, boost::directedS> Traits;
-    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
-            boost::property<boost::vertex_color_t, boost::default_color_type,
-                    boost::property<boost::vertex_predecessor_t,Traits::edge_descriptor,
-                            boost::property<boost::vertex_distance_t, double,
-                                    boost::property<boost::vertex_index_t, long> > >
-            >,
-
-            boost::property<boost::edge_capacity_t, double,
-                    boost::property<boost::edge_residual_capacity_t, double,
-                            boost::property<boost::edge_reverse_t, Traits::edge_descriptor > > > >
-            Graph;
-
-    Graph g(nBlock);
-
-    boost::property_map<Graph,boost::edge_capacity_t>::type
-            e_weights = get(boost::edge_capacity,g);
-    boost::property_map<Graph,boost::edge_reverse_t>::type
-            e_reverse = get(boost::edge_reverse,g);
-
-    // add edges between blocks
-    for (int p = 0; p < nPatch; ++p) {
-        int b1 = P_block[p][0];
-        int b2 = P_block[p][1];
-        auto e = add_edge(b1,b2,g).first;
-        e_weights[e] = hPair[Edge(b1,b2)];
-        auto re = add_edge(b2,b1,g).first;
-        e_weights[re] = hPair[Edge(b2,b1)];
-        e_reverse[e] = re;
-        e_reverse[re] = e;
-    }
-
-    // add edges between blocks and terminals (s,t)
-    auto sid = add_vertex(g);
-    auto tid = add_vertex(g);
-    for (int b = 0; b < nBlock; ++b) {
-        auto e = add_edge(sid,b,g).first;
-        e_weights[e] = hNeg[b];
-        auto re = add_edge(b,sid,g).first;
-        e_weights[re] = 0;
-        e_reverse[e] = re;
-        e_reverse[re] = e;
-        //
-        e = add_edge(b,tid,g).first;
-        e_weights[e] = hPos[b];
-        re = add_edge(tid,b,g).first;
-        e_weights[re] = 0;
-        e_reverse[e] = re;
-        e_reverse[re] = e;
-    }
-
-    // max-flow-min-cut
-    /*double flow*/ cut_cost = boykov_kolmogorov_max_flow(g ,sid, tid);
-
-    // print max-flow result
-//    std::cout << "c  The total flow:" << std::endl;
-//    std::cout << "s " << flow << std::endl << std::endl;
-//
-//    std::cout << "c flow values:" << std::endl;
-//    boost::graph_traits<Graph>::vertex_iterator u_iter, u_end;
-//    boost::graph_traits <Graph>::out_edge_iterator ei, e_end;
-//    for (boost::tie(u_iter, u_end) = vertices(g); u_iter != u_end; ++u_iter)
-//        for (boost::tie(ei, e_end) = out_edges(*u_iter, g); ei != e_end; ++ei)
-//            if (e_weights[*ei] > 0)
-//                std::cout << "f " << *u_iter << " " << target(*ei, g) << " "
-//                << (e_weights[*ei]) << " " << std::endl;
-//                << (e_weights[*ei] - e_residual[*ei]) << std::endl;
-
-    // print block labels
-//    std::cout << "vertex color:" << std::endl;
-//    boost::property_map<Graph ,boost::vertex_color_t>::type v_color = get(boost::vertex_color,g);
-//    for (boost::tie(u_iter, u_end) = vertices(g); u_iter != u_end; ++u_iter) {
-//        std::cout << *u_iter << " " << v_color[*u_iter] << std::endl;
-//    }
     //
-
-    // get block and patch labels
-    boost::property_map<Graph,boost::vertex_color_t>::type
-            block_labels = get(boost::vertex_color,g);
-    auto s_label = block_labels[sid];
-
-    B_label.clear();
-    P_label.clear();
-
-    B_label.resize(nBlock);
-    for (int b = 0; b < nBlock; ++b) {
-        B_label[b] = (block_labels[b] == s_label);
-    }
-
-    P_label.resize(nPatch);
-    for (int p = 0; p < nPatch; ++p) {
-        P_label[p] = (B_label[P_block[p][0]] != B_label[P_block[p][1]]);
-    }
+    simple_graph_cut(patch_dist,P_samples,P_block,P_sign,B_patch,Delta,B_label,P_label,cut_cost);
 
     // debug
 //    double total_area = 0;
@@ -520,6 +513,15 @@ void PSI::graph_cut(
 //    std::cout << "total area = " << total_area << std::endl;
 //    std::cout << "cost Mod Delta = " << fmod(cut_cost, Delta) << std::endl;
 //    std::cout << "******" << std::endl;
+}
+
+void PSI::set_parameters(const PSI_Param &param_spec) {
+    use_distance_weighted_area = param_spec.use_distance_weighted_area;
+    use_state_space_graph_cut = param_spec.use_state_space_graph_cut;
+    if (use_state_space_graph_cut) {
+        topK = param_spec.topK;
+        consider_adj_diff = param_spec.consider_adj_diff;
+    }
 }
 
 bool PSI::export_state(const std::string &filename,
@@ -745,96 +747,6 @@ bool PSI::export_data(const std::string &filename) const
 
 // Algorithms for reverse engineering
 
-void PSI::reduce_samples() {
-    // should first run PSI on dense samples
-    if (!graph_cut_finished) {
-        return;
-    }
-    //
-    // Note: current implementation is only suitable for non-distance-weighted patch area
-    // If the patch area is not weighted by distance to samples,
-    // then there is no need to update P_dist
-
-    // init samples
-    int num_patch = P_samples.size();
-    std::vector<std::vector<int>> P_samples_dense = P_samples;
-    std::vector<std::vector<int>> P_samples_sparse(num_patch);  // no samples at all
-
-
-    std::vector<bool> B_label_sparse;
-    std::vector<bool> P_label_sparse;
-
-    graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,B_label_sparse,P_label_sparse);
-    int num_diff_label = 0;
-    for (int p=0; p<num_patch; ++p) {
-        if (P_label[p] != P_label_sparse[p]) {
-            ++num_diff_label;
-        }
-    }
-
-    int num_iter = 0;
-    while (num_diff_label != 0) {
-        ++num_iter;
-        std::cout << "iter " << num_iter << ": " << num_diff_label << " different patch labels." << std::endl;
-
-        // find missing patch with largest area and some samples on it
-        double max_area = -1;
-        double max_area_patch = -1;
-        for (int p = 0; p < num_patch; ++p) {
-            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty()) {
-                if (P_dist[p] > max_area) {
-                    max_area = P_dist[p];
-                    max_area_patch = p;
-                }
-            }
-        }
-
-        if (max_area_patch == -1) { // no patch found but graph-cut result is not the same
-            std::cout << "sample reduction failed: no patch found but graph-cut result is not the same" << std::endl;
-            return;
-        }
-
-        // find the most centered sample on the patch
-        double min_squared_dist = std::numeric_limits<double>::infinity();
-        double min_i = -1;
-
-        int impl = P_Impl[max_area_patch];
-        const auto &samples = (*Impl_ptr)[impl]->get_sample_points();
-
-        const auto &sampleIds = P_samples_dense[max_area_patch];
-        for (int i = 0; i < sampleIds.size(); ++i) {
-            double square_dist_i = 0;
-            for (int j = 0; j < sampleIds.size(); ++j) {
-                square_dist_i += (samples[sampleIds[i]] - samples[sampleIds[j]]).squaredNorm();
-            }
-            if (square_dist_i < min_squared_dist) {
-                min_squared_dist = square_dist_i;
-                min_i = i;
-            }
-        }
-
-        // move the most centered sample to sparse samples
-        P_samples_sparse[max_area_patch].push_back(P_samples_dense[max_area_patch][min_i]);
-        P_samples_dense[max_area_patch].erase(P_samples_dense[max_area_patch].begin() + min_i);
-
-        // re-compute graph-cut
-        graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,B_label_sparse,P_label_sparse);
-        num_diff_label = 0;
-        for (int p=0; p<num_patch; ++p) {
-            if (P_label[p] != P_label_sparse[p]) {
-                ++num_diff_label;
-            }
-        }
-    }
-
-    if (num_diff_label == 0) {
-        P_samples = P_samples_sparse;
-    } else {
-        std::cout << "sample reduction failed: can't add samples but result is still different." << std::endl;
-    }
-
-}
-
 void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr_sparse) {
     // should first run PSI on dense samples
     if (!graph_cut_finished) {
@@ -848,7 +760,6 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
     // init samples
     int num_patch = P_samples.size();
     std::vector<std::vector<int>> P_samples_dense = P_samples;
-//    std::vector<std::vector<int>> P_samples_sparse(num_patch);  // no samples at all
 
     std::vector<std::vector<int>> P_samples_sparse;
     std::vector<double> P_dist_sparse;
@@ -856,6 +767,8 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
         P_samples_sparse.resize(num_patch);  // no samples at all
     } else {
         process_samples(V,F,P,P_Impl,Impl_ptr_sparse,use_distance_weighted_area,P_samples_sparse,P_dist_sparse);
+        //To ensure sparse samples are subset of dense samples,
+        //replace sparse samples by the their closest points in the dense samples
         for (int pi = 0; pi < P_samples_sparse.size(); ++pi) {
             int impl = P_Impl[pi];
             const auto &dense_samples = (*Impl_ptr)[impl]->get_sample_points();
@@ -863,8 +776,6 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
             for (int i=0; i< P_samples_sparse[pi].size(); ++i) {
                 int sample_point_sparse_id = P_samples_sparse[pi][i];
                 auto sample_point = sparse_samples[sample_point_sparse_id];
-
-
 
                 double min_sample_dist = std::numeric_limits<double>::infinity();
                 int min_j = -1;
@@ -890,7 +801,20 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
     std::vector<bool> B_label_sparse;
     std::vector<bool> P_label_sparse;
 
-    graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,B_label_sparse,P_label_sparse);
+    if (use_state_space_graph_cut) {
+        if (!ready_for_connected_graph_cut) {
+            compute_patch_adjacency();
+            ready_for_connected_graph_cut = true;
+        }
+    }
+    if (use_state_space_graph_cut) {
+        connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
+                            B_label_sparse,P_label_sparse);
+    } else {
+        double cut_cost;
+        simple_graph_cut(P_dist, P_samples_sparse, P_block, P_sign, B_patch, B_label_sparse, P_label_sparse, cut_cost);
+    }
+
     int num_diff_label = 0;
     for (int p=0; p<num_patch; ++p) {
         if (P_label[p] != P_label_sparse[p]) {
@@ -901,7 +825,8 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
     int num_iter = 0;
     while (num_diff_label != 0) {
         ++num_iter;
-        std::cout << "iter " << num_iter << ": " << num_diff_label << " different patch labels." << std::endl;
+        std::cout << "~~~~~~~~~ sample reduction iter " << num_iter << " ~~~~~~~~~" << std::endl;
+        std::cout << num_diff_label << " different patch labels." << std::endl;
 
         // find missing patch with largest area and some samples on it
         double max_area = -1;
@@ -917,7 +842,6 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
 
         if (max_area_patch == -1) { // no patch found but graph-cut result is not the same
             std::cout << "sample reduction failed: no patch found but graph-cut result is not the same" << std::endl;
-//            return;
             break;
         }
 
@@ -945,7 +869,13 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
         P_samples_dense[max_area_patch].erase(P_samples_dense[max_area_patch].begin() + min_i);
 
         // re-compute graph-cut
-        graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,B_label_sparse,P_label_sparse);
+        if (use_state_space_graph_cut) {
+            connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
+                                B_label_sparse,P_label_sparse);
+        } else {
+            double cut_cost;
+            simple_graph_cut(P_dist, P_samples_sparse, P_block, P_sign, B_patch, B_label_sparse, P_label_sparse, cut_cost);
+        }
         num_diff_label = 0;
         for (int p=0; p<num_patch; ++p) {
             if (P_label[p] != P_label_sparse[p]) {
@@ -963,9 +893,9 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
 
 }
 
-void PSI::compute_patch_adjacency(std::vector<std::vector<int>> &P_Adj_same, std::vector<std::vector<int>> &P_Adj_diff) {
+void PSI::compute_patch_adjacency() {
     // require: P, P_Impl, F, V
-    if (graph_cut_finished) {
+    if (arrangement_ready) {
         compute_patch_adjacency(P,F,V,P_Impl,
                                 P_Adj_same,P_Adj_diff);
     }
@@ -999,11 +929,6 @@ void PSI::compute_patch_adjacency(
     }
 
     // convert to vectors
-//    std::vector<std::vector<int>> V_patch_vec(V.size());
-//    for (int vi = 0; vi < V.size(); ++vi) {
-//        V_patch_vec[vi].insert(V_patch_vec[vi].end(),V_patch[vi].begin(),V_patch[vi].end());
-//    }
-
     std::vector<std::vector<int>> V_patch_vec;
     V_patch_vec.reserve(V.size());
     for (auto &patches : V_patch) {
@@ -1056,7 +981,6 @@ void PSI::get_unsampled_patch_components(
 ) {
     // in current implementation, we only return unsampled components, not those patches connected to unsampled components
     std::vector<int> component_labels(P_label.size(), -1);  // -1 for unlabeled
-
 
     int cur_component = -1;
     for (int pi =0; pi < P_label.size(); ++pi) {
@@ -1130,110 +1054,5 @@ void PSI::get_unsampled_patch_components(
     }
 
 }
-
-
-void PSI::search_for_connected_result(int topK, bool consider_adj_diff) {
-    // should first run PSI
-    if (!graph_cut_finished) {
-        return;
-    }
-
-    std::cout << "topK = " << topK << std::endl;
-    std::cout << "explore adjacent patches: " << consider_adj_diff << std::endl;
-
-    // compute patch adjacency list
-    std::vector<std::vector<int>> P_Adj_same, P_Adj_diff;
-    compute_patch_adjacency(P_Adj_same, P_Adj_diff);
-
-
-    // initial state
-    PSI_Search_State s0;
-    graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,s0.prohibited_patches,
-              s0.B_label,s0.P_label,s0.cost);
-    std::cout << "initial cost: " << s0.cost << std::endl;
-
-    auto state_cmp = [](const PSI_Search_State &left, const PSI_Search_State &right)
-            { return left.cost > right.cost; };
-    std::priority_queue<PSI_Search_State, std::vector<PSI_Search_State>, decltype(state_cmp)> Q(state_cmp);
-    Q.push(s0);
-
-    std::unordered_set<std::vector<bool>> visited_states;
-    visited_states.insert(s0.B_label);
-
-    int search_count = 0;
-    PSI_Search_State s;
-    while (! Q.empty()) {
-        s = Q.top();
-        Q.pop();
-        ++search_count;
-
-
-        // expand state
-        std::vector<std::vector<int>> components;
-        get_unsampled_patch_components(P_Adj_same,P_Adj_diff, P_samples, s.P_label, consider_adj_diff,
-                                       components);
-
-        // info
-        std::cout << "------ " << search_count << " ------" << std::endl;
-        std::cout << "cost: " << s.cost << ", ";
-        std::cout << components.size() << " unsampled patch components." << std::endl;
-        std::cout << "prohibited patches:" << std::endl;
-        for (auto i : s.prohibited_patches) {
-            std::cout << i << ",";
-        }
-        std::cout << std::endl;
-        export_state("/Users/charlesdu/Downloads/research/implicit_modeling/code/piecewise_sampled_implicits/data/state_search_test/patch_labels/"+std::to_string(search_count),
-                     s.P_label, components);
-
-
-        if (components.empty()) {
-            std::cout << "no unsampled patch component." << std::endl;
-            break;
-        }
-
-
-
-        std::vector<PSI_Search_State> children_states;
-        for (auto &comp : components) {
-            std::vector<int> proh_patches = s.prohibited_patches;
-            proh_patches.insert(proh_patches.end(), comp.begin(), comp.end());
-            PSI_Search_State child_s;
-            child_s.prohibited_patches = proh_patches;
-            graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,child_s.prohibited_patches,
-                      child_s.B_label,child_s.P_label,child_s.cost);
-            if (visited_states.find(child_s.B_label) == visited_states.end()) { // not visited before
-                children_states.push_back(child_s);
-            }
-        }
-        // select topK states with least cost
-        std::vector<PSI_Search_State> top_children_states;
-        if (topK >0 && topK < children_states.size()) {
-            std::sort(children_states.begin(), children_states.end(), state_cmp);
-            top_children_states.insert(top_children_states.begin(), children_states.end()-topK, children_states.end());
-        } else {
-            top_children_states = children_states;
-        }
-
-        // set visited
-        for (auto &state : top_children_states) {
-            visited_states.insert(state.B_label);
-        }
-
-        // enqueue
-//        for (int si = 0; si < top_children_states.size(); ++si) {
-//            Q.push(top_children_states[si]);
-//        }
-        for (const auto &state : top_children_states) {
-            Q.push(state);
-        }
-    }
-
-    // store result
-    P_label = s.P_label;
-    B_label = s.B_label;
-
-}
-
-//PSI::PSI(std::vector<std::unique_ptr<Sampled_Implicit>> *implPtr) : Impl_ptr(implPtr) {}
 
 
