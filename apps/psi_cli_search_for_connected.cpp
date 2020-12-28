@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     {
         ScopedTimer<> timer("search for connected result");
 //        int topK = 1;
-        psi->search_for_connected_result(args.topK, args.consider_adj_diff);
+//        psi->search_for_connected_result(args.topK, args.consider_adj_diff);
     }
 
 
