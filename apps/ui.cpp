@@ -38,7 +38,8 @@ public:
     }
 
 private:
-    void reset_patch_visibility(igl::opengl::glfw::Viewer& viewer) {
+    void reset_patch_visibility(igl::opengl::glfw::Viewer& viewer)
+    {
         static auto set_patch_visible = [&](auto& viewer, size_t i, bool val) {
             assert(i < m_data_ids.size());
             m_patch_visible[i] = val;
@@ -59,7 +60,7 @@ private:
 
     void initialize_manu(igl::opengl::glfw::Viewer& viewer)
     {
-        //static auto is_patch_visible = [&](auto& viewer, size_t i) -> bool {
+        // static auto is_patch_visible = [&](auto& viewer, size_t i) -> bool {
         //    assert(i < m_data_ids.size());
         //    auto pid = m_data_ids[i];
         //    return viewer.core().is_set(viewer.data(pid).is_visible);
@@ -75,7 +76,10 @@ private:
 
         static auto update_cell_visibility = [&](auto& viewer, size_t i) {
             const auto& cell = m_states->get_cells()[i];
-            const bool curr_cell_visible = m_cell_visible[i];
+            bool curr_cell_visible = m_cell_visible[i];
+            if (i == m_hovered_cell) {
+                curr_cell_visible = !curr_cell_visible;
+            }
             const auto& adj_list = m_states->get_cell_patch_adjacency();
             for (auto patch_index : cell) {
                 const auto& adj_cells = adj_list[patch_index];
@@ -147,14 +151,33 @@ private:
                     const auto& cells = m_states->get_cells();
                     const size_t num_cells = cells.size();
 
+                    int hovered_cell = -1;
                     for (size_t i = 0; i < num_cells; i++) {
-                        std::string name = "Cells " + std::to_string(i);
+                        ImGui::PushID(i);
+                        // std::string name = "Cells " + std::to_string(i);
                         if (ImGui::Checkbox(
-                                name.c_str(),
+                                // name.c_str(),
+                                "",
                                 [&]() { return m_cell_visible[i]; },
                                 [&](bool val) { m_cell_visible[i] = val; })) {
                             update_cell_visibility(viewer, i);
                         }
+                        if (!m_cell_visible[i]) {
+                            if (ImGui::IsItemHovered()) {
+                                hovered_cell = i;
+                            }
+                        }
+                        if (i % 5 != 4 && i != num_cells - 1) ImGui::SameLine();
+                        ImGui::PopID();
+                    }
+
+                    int prev_hovered_cell = m_hovered_cell;
+                    m_hovered_cell = hovered_cell;
+                    if (prev_hovered_cell >= 0) {
+                        update_cell_visibility(viewer, prev_hovered_cell);
+                    }
+                    if (hovered_cell >= 0) {
+                        update_cell_visibility(viewer, hovered_cell);
                     }
                 }
             };
@@ -323,6 +346,7 @@ private:
 
     void initialize_picking(igl::opengl::glfw::Viewer& viewer)
     {
+        constexpr float point_radius = 10;
         viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             int fid;
             Eigen::Vector3f bc;
@@ -351,7 +375,8 @@ private:
                         viewer.core().view,
                         viewer.core().proj,
                         viewer.core().viewport);
-                    if (std::abs(screen_p[0] - x) < 5 && std::abs(screen_p[1] - y) < 5) {
+                    if (std::abs(screen_p[0] - x) < point_radius &&
+                        std::abs(screen_p[1] - y) < point_radius) {
                         m_hit = true;
                         m_active_control_point = j;
                         m_hit_implicit = i;
@@ -372,7 +397,8 @@ private:
                         viewer.core().view,
                         viewer.core().proj,
                         viewer.core().viewport);
-                    if (std::abs(screen_p[0] - x) < 5 && std::abs(screen_p[1] - y) < 5) {
+                    if (std::abs(screen_p[0] - x) < point_radius &&
+                        std::abs(screen_p[1] - y) < point_radius) {
                         m_hit = true;
                         m_active_sample_point = j;
                         m_hit_implicit = i;
@@ -387,7 +413,7 @@ private:
             hit_patches.reserve(num_patches);
             for (size_t i = 0; i < num_patches; i++) {
                 if (!m_patch_visible[i]) continue;
-                if (!m_implicit_visible[m_states->get_implicit_from_patch(i)]) continue;
+                // if (!m_implicit_visible[m_states->get_implicit_from_patch(i)]) continue;
                 const auto pid = m_data_ids[i];
                 const auto& V = viewer.data(pid).V;
                 const auto& F = viewer.data(pid).F;
@@ -485,7 +511,7 @@ private:
                     pts.push_back(m_hit_pt);
 
                     m_states->update_sample_points(m_hit_implicit, pts);
-                    initialize_data(viewer);
+                    reset_patch_visibility(viewer);
 
                     m_hit = false;
                     m_hit_implicit = -1;
@@ -493,9 +519,8 @@ private:
                     m_active_sample_point = -1;
                     return true;
                 }
-            } else if (m_hit) {
+            } else if (m_hit && (m_active_control_point >= 0 || m_active_sample_point >= 0)) {
                 assert(m_hit_implicit >= 0);
-                assert(m_active_control_point >= 0 || m_active_sample_point >= 0);
 
                 const auto& fn = m_states->get_implicit_function(m_hit_implicit);
                 if (m_active_control_point >= 0) {
@@ -503,16 +528,18 @@ private:
                     assert(fn.has_control_points());
                     auto view_id = m_control_view_ids[m_hit_implicit];
                     auto pts = fn.get_control_points();
-                    pts[m_active_control_point] =
-                        viewer.data(view_id).points.row(m_active_control_point).template segment<3>(0);
+                    pts[m_active_control_point] = viewer.data(view_id)
+                                                      .points.row(m_active_control_point)
+                                                      .template segment<3>(0);
                     m_states->update_control_points(m_hit_implicit, pts);
                     initialize_data(viewer);
                 } else {
                     // Sample point moved.
                     auto view_id = m_sample_view_ids[m_hit_implicit];
                     auto pts = fn.get_sample_points();
-                    pts[m_active_sample_point] =
-                        viewer.data(view_id).points.row(m_active_sample_point).template segment<3>(0);
+                    pts[m_active_sample_point] = viewer.data(view_id)
+                                                     .points.row(m_active_sample_point)
+                                                     .template segment<3>(0);
                     m_states->update_sample_points(m_hit_implicit, pts);
                     reset_patch_visibility(viewer);
                 }
@@ -536,8 +563,13 @@ private:
 
     Eigen::RowVector3d get_sample_pt_color(int implicit_id) const
     {
-        Eigen::Vector3d pt_color(1, 1, 0);
+        Eigen::RowVector4d implicit_color = m_states->get_implicit_color(implicit_id);
+        Eigen::Vector3d pt_color =
+            implicit_color.template segment<3>(0) +
+            (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.1;
         return pt_color;
+        //Eigen::Vector3d pt_color(1, 1, 0);
+        //return pt_color;
     }
 
 private:
@@ -553,6 +585,7 @@ private:
     PSIStates* m_states;
     int m_active_control_point = -1;
     int m_active_sample_point = -1;
+    int m_hovered_cell = -1;
     bool m_hit;
     int m_hit_implicit = -1;
     Eigen::RowVector3d m_hit_pt;

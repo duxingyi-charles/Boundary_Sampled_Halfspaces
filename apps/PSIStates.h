@@ -50,19 +50,18 @@ public:
         initialize_colors();
     }
 
-    const Sampled_Implicit& get_implicit_function(size_t i)
-    {
-        return *m_implicits[i];
-    }
+    const Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
 
-    void update_control_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts) {
+    void update_control_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
+    {
         m_implicits[implicit_id]->set_control_points(pts);
         m_psi->run(m_grid, m_implicits);
         initialize_states();
         initialize_colors();
     }
 
-    void update_sample_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts) {
+    void update_sample_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
+    {
         m_implicits[implicit_id]->set_sample_points(pts);
         m_psi->process_samples();
         m_psi->graph_cut();
@@ -101,12 +100,43 @@ private:
         }
     }
 
+    Eigen::Matrix<double, 1, 3> map_color(double t)
+    {
+        t = std::max<double>(std::min<double>(t, 1), 0);
+        Eigen::Matrix<double, 8, 3> pallette;
+        //pallette << 0x8d, 0xd3, 0xc7, 0xff, 0xff, 0xb3, 0xbe, 0xba, 0xda, 0xfb, 0x80, 0x72, 0x80,
+        //    0xb1, 0xd3, 0xfd, 0xb4, 0x62, 0xb3, 0xde, 0x69, 0xfc, 0xcd, 0xe5;
+
+        pallette <<
+                0xe4, 0x1a, 0x1c,
+                0x37, 0x7e, 0xb8,
+                0x4d, 0xaf, 0x4a,
+                0x98, 0x4e, 0xa3,
+                0xff, 0x7f, 0x00,
+                0xff, 0xff, 0x33,
+                0xa6, 0x56, 0x28,
+                0xf7, 0x81, 0xbf;
+        size_t i0 = static_cast<size_t>(std::floor(t * 8));
+        size_t i1 = static_cast<size_t>(std::ceil(t * 8));
+        i0 = std::min<size_t>(i0, 7);
+        i1 = std::min<size_t>(i1, 7);
+
+        const double d = t * 8 - i0;
+        return (pallette.row(i0) * (1 - d) + pallette.row(i1) * d) / 255.0;
+    }
+
     void initialize_colors()
     {
         const auto num_implicits = m_implicits.size();
-        m_colors.setRandom(num_implicits, 4);
-        m_colors = m_colors.array() * 0.5 + 0.5;
-        m_colors.col(3).setConstant(0.5);
+        m_colors.resize(num_implicits, 4);
+        for (int i = 0; i < num_implicits; i++) {
+            double t = double(i) / double(num_implicits - 1);
+            m_colors.row(i) << map_color(t), 1;
+        }
+
+        // m_colors.setRandom(num_implicits, 4);
+        // m_colors = m_colors.array() * 0.5 + 0.5;
+        // m_colors.col(3).setConstant(0.5);
     }
 
 private:
