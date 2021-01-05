@@ -24,5 +24,8 @@ std::unique_ptr<Sampled_Implicit> initialize_Cylinder(
 std::unique_ptr<Sampled_Implicit> initialize_Cone(const nlohmann::json& entry,
                                                   const std::string& path_name);
 
+std::unique_ptr<Sampled_Implicit> initialize_Torus(const nlohmann::json& entry,
+                                                  const std::string& path_name);
+
 std::vector<std::unique_ptr<Sampled_Implicit>>
 initialize_sampled_implicit_functions(const std::string& config_file);
