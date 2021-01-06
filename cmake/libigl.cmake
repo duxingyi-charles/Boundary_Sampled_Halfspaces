@@ -4,7 +4,7 @@ include(FetchContent)
 FetchContent_Declare(
     libigl
     GIT_REPOSITORY https://github.com/libigl/libigl.git
-    GIT_TAG 780a5fbea5596bfce9809f7c5845315f14ac8ad2
+    GIT_TAG qnzhou/ui
 )
 FetchContent_GetProperties(libigl)
 if(libigl_POPULATED)

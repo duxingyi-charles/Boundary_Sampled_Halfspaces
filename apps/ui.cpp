@@ -614,6 +614,7 @@ int main(int argc, char** argv)
     PSIStates states(grid_spec, implicit_functions);
 
     igl::opengl::glfw::Viewer viewer;
+    viewer.core().background_color.setOnes();
 
     MeshArrangementMenu menu;
     menu.set_states(&states);
