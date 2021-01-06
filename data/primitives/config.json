@@ -1,0 +1,37 @@
+{
+	"input":[
+		{
+			"type":"sphere",
+			"center": [0,0,0],
+			"radius": 1,
+			"is_flipped": false
+		},
+		{
+			"type":"cylinder",
+			"axis_point1": [0,0,0],
+			"axis_point2": [1,0,0],
+			"radius": 0.3,
+			"is_flipped": true
+		},
+		{
+			"type":"cone",
+			"apex": [0,0,1.8],
+			"axis_vector":[0,0,-1],
+			"apex_angle": 0.253,
+			"is_flipped": false
+		},
+		{
+			"type":"plane",
+			"point": [0,0,-1.5],
+			"normal": [0,0,-1]
+		},
+		{
+			"type":"torus",
+			"center": [0,0,0],
+			"axis_vector": [0,0,1],
+			"major_radius": 1,
+			"minor_radius": 0.5,
+			"is_flipped": false
+		}
+	]
+}

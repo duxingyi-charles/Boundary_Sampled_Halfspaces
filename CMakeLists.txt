@@ -80,8 +80,14 @@ target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
 add_executable(psi_cli apps/psi_cli.cpp)
 target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11)
 
-add_executable(psi_cli_add_new_explicit apps/psi_cli_add_new_implicit.cpp)
-target_link_libraries(psi_cli_add_new_explicit PRIVATE psi CLI11::CLI11)
+add_executable(psi_cli_add_new_implicit apps/psi_cli_add_new_implicit.cpp)
+target_link_libraries(psi_cli_add_new_implicit PRIVATE psi CLI11::CLI11)
+
+add_executable(psi_cli_sample_reduction apps/psi_cli_sample_reduction.cpp)
+target_link_libraries(psi_cli_sample_reduction PRIVATE psi CLI11::CLI11)
+
+#add_executable(psi_cli_connect apps/psi_cli_search_for_connected.cpp)
+#target_link_libraries(psi_cli_connect PRIVATE psi CLI11::CLI11)
 
 add_executable(ui apps/ui.cpp)
 target_link_libraries(ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
