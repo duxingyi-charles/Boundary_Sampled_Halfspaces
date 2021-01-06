@@ -309,6 +309,7 @@ private:
             viewer.data(id).set_colors(color);
             viewer.data(id).set_visible(m_patch_visible[i]);
             viewer.data(id).double_sided = true;
+            viewer.data(id).show_lines = false;
         }
     }
 
