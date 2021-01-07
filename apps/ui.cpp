@@ -526,16 +526,27 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             if (x == m_down_x && y == m_down_y && m_hit) {
                 if (m_active_control_point < 0 && m_active_sample_point < 0) {
-                    const auto view_id = m_sample_view_ids[m_hit_implicit];
-                    viewer.data(view_id).add_points(m_hit_pt, get_sample_pt_color(m_hit_implicit));
+                    if (m_ui_mode == 0) {
+                        const auto view_id = m_sample_view_ids[m_hit_implicit];
+                        viewer.data(view_id).add_points(m_hit_pt, get_sample_pt_color(m_hit_implicit));
 
-                    const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                    auto pts = fn.get_sample_points();
-                    pts.push_back(m_hit_pt);
+                        const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+                        auto pts = fn.get_sample_points();
+                        pts.push_back(m_hit_pt);
 
-                    m_states->update_sample_points(m_hit_implicit, pts);
+                        m_states->update_sample_points(m_hit_implicit, pts);
+                    } else {
+                        const auto view_id = m_control_view_ids[m_hit_implicit];
+                        viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
+
+                        const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+                        auto pts = fn.get_control_points();
+                        pts.push_back(m_hit_pt);
+
+                        m_states->update_control_points(m_hit_implicit, pts);
+                    }
+
                     reset_patch_visibility(viewer);
-
                     m_hit = false;
                     m_hit_implicit = -1;
                     m_active_control_point = -1;
