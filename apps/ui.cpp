@@ -33,18 +33,33 @@ public:
     void initialize(igl::opengl::glfw::Viewer& viewer)
     {
         initialize_data(viewer); // Data must be initialized first.
-        initialize_manu(viewer);
+        // initialize_debug_menu(viewer);
+        initialize_menu(viewer);
         initialize_picking(viewer);
+        initialize_hotkeys(viewer);
     }
 
 private:
     void reset_patch_visibility(igl::opengl::glfw::Viewer& viewer)
     {
-        static auto set_patch_visible = [&](auto& viewer, size_t i, bool val) {
+        auto set_patch_visible = [&](auto& viewer, size_t i, bool val) {
             assert(i < m_data_ids.size());
             m_patch_visible[i] = val;
             auto pid = m_data_ids[i];
-            viewer.data(pid).set_visible(val);
+
+            const int implicit_id = m_states->get_implicit_from_patch(i);
+            Eigen::RowVector4d color = m_states->get_implicit_color(implicit_id);
+
+            if (val) {
+                viewer.data(pid).set_visible(true);
+                viewer.data(pid).show_lines = false;
+                viewer.data(pid).show_faces = true;
+            } else {
+                viewer.data(pid).set_visible(true);
+                viewer.data(pid).show_lines = m_show_wire_frame;
+                viewer.data(pid).show_faces = false;
+                viewer.data(pid).line_color = color.transpose().template cast<float>();
+            }
             assert(viewer.core().is_set(viewer.data(pid).is_visible) == val);
         };
 
@@ -56,9 +71,44 @@ private:
         for (size_t i = 0; i < num_patches; i++) {
             set_patch_visible(viewer, i, m_patch_visible[i]);
         }
+
+        update_mode(viewer);
     }
 
-    void initialize_manu(igl::opengl::glfw::Viewer& viewer)
+    void update_mode(igl::opengl::glfw::Viewer& viewer)
+    {
+        const auto num_implicits = m_states->get_num_implicits();
+        for (size_t i = 0; i < num_implicits; i++) {
+            const int control_id = m_control_view_ids[i];
+            viewer.data(control_id).set_visible(m_ui_mode == 1);
+
+            const int sample_id = m_sample_view_ids[i];
+            viewer.data(sample_id).set_visible(m_ui_mode == 0);
+        }
+    }
+
+    void initialize_menu(igl::opengl::glfw::Viewer& viewer)
+    {
+        update_mode(viewer);
+
+        static bool imgui_demo = false;
+        viewer.plugins.push_back(&m_menu);
+        m_menu.callback_draw_viewer_menu = [&]() {
+            ImGui::Checkbox("imgui demo", &imgui_demo);
+            if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
+            if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
+                update_mode(viewer);
+            }
+            if (ImGui::RadioButton("Control Points", &m_ui_mode, 1)) {
+                update_mode(viewer);
+            }
+            if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
+                reset_patch_visibility(viewer);
+            }
+        };
+    }
+
+    void initialize_debug_menu(igl::opengl::glfw::Viewer& viewer)
     {
         // static auto is_patch_visible = [&](auto& viewer, size_t i) -> bool {
         //    assert(i < m_data_ids.size());
@@ -120,9 +170,9 @@ private:
             }
         };
 
-        viewer.plugins.push_back(&m_menu);
-        m_menu.callback_draw_viewer_menu = [&]() {
-            // m_menu.draw_viewer_menu();
+        viewer.plugins.push_back(&m_debug_menu);
+        m_debug_menu.callback_draw_viewer_menu = [&]() {
+            // m_debug_menu.draw_viewer_menu();
             if (ImGui::Button("Center object", ImVec2(-1, 0))) {
                 auto bbox = m_states->get_bbox();
                 viewer.core().align_camera_center(bbox);
@@ -233,14 +283,6 @@ private:
                 add_patch_menu();
             } else {
                 add_implicit_menu();
-            }
-
-            // Primitive menu
-            if (ImGui::Button("Add sphere", ImVec2(-1, 0))) {
-                auto bbox = m_states->get_bbox();
-                double diag = (bbox.row(0) - bbox.row(1)).norm();
-                m_states->add_sphere(0.5 * (bbox.row(0) + bbox.row(1)), diag / 5);
-                initialize_data(viewer);
             }
         };
     }
@@ -358,17 +400,19 @@ private:
             m_down_y = y;
             m_hit = false;
             m_hit_implicit = -1;
-            std::cout << "x: " << x << " y:" << y << std::endl;
+            m_active_sample_point = -1;
+            m_active_control_point = -1;
 
             const auto num_patches = m_states->get_patches().size();
             const auto num_implicits = m_states->get_num_implicits();
 
-            // Check of control points.
-            m_active_control_point = -1;
+            const auto& ids = (m_ui_mode == 0) ? m_sample_view_ids : m_control_view_ids;
+            auto& active_point = (m_ui_mode == 0) ? m_active_sample_point : m_active_control_point;
+
+            // Check for hitting sample/control points.
             for (size_t i = 0; i < num_implicits; i++) {
-                if (!m_implicit_visible[i]) continue;
-                auto view_id = m_control_view_ids[i];
-                const auto& points = viewer.data(view_id).points;
+                auto id = ids[i];
+                const auto& points = viewer.data(id).points;
                 const size_t num_pts = points.rows();
                 for (size_t j = 0; j < num_pts; j++) {
                     const Eigen::RowVector3d p = points.row(j).template segment<3>(0);
@@ -379,35 +423,14 @@ private:
                     if (std::abs(screen_p[0] - x) < point_radius &&
                         std::abs(screen_p[1] - y) < point_radius) {
                         m_hit = true;
-                        m_active_control_point = j;
+                        active_point = j;
                         m_hit_implicit = i;
                         return false;
                     }
                 }
             }
 
-            // Check of sample points.
-            m_active_sample_point = -1;
-            for (size_t i = 0; i < num_implicits; i++) {
-                auto view_id = m_sample_view_ids[i];
-                const auto& points = viewer.data(view_id).points;
-                const size_t num_pts = points.rows();
-                for (size_t j = 0; j < num_pts; j++) {
-                    const Eigen::RowVector3d p = points.row(j).template segment<3>(0);
-                    auto screen_p = igl::project(p.template cast<float>().transpose().eval(),
-                        viewer.core().view,
-                        viewer.core().proj,
-                        viewer.core().viewport);
-                    if (std::abs(screen_p[0] - x) < point_radius &&
-                        std::abs(screen_p[1] - y) < point_radius) {
-                        m_hit = true;
-                        m_active_sample_point = j;
-                        m_hit_implicit = i;
-                        return false;
-                    }
-                }
-            }
-
+            // Check for hitting any patch.
             std::vector<Eigen::RowVector3d> hits;
             std::vector<int> hit_patches;
             hits.reserve(num_patches);
@@ -457,7 +480,6 @@ private:
                 m_hit = true;
                 return false;
             }
-            m_active_control_point = -1;
             return false;
         };
 
@@ -542,8 +564,8 @@ private:
                                                      .points.row(m_active_sample_point)
                                                      .template segment<3>(0);
                     m_states->update_sample_points(m_hit_implicit, pts);
-                    reset_patch_visibility(viewer);
                 }
+                reset_patch_visibility(viewer);
             }
             m_hit = false;
             m_hit_implicit = -1;
@@ -553,12 +575,36 @@ private:
         };
     }
 
+    void initialize_hotkeys(igl::opengl::glfw::Viewer& viewer)
+    {
+        viewer.callback_key_down =
+            [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifier) -> bool {
+            std::cout << "Key down -- Key: " << key << " Modifier: " << modifier << std::endl;
+            if (key == 32) {
+                m_show_wire_frame = !m_show_wire_frame;
+                reset_patch_visibility(viewer);
+                return true;
+            }
+            return false;
+        };
+        viewer.callback_key_up =
+            [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifier) -> bool {
+            std::cout << "Key up   -- Key: " << key << " Modifier: " << modifier << std::endl;
+            if (key == 32) {
+                m_show_wire_frame = !m_show_wire_frame;
+                reset_patch_visibility(viewer);
+                return true;
+            }
+            return false;
+        };
+    }
+
     Eigen::RowVector3d get_control_pt_color(int implicit_id) const
     {
         Eigen::RowVector4d implicit_color = m_states->get_implicit_color(implicit_id);
         Eigen::Vector3d pt_color =
             implicit_color.template segment<3>(0) +
-            (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.5;
+            (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.2;
         return pt_color;
     }
 
@@ -569,8 +615,8 @@ private:
             implicit_color.template segment<3>(0) +
             (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.1;
         return pt_color;
-        //Eigen::Vector3d pt_color(1, 1, 0);
-        //return pt_color;
+        // Eigen::Vector3d pt_color(1, 1, 0);
+        // return pt_color;
     }
 
 private:
@@ -582,6 +628,7 @@ private:
     std::vector<bool> m_cell_visible;
     std::vector<bool> m_implicit_visible;
 
+    igl::opengl::glfw::imgui::ImGuiMenu m_debug_menu;
     igl::opengl::glfw::imgui::ImGuiMenu m_menu;
     PSIStates* m_states;
     int m_active_control_point = -1;
@@ -591,6 +638,8 @@ private:
     int m_hit_implicit = -1;
     Eigen::RowVector3d m_hit_pt;
     double m_down_x, m_down_y;
+    int m_ui_mode = 0;
+    bool m_show_wire_frame = false;
 };
 
 int main(int argc, char** argv)
@@ -620,7 +669,11 @@ int main(int argc, char** argv)
     menu.set_states(&states);
     menu.initialize(viewer);
 
-    viewer.launch();
+    viewer.launch_init(true, false, "Implicit Modeling");
+    auto bbox = states.get_bbox();
+    viewer.core().align_camera_center(bbox);
+    viewer.launch_rendering(true);
+    viewer.launch_shut();
 
     return 0;
 }
