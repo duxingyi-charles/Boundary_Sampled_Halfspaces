@@ -390,6 +390,7 @@ private:
     void initialize_picking(igl::opengl::glfw::Viewer& viewer)
     {
         constexpr float point_radius = 10;
+
         viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             int fid;
             Eigen::Vector3f bc;
@@ -524,65 +525,72 @@ private:
         viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-            if (x == m_down_x && y == m_down_y && m_hit) {
-                if (m_active_control_point < 0 && m_active_sample_point < 0) {
-                    if (m_ui_mode == 0) {
-                        const auto view_id = m_sample_view_ids[m_hit_implicit];
-                        viewer.data(view_id).add_points(m_hit_pt, get_sample_pt_color(m_hit_implicit));
 
-                        const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                        auto pts = fn.get_sample_points();
-                        pts.push_back(m_hit_pt);
-
-                        m_states->update_sample_points(m_hit_implicit, pts);
-                    } else {
-                        const auto view_id = m_control_view_ids[m_hit_implicit];
-                        viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
-
-                        const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                        auto pts = fn.get_control_points();
-                        pts.push_back(m_hit_pt);
-
-                        m_states->update_control_points(m_hit_implicit, pts);
-                    }
-
-                    reset_patch_visibility(viewer);
-                    m_hit = false;
-                    m_hit_implicit = -1;
+            auto reset_pick_state = [&]() {
+                if (!m_hit) {
                     m_active_control_point = -1;
                     m_active_sample_point = -1;
-                    return true;
+                    m_hit_implicit = -1;
                 }
-            } else if (m_hit && (m_active_control_point >= 0 || m_active_sample_point >= 0)) {
-                assert(m_hit_implicit >= 0);
+                m_hit = false;
+            };
 
-                const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                if (m_active_control_point >= 0) {
-                    // Control point moved.
-                    assert(fn.has_control_points());
-                    auto view_id = m_control_view_ids[m_hit_implicit];
-                    auto pts = fn.get_control_points();
-                    pts[m_active_control_point] = viewer.data(view_id)
-                                                      .points.row(m_active_control_point)
-                                                      .template segment<3>(0);
-                    m_states->update_control_points(m_hit_implicit, pts);
-                    initialize_data(viewer);
-                } else {
-                    // Sample point moved.
-                    auto view_id = m_sample_view_ids[m_hit_implicit];
-                    auto pts = fn.get_sample_points();
-                    pts[m_active_sample_point] = viewer.data(view_id)
-                                                     .points.row(m_active_sample_point)
-                                                     .template segment<3>(0);
-                    m_states->update_sample_points(m_hit_implicit, pts);
+            if (m_hit) {
+                if (x == m_down_x && y == m_down_y) {
+                    if (m_active_control_point < 0 && m_active_sample_point < 0) {
+                        if (m_ui_mode == 0) {
+                            const auto view_id = m_sample_view_ids[m_hit_implicit];
+                            viewer.data(view_id).add_points(m_hit_pt, get_sample_pt_color(m_hit_implicit));
+
+                            const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+                            auto pts = fn.get_sample_points();
+                            pts.push_back(m_hit_pt);
+
+                            m_states->update_sample_points(m_hit_implicit, pts);
+                        } else {
+                            const auto view_id = m_control_view_ids[m_hit_implicit];
+                            viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
+
+                            const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+                            auto pts = fn.get_control_points();
+                            pts.push_back(m_hit_pt);
+
+                            m_states->update_control_points(m_hit_implicit, pts);
+                        }
+
+                        reset_patch_visibility(viewer);
+                        reset_pick_state();
+                    }
+                } else if (m_active_control_point >= 0 || m_active_sample_point >= 0) {
+                    assert(m_hit_implicit >= 0);
+
+                    const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+                    if (m_active_control_point >= 0) {
+                        // Control point moved.
+                        assert(fn.has_control_points());
+                        auto view_id = m_control_view_ids[m_hit_implicit];
+                        auto pts = fn.get_control_points();
+                        pts[m_active_control_point] = viewer.data(view_id)
+                                                          .points.row(m_active_control_point)
+                                                          .template segment<3>(0);
+                        m_states->update_control_points(m_hit_implicit, pts);
+                        initialize_data(viewer);
+                    } else {
+                        // Sample point moved.
+                        auto view_id = m_sample_view_ids[m_hit_implicit];
+                        auto pts = fn.get_sample_points();
+                        pts[m_active_sample_point] = viewer.data(view_id)
+                                                         .points.row(m_active_sample_point)
+                                                         .template segment<3>(0);
+                        m_states->update_sample_points(m_hit_implicit, pts);
+                    }
+                    reset_patch_visibility(viewer);
+                    reset_pick_state();
                 }
-                reset_patch_visibility(viewer);
+            } else {
+                reset_pick_state();
             }
-            m_hit = false;
-            m_hit_implicit = -1;
-            m_active_control_point = -1;
-            m_active_sample_point = -1;
-            return false;
+            return true;
         };
     }
 
@@ -606,8 +614,49 @@ private:
                 reset_patch_visibility(viewer);
                 return true;
             }
+            if (key == 259 || key == 88) {
+                remove_active_point(viewer);
+            }
             return false;
         };
+    }
+
+    void remove_active_point(igl::opengl::glfw::Viewer& viewer)
+    {
+        if (m_hit_implicit < 0) return;
+
+        const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+        if (m_ui_mode == 0) {
+            // Working with sample points.
+            if (m_active_sample_point < 0) return;
+
+            auto view_id = m_sample_view_ids[m_hit_implicit];
+            auto pts = fn.get_sample_points();
+            pts.erase(pts.begin() + m_active_sample_point);
+            m_states->update_sample_points(m_hit_implicit, pts);
+
+            viewer.data(view_id).clear_points();
+            auto c = get_sample_pt_color(m_hit_implicit);
+            for (auto& p : pts) {
+                viewer.data(view_id).add_points(p.transpose(), c);
+            }
+            m_active_sample_point = -1;
+        } else {
+            // Working with control points.
+            if (m_active_control_point < 0) return;
+
+            auto view_id = m_control_view_ids[m_hit_implicit];
+            auto pts = fn.get_control_points();
+            pts.erase(pts.begin() + m_active_control_point);
+            m_states->update_control_points(m_hit_implicit, pts);
+
+            viewer.data(view_id).clear_points();
+            auto c = get_control_pt_color(m_hit_implicit);
+            for (auto& p : pts) {
+                viewer.data(view_id).add_points(p.transpose(), c);
+            }
+            m_active_control_point = -1;
+        }
     }
 
     Eigen::RowVector3d get_control_pt_color(int implicit_id) const
