@@ -183,9 +183,9 @@ void Mesh_PSI::compute_arrangement(
 
     meshes.push_back(generate_cube(grid));
     for (const auto& fn : implicits) {
-//        meshes.push_back(marching_cubes(*fn, grid));
+        meshes.push_back(marching_cubes(*fn, grid));
         // test: random planes
-        meshes.push_back(generate_random_plane(grid));
+//        meshes.push_back(generate_random_plane(grid));
     }
 
 
