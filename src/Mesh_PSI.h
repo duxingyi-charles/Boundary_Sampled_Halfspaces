@@ -37,6 +37,8 @@ private:
             IGL_Mesh &merged_mesh,
             Eigen::VectorXi &face_to_mesh);
 
+    IGL_Mesh generate_random_plane(const GridSpec &grid);
+
 };
 
 

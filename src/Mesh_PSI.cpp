@@ -13,6 +13,7 @@
 #include "PyMesh/CellPartition.h"
 #include "ScopedTimer.h"
 
+#include <Eigen/Geometry> //cross product
 
 IGL_Mesh Mesh_PSI::generate_cube(const GridSpec& grid_spec) {
     ScopedTimer<> timer("Generate cube");
@@ -123,6 +124,54 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
     process_samples();
 }
 
+IGL_Mesh Mesh_PSI::generate_random_plane(const GridSpec &grid)
+{
+    auto pmin = grid.bbox_min;
+    auto pmax = grid.bbox_max;
+    auto resolution = grid.resolution;
+
+    int rand_x = rand() % resolution.x();
+    double x = pmin.x() + (1.0 * rand_x / resolution.x()) * (pmax.x() - pmin.x());
+    int rand_y = rand() % resolution.y();
+    double y = pmin.y() + (1.0 * rand_y / resolution.y()) * (pmax.y() - pmin.y());
+    int rand_z = rand() % resolution.z();
+    double z = pmin.z() + (1.0 * rand_z / resolution.z()) * (pmax.z() - pmin.z());
+
+    Point center(x,y,z);
+    std::cout << "plane center: " << center << std::endl;
+
+    Eigen::Vector3d normal((double)rand()/RAND_MAX, (double)rand()/RAND_MAX, (double)rand()/RAND_MAX);
+    normal.normalize();
+
+    double max_dist = (pmax - pmin).norm() * 1.001;
+    std::cout << "max_dist: " << max_dist << std::endl;
+
+    Eigen::Vector3d axis1 = center.cross(center+normal);
+    axis1.normalize();
+    Eigen::Vector3d axis2 = normal.cross(axis1);
+
+    Point p0 = center + max_dist * (-axis1-axis2);
+    Point p1 = center + max_dist * (axis1 -axis2);
+    Point p2 = center + max_dist * (axis1 +axis2);
+    Point p3 = center + max_dist * (-axis1+axis2);
+
+    std::cout << "point0: " << p0 << std::endl;
+
+    IGL_Mesh plane;
+    plane.vertices.resize(4, 3);
+    plane.vertices.row(0) = p0;
+    plane.vertices.row(1) = p1;
+    plane.vertices.row(2) = p2;
+    plane.vertices.row(3) = p3;
+
+
+    plane.faces.resize(2, 3);
+    plane.faces << 0, 1, 2, 0, 2, 3;
+
+
+    return plane;
+
+}
 
 void Mesh_PSI::compute_arrangement(
         const GridSpec &grid,
@@ -134,7 +183,9 @@ void Mesh_PSI::compute_arrangement(
 
     meshes.push_back(generate_cube(grid));
     for (const auto& fn : implicits) {
-        meshes.push_back(marching_cubes(*fn, grid));
+//        meshes.push_back(marching_cubes(*fn, grid));
+        // test: random planes
+        meshes.push_back(generate_random_plane(grid));
     }
 
 
