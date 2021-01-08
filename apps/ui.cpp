@@ -60,7 +60,14 @@ private:
                 viewer.data(pid).show_faces = false;
                 viewer.data(pid).line_color = color.transpose().template cast<float>();
             }
-            assert(viewer.core().is_set(viewer.data(pid).is_visible) == val);
+
+            // Show hit implicit patches.
+            if (implicit_id == m_hit_implicit) {
+                viewer.data(pid).set_visible(true);
+                viewer.data(pid).show_lines = true;
+                viewer.data(pid).show_faces = val;
+                viewer.data(pid).line_color = color.transpose().template cast<float>();
+            }
         };
 
         const auto& patches = m_states->get_patches();
@@ -390,6 +397,7 @@ private:
     void initialize_picking(igl::opengl::glfw::Viewer& viewer)
     {
         constexpr float point_radius = 10;
+        static bool mouse_down = false;
 
         viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             int fid;
@@ -400,9 +408,7 @@ private:
             m_down_x = x;
             m_down_y = y;
             m_hit = false;
-            m_hit_implicit = -1;
-            m_active_sample_point = -1;
-            m_active_control_point = -1;
+            mouse_down = true;
 
             const auto num_patches = m_states->get_patches().size();
             const auto num_implicits = m_states->get_num_implicits();
@@ -508,7 +514,7 @@ private:
                 viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
             };
 
-            if (m_hit) {
+            if (m_hit && mouse_down) {
                 if (m_active_control_point >= 0) {
                     const auto view_id = m_control_view_ids[m_hit_implicit];
                     update_point(view_id, m_active_control_point);
@@ -525,9 +531,10 @@ private:
         viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+            const bool mouse_moved = (x != m_down_x) || (y != m_down_y);
 
             auto reset_pick_state = [&]() {
-                if (!m_hit) {
+                if (!m_hit && !mouse_moved) {
                     m_active_control_point = -1;
                     m_active_sample_point = -1;
                     m_hit_implicit = -1;
@@ -536,7 +543,7 @@ private:
             };
 
             if (m_hit) {
-                if (x == m_down_x && y == m_down_y) {
+                if (!mouse_moved) {
                     if (m_active_control_point < 0 && m_active_sample_point < 0) {
                         if (m_ui_mode == 0) {
                             const auto view_id = m_sample_view_ids[m_hit_implicit];
@@ -557,9 +564,6 @@ private:
 
                             m_states->update_control_points(m_hit_implicit, pts);
                         }
-
-                        reset_patch_visibility(viewer);
-                        reset_pick_state();
                     }
                 } else if (m_active_control_point >= 0 || m_active_sample_point >= 0) {
                     assert(m_hit_implicit >= 0);
@@ -584,12 +588,11 @@ private:
                                                          .template segment<3>(0);
                         m_states->update_sample_points(m_hit_implicit, pts);
                     }
-                    reset_patch_visibility(viewer);
-                    reset_pick_state();
                 }
-            } else {
-                reset_pick_state();
             }
+            reset_pick_state();
+            reset_patch_visibility(viewer);
+            mouse_down = false;
             return true;
         };
     }
