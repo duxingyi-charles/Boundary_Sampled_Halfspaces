@@ -124,6 +124,66 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
     process_samples();
 }
 
+IGL_Mesh Mesh_PSI::generate_plane(const GridSpec &grid, const Point &p, const Eigen::Vector3d &normal)
+{
+    auto pmin = grid.bbox_min;
+    auto pmax = grid.bbox_max;
+    auto center = (pmin + pmax) /2;
+
+    Eigen::Vector3d xAxi(pmax.x()-center.x(),0,0);
+    Eigen::Vector3d yAxi(0,pmax.y()-center.y(),0);
+    Eigen::Vector3d zAxi(0,0,pmax.z()-center.z());
+
+    // find the corner farthest to point p
+    double max_dist = 0;
+    for (int i = 0; i < 2; ++i) {
+        int sx = (i == 0 ? -1 : 1);
+        for (int j = 0; j < 2; ++j) {
+            int sy = (j == 0 ? -1 : 1);
+            for (int k = 0; k < 2; ++k) {
+                int sz = (k == 0 ? -1 : 1);
+                auto q_ijk = center + sx * xAxi + sy * yAxi + sz * zAxi;
+                double dist = (p-q_ijk).norm();
+                if (dist > max_dist) {
+                    max_dist = dist;
+                }
+            }
+        }
+    }
+    max_dist *= 1.001;
+
+//    Eigen::Vector3d axis1 = p.cross(p+normal);
+    Eigen::Vector3d axis1 = normal.cross(xAxi);
+    if (axis1.norm() == 0) {
+        axis1 = normal.cross(yAxi);
+    }
+    axis1.normalize();
+    Eigen::Vector3d axis2 = normal.cross(axis1);
+
+    std::cout << "plane center: " << p << std::endl;
+    std::cout << "max_dist: " << max_dist << std::endl;
+
+    Point p0 = p + max_dist * (-axis1-axis2);
+    Point p1 = p + max_dist * (axis1 -axis2);
+    Point p2 = p + max_dist * (axis1 +axis2);
+    Point p3 = p + max_dist * (-axis1+axis2);
+
+    IGL_Mesh plane;
+    plane.vertices.resize(4, 3);
+    plane.vertices.row(0) = p0;
+    plane.vertices.row(1) = p1;
+    plane.vertices.row(2) = p2;
+    plane.vertices.row(3) = p3;
+
+    std::cout << "point0: " << p0 << std::endl;
+
+
+    plane.faces.resize(2, 3);
+    plane.faces << 0, 1, 2, 0, 2, 3;
+
+    return plane;
+}
+
 IGL_Mesh Mesh_PSI::generate_random_plane(const GridSpec &grid)
 {
     auto pmin = grid.bbox_min;
