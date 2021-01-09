@@ -1,5 +1,6 @@
+#pragma once
 #include <PSI.h>
-#include <config.h>
+
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/project.h>
@@ -7,20 +8,17 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/write_triangle_mesh.h>
 
-#include <CLI/CLI.hpp>
-#include <Eigen/Core>
 #include <array>
 #include <limits>
 #include <map>
 #include <string>
 
 #include "PSIStates.h"
-#include "ScopedTimer.h"
 
-class MeshArrangementMenu
+class UI
 {
 public:
-    MeshArrangementMenu()
+    UI()
         : m_states(nullptr)
     {}
 
@@ -678,8 +676,6 @@ private:
             implicit_color.template segment<3>(0) +
             (Eigen::RowVector3d::Ones() - implicit_color.template segment<3>(0)) * 0.1;
         return pt_color;
-        // Eigen::Vector3d pt_color(1, 1, 0);
-        // return pt_color;
     }
 
 private:
@@ -705,38 +701,3 @@ private:
     bool m_show_wire_frame = false;
 };
 
-int main(int argc, char** argv)
-{
-    struct
-    {
-        std::string config_file;
-        std::string grid_file;
-    } args;
-
-    CLI::App app{"Piecewise implicit surface demo"};
-    app.add_option("-G,--grid", args.grid_file, "Grid spec file")->required();
-    app.add_option("config_file", args.config_file, "Configuration file")->required();
-    CLI11_PARSE(app, argc, argv);
-
-    // grid specification and implicit functions
-    auto implicit_functions = initialize_sampled_implicit_functions(args.config_file);
-
-    auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
-
-    PSIStates states(grid_spec, implicit_functions);
-
-    igl::opengl::glfw::Viewer viewer;
-    viewer.core().background_color.setOnes();
-
-    MeshArrangementMenu menu;
-    menu.set_states(&states);
-    menu.initialize(viewer);
-
-    viewer.launch_init(true, false, "Implicit Modeling");
-    auto bbox = states.get_bbox();
-    viewer.core().align_camera_center(bbox);
-    viewer.launch_rendering(true);
-    viewer.launch_shut();
-
-    return 0;
-}

@@ -1,3 +1,4 @@
+#pragma once
 #include <Mesh_PSI.h>
 #include <PSI.h>
 #include <Sphere_sImplicit.h>

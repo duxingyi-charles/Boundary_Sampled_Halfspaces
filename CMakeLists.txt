@@ -89,6 +89,6 @@ target_link_libraries(psi_cli_sample_reduction PRIVATE psi CLI11::CLI11)
 #add_executable(psi_cli_connect apps/psi_cli_search_for_connected.cpp)
 #target_link_libraries(psi_cli_connect PRIVATE psi CLI11::CLI11)
 
-add_executable(ui apps/ui.cpp)
-target_link_libraries(ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
+add_executable(psi_ui apps/psi_ui.cpp apps/UI.h)
+target_link_libraries(psi_ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
     cell_partition)
