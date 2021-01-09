@@ -15,6 +15,31 @@
 
 #include "PSIStates.h"
 
+struct ActiveState
+{
+    int active_implicit_id = -1;
+    int active_point_id = -1;
+    void reset()
+    {
+        active_implicit_id = -1;
+        active_point_id = -1;
+    }
+};
+
+struct PickState
+{
+    bool hit = false;
+    int hit_implicit_id = -1;
+    int hit_point_id = -1;
+    Eigen::RowVector3d hit_point;
+    void reset()
+    {
+        hit = false;
+        hit_implicit_id = -1;
+        hit_point_id = -1;
+    }
+};
+
 class UI
 {
 public:
@@ -32,7 +57,7 @@ public:
     {
         initialize_data(viewer); // Data must be initialized first.
         initialize_menu(viewer);
-        initialize_picking(viewer);
+        initialize_mouse_behaviors(viewer);
         initialize_hotkeys(viewer);
     }
 
@@ -59,7 +84,7 @@ private:
             }
 
             // Show hit implicit patches.
-            if (implicit_id == m_hit_implicit) {
+            if (implicit_id == m_active_state.active_implicit_id) {
                 viewer.data(pid).set_visible(true);
                 viewer.data(pid).show_lines = true;
                 viewer.data(pid).show_faces = val;
@@ -89,6 +114,8 @@ private:
             const int sample_id = m_sample_view_ids[i];
             viewer.data(sample_id).set_visible(m_ui_mode == 0);
         }
+        m_active_state.reset();
+        m_pick_state.reset();
     }
 
     void initialize_menu(igl::opengl::glfw::Viewer& viewer)
@@ -133,10 +160,7 @@ private:
         initialize_implicit_data(viewer);
     }
 
-    void initialize_visibility()
-    {
-        m_patch_visible = m_states->get_patch_labels();
-    }
+    void initialize_visibility() { m_patch_visible = m_states->get_patch_labels(); }
 
     void initialize_patch_data(igl::opengl::glfw::Viewer& viewer)
     {
@@ -209,103 +233,132 @@ private:
         }
     }
 
-    void initialize_picking(igl::opengl::glfw::Viewer& viewer)
+    /**
+     * Shoot a ray from camera through the screen point (x,y) and see which
+     * patch it hits.  The result will be stored in m_pick_state.
+     */
+    void pick(igl::opengl::glfw::Viewer& viewer, double x, double y)
     {
-        constexpr float point_radius = 10;
-        static bool mouse_down = false;
+        m_pick_state.reset();
+        const size_t num_patches = m_states->get_num_patches();
+
+        std::vector<Eigen::RowVector3d> hits;
+        std::vector<int> hit_patches;
+        hits.reserve(num_patches);
+        hit_patches.reserve(num_patches);
+
+        int fid;
+        Eigen::Vector3f bc;
+
+        for (size_t i = 0; i < num_patches; i++) {
+            if (!m_patch_visible[i]) continue;
+            const auto pid = m_data_ids[i];
+            const auto& V = viewer.data(pid).V;
+            const auto& F = viewer.data(pid).F;
+            if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
+                    viewer.core().view,
+                    viewer.core().proj,
+                    viewer.core().viewport,
+                    V,
+                    F,
+                    fid,
+                    bc)) {
+                const int v0 = F(fid, 0);
+                const int v1 = F(fid, 1);
+                const int v2 = F(fid, 2);
+                Eigen::RowVector3d p = V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
+
+                hits.push_back(p);
+                hit_patches.push_back(i);
+            }
+        }
+
+        if (hits.size() > 0) {
+            Eigen::RowVector3d best_hit;
+            double best_z = std::numeric_limits<double>::max();
+            int implicit_id;
+            for (size_t i = 0; i < hits.size(); i++) {
+                const auto& p = hits[i];
+                const auto patch_index = hit_patches[i];
+                Eigen::RowVector4d q;
+                q << p, 1;
+                double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
+                if (z < best_z) {
+                    best_hit = p;
+                    best_z = z;
+                    implicit_id = m_states->get_implicit_from_patch(patch_index);
+                }
+            }
+
+            m_pick_state.hit = true;
+            m_pick_state.hit_implicit_id = implicit_id;
+            m_pick_state.hit_point = best_hit;
+        }
+    }
+
+    void initialize_mouse_down_behaviors(igl::opengl::glfw::Viewer& viewer)
+    {
+        static auto has_hit_point = [&](double x, double y) -> int {
+            if (m_active_state.active_implicit_id < 0) return -1;
+
+            constexpr float point_radius = 10;
+            const auto& ids = (m_ui_mode == 0) ? m_sample_view_ids : m_control_view_ids;
+            const auto view_id = ids[m_active_state.active_implicit_id];
+            const auto& points = viewer.data(view_id).points;
+
+            const size_t num_pts = points.rows();
+            for (size_t i = 0; i < num_pts; i++) {
+                const Eigen::RowVector3d p = points.row(i).template segment<3>(0);
+                auto screen_p = igl::project(p.template cast<float>().transpose().eval(),
+                    viewer.core().view,
+                    viewer.core().proj,
+                    viewer.core().viewport);
+                if (std::abs(screen_p[0] - x) < point_radius &&
+                    std::abs(screen_p[1] - y) < point_radius) {
+                    return i;
+                }
+            }
+            return -1;
+        };
 
         viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
-            int fid;
-            Eigen::Vector3f bc;
-            // Cast a ray in the view direction starting from the mouse position
+            m_mouse_down = true;
+            m_pick_state.reset();
+
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             m_down_x = x;
             m_down_y = y;
-            m_hit = false;
-            mouse_down = true;
 
-            const auto num_patches = m_states->get_patches().size();
-            const auto num_implicits = m_states->get_num_implicits();
-
-            const auto& ids = (m_ui_mode == 0) ? m_sample_view_ids : m_control_view_ids;
-            auto& active_point = (m_ui_mode == 0) ? m_active_sample_point : m_active_control_point;
-
-            // Check for hitting sample/control points.
-            for (size_t i = 0; i < num_implicits; i++) {
-                auto id = ids[i];
-                const auto& points = viewer.data(id).points;
-                const size_t num_pts = points.rows();
-                for (size_t j = 0; j < num_pts; j++) {
-                    const Eigen::RowVector3d p = points.row(j).template segment<3>(0);
-                    auto screen_p = igl::project(p.template cast<float>().transpose().eval(),
-                        viewer.core().view,
-                        viewer.core().proj,
-                        viewer.core().viewport);
-                    if (std::abs(screen_p[0] - x) < point_radius &&
-                        std::abs(screen_p[1] - y) < point_radius) {
-                        m_hit = true;
-                        active_point = j;
-                        m_hit_implicit = i;
-                        return false;
-                    }
-                }
-            }
-
-            // Check for hitting any patch.
-            std::vector<Eigen::RowVector3d> hits;
-            std::vector<int> hit_patches;
-            hits.reserve(num_patches);
-            hit_patches.reserve(num_patches);
-            for (size_t i = 0; i < num_patches; i++) {
-                if (!m_patch_visible[i]) continue;
-                const auto pid = m_data_ids[i];
-                const auto& V = viewer.data(pid).V;
-                const auto& F = viewer.data(pid).F;
-                if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
-                        viewer.core().view,
-                        viewer.core().proj,
-                        viewer.core().viewport,
-                        V,
-                        F,
-                        fid,
-                        bc)) {
-                    const int v0 = F(fid, 0);
-                    const int v1 = F(fid, 1);
-                    const int v2 = F(fid, 2);
-                    Eigen::RowVector3d p =
-                        V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
-
-                    hits.push_back(p);
-                    hit_patches.push_back(i);
-                }
-            }
-
-            if (hits.size() > 0) {
-                Eigen::RowVector3d best_hit;
-                double best_z = std::numeric_limits<double>::max();
-                for (size_t i = 0; i < hits.size(); i++) {
-                    const auto& p = hits[i];
-                    const auto patch_index = hit_patches[i];
-                    Eigen::RowVector4d q;
-                    q << p, 1;
-                    double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
-                    if (z < best_z) {
-                        best_hit = p;
-                        best_z = z;
-                        m_hit_implicit = m_states->get_implicit_from_patch(patch_index);
-                    }
-                }
-
-                m_hit_pt = best_hit;
-                m_hit = true;
-                return false;
+            auto hit_point_id = has_hit_point(x, y);
+            if (hit_point_id >= 0) {
+                // Hit a control/sample point in the active implicit.
+                m_active_state.active_point_id = hit_point_id;
+            } else {
+                // Pick to see if we hit an implicit surface.
+                m_active_state.active_point_id = -1;
+                pick(viewer, x, y);
             }
             return false;
         };
+    }
 
+    void initialize_mouse_move_behaviors(igl::opengl::glfw::Viewer& viewer)
+    {
         viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
-            auto update_point = [&](int view_id, int point_id) {
+            double x = viewer.current_mouse_x;
+            double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+
+            auto update_active_point = [&]() {
+                int view_id = -1;
+                int point_id = m_active_state.active_point_id;
+                if (m_ui_mode == 0) {
+                    view_id = m_sample_view_ids[m_active_state.active_implicit_id];
+                } else {
+                    view_id = m_control_view_ids[m_active_state.active_implicit_id];
+                }
+                assert(view_id >= 0);
+
                 Eigen::RowVector3d p =
                     viewer.data(view_id).points.row(point_id).template segment<3>(0);
                 Eigen::RowVector3d n(0, 0, 1);
@@ -314,9 +367,6 @@ private:
                         .transpose();
                 Eigen::RowVector4d plane;
                 plane << n, -n.dot(p);
-
-                double x = viewer.current_mouse_x;
-                double y = viewer.core().viewport(3) - viewer.current_mouse_y;
 
                 Eigen::RowVector3d q;
                 igl::unproject_on_plane(Eigen::Vector2f(x, y),
@@ -328,89 +378,94 @@ private:
                 viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
             };
 
-            if (m_hit && mouse_down) {
-                if (m_active_control_point >= 0) {
-                    const auto view_id = m_control_view_ids[m_hit_implicit];
-                    update_point(view_id, m_active_control_point);
-                    return true;
-                } else if (m_active_sample_point >= 0) {
-                    const auto view_id = m_sample_view_ids[m_hit_implicit];
-                    update_point(view_id, m_active_sample_point);
+            if (m_mouse_down) {
+                const bool is_active =
+                    m_active_state.active_implicit_id >= 0 && m_active_state.active_point_id >= 0;
+                if (is_active) {
+                    update_active_point();
                     return true;
                 }
+            } else {
+                // Hover. Do nothing for now.
             }
             return false;
         };
+    }
 
+    void initialize_mouse_up_behaviors(igl::opengl::glfw::Viewer& viewer)
+    {
         viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             const bool mouse_moved = (x != m_down_x) || (y != m_down_y);
+            const bool is_patch_active = m_active_state.active_implicit_id >= 0;
+            const bool is_point_active = is_patch_active && m_active_state.active_point_id >= 0;
+            const auto point_id = m_active_state.active_point_id;
+            const auto implicit_id = m_active_state.active_implicit_id;
 
-            auto reset_pick_state = [&]() {
-                if (!m_hit && !mouse_moved) {
-                    m_active_control_point = -1;
-                    m_active_sample_point = -1;
-                    m_hit_implicit = -1;
+            if (is_point_active && mouse_moved) {
+                // Active point dragged.
+                const auto& fn = m_states->get_implicit_function(implicit_id);
+                if (m_ui_mode == 0) {
+                    // Sample mode.
+                    const auto view_id = m_sample_view_ids[implicit_id];
+                    auto pts = fn.get_sample_points();
+                    pts[point_id] =
+                        viewer.data(view_id).points.row(point_id).template segment<3>(0);
+                    m_states->update_sample_points(implicit_id, pts);
+                } else {
+                    // Control mode.
+                    const auto view_id = m_control_view_ids[implicit_id];
+                    auto pts = fn.get_control_points();
+                    pts[point_id] =
+                        viewer.data(view_id).points.row(point_id).template segment<3>(0);
+                    m_states->update_control_points(implicit_id, pts);
+                    initialize_data(viewer);
                 }
-                m_hit = false;
-            };
+            } else if (is_patch_active && !mouse_moved && m_pick_state.hit) {
+                // Insert new point to the active patch.
+                const auto& hit_point = m_pick_state.hit_point;
+                const auto& fn = m_states->get_implicit_function(implicit_id);
 
-            if (m_hit) {
-                if (!mouse_moved) {
-                    if (m_active_control_point < 0 && m_active_sample_point < 0) {
-                        if (m_ui_mode == 0) {
-                            const auto view_id = m_sample_view_ids[m_hit_implicit];
-                            viewer.data(view_id).add_points(
-                                m_hit_pt, get_sample_pt_color(m_hit_implicit));
+                if (m_ui_mode == 0) {
+                    const auto view_id = m_sample_view_ids[implicit_id];
+                    viewer.data(view_id).add_points(hit_point, get_sample_pt_color(implicit_id));
 
-                            const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                            auto pts = fn.get_sample_points();
-                            pts.push_back(m_hit_pt);
+                    auto pts = fn.get_sample_points();
+                    pts.push_back(hit_point);
+                    m_states->update_sample_points(implicit_id, pts);
+                } else {
+                    const auto view_id = m_control_view_ids[implicit_id];
+                    viewer.data(view_id).add_points(hit_point, get_control_pt_color(implicit_id));
 
-                            m_states->update_sample_points(m_hit_implicit, pts);
-                        } else {
-                            const auto view_id = m_control_view_ids[m_hit_implicit];
-                            viewer.data(view_id).add_points(
-                                m_hit_pt, get_control_pt_color(m_hit_implicit));
-
-                            const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                            auto pts = fn.get_control_points();
-                            pts.push_back(m_hit_pt);
-
-                            m_states->update_control_points(m_hit_implicit, pts);
-                        }
-                    }
-                } else if (m_active_control_point >= 0 || m_active_sample_point >= 0) {
-                    assert(m_hit_implicit >= 0);
-
-                    const auto& fn = m_states->get_implicit_function(m_hit_implicit);
-                    if (m_active_control_point >= 0) {
-                        // Control point moved.
-                        assert(fn.has_control_points());
-                        auto view_id = m_control_view_ids[m_hit_implicit];
-                        auto pts = fn.get_control_points();
-                        pts[m_active_control_point] = viewer.data(view_id)
-                                                          .points.row(m_active_control_point)
-                                                          .template segment<3>(0);
-                        m_states->update_control_points(m_hit_implicit, pts);
-                        initialize_data(viewer);
-                    } else {
-                        // Sample point moved.
-                        auto view_id = m_sample_view_ids[m_hit_implicit];
-                        auto pts = fn.get_sample_points();
-                        pts[m_active_sample_point] = viewer.data(view_id)
-                                                         .points.row(m_active_sample_point)
-                                                         .template segment<3>(0);
-                        m_states->update_sample_points(m_hit_implicit, pts);
-                    }
+                    const auto& fn = m_states->get_implicit_function(implicit_id);
+                    auto pts = fn.get_control_points();
+                    pts.push_back(hit_point);
+                    m_states->update_control_points(implicit_id, pts);
+                    initialize_data(viewer);
+                }
+            } else if (!mouse_moved) {
+                // Nothing was active.
+                if (m_pick_state.hit) {
+                    // Clicked a non-active patch, just activate it.
+                    m_active_state.active_implicit_id = m_pick_state.hit_implicit_id;
+                    m_active_state.active_point_id = -1;
+                } else {
+                    m_active_state.reset();
                 }
             }
-            reset_pick_state();
+
             reset_patch_visibility(viewer);
-            mouse_down = false;
+            m_mouse_down = false;
             return true;
         };
+    }
+
+    void initialize_mouse_behaviors(igl::opengl::glfw::Viewer& viewer)
+    {
+        initialize_mouse_down_behaviors(viewer);
+        initialize_mouse_move_behaviors(viewer);
+        initialize_mouse_up_behaviors(viewer);
     }
 
     void initialize_hotkeys(igl::opengl::glfw::Viewer& viewer)
@@ -442,39 +497,39 @@ private:
 
     void remove_active_point(igl::opengl::glfw::Viewer& viewer)
     {
-        if (m_hit_implicit < 0) return;
+        if (m_active_state.active_implicit_id < 0) return;
+        if (m_active_state.active_point_id < 0) return;
 
-        const auto& fn = m_states->get_implicit_function(m_hit_implicit);
+        const auto implicit_id = m_active_state.active_implicit_id;
+        const auto point_id = m_active_state.active_point_id;
+        const auto& fn = m_states->get_implicit_function(implicit_id);
+
         if (m_ui_mode == 0) {
             // Working with sample points.
-            if (m_active_sample_point < 0) return;
-
-            auto view_id = m_sample_view_ids[m_hit_implicit];
+            auto view_id = m_sample_view_ids[implicit_id];
             auto pts = fn.get_sample_points();
-            pts.erase(pts.begin() + m_active_sample_point);
-            m_states->update_sample_points(m_hit_implicit, pts);
+            pts.erase(pts.begin() + point_id);
+            m_states->update_sample_points(implicit_id, pts);
 
             viewer.data(view_id).clear_points();
-            auto c = get_sample_pt_color(m_hit_implicit);
+            auto c = get_sample_pt_color(implicit_id);
             for (auto& p : pts) {
                 viewer.data(view_id).add_points(p.transpose(), c);
             }
-            m_active_sample_point = -1;
+            m_active_state.active_point_id = -1;
         } else {
             // Working with control points.
-            if (m_active_control_point < 0) return;
-
-            auto view_id = m_control_view_ids[m_hit_implicit];
+            auto view_id = m_control_view_ids[implicit_id];
             auto pts = fn.get_control_points();
-            pts.erase(pts.begin() + m_active_control_point);
-            m_states->update_control_points(m_hit_implicit, pts);
+            pts.erase(pts.begin() + point_id);
+            m_states->update_control_points(implicit_id, pts);
 
             viewer.data(view_id).clear_points();
-            auto c = get_control_pt_color(m_hit_implicit);
+            auto c = get_control_pt_color(implicit_id);
             for (auto& p : pts) {
                 viewer.data(view_id).add_points(p.transpose(), c);
             }
-            m_active_control_point = -1;
+            m_active_state.active_point_id = -1;
         }
     }
 
@@ -505,13 +560,12 @@ private:
 
     igl::opengl::glfw::imgui::ImGuiMenu m_menu;
     PSIStates* m_states;
-    int m_active_control_point = -1;
-    int m_active_sample_point = -1;
-    bool m_hit;
-    int m_hit_implicit = -1;
-    Eigen::RowVector3d m_hit_pt;
     double m_down_x, m_down_y;
     int m_ui_mode = 0;
     bool m_show_wire_frame = false;
+
+    bool m_mouse_down = false;
+    PickState m_pick_state;
+    ActiveState m_active_state;
 };
 

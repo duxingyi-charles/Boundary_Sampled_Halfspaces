@@ -165,6 +165,8 @@ public:
     const std::vector<bool>& get_patch_labels() const { return P_label; }
     const std::vector<int>& get_patch_implicit() const { return P_Impl; }
     size_t get_num_implicits() const { return Impl_ptr->size(); }
+    size_t get_num_patches() const { return P.size(); }
+    size_t get_num_cells() const { return B_patch.size(); }
 
 protected:
     // vertices

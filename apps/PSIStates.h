@@ -35,6 +35,8 @@ public:
     const auto& get_patch_implicit() const { return m_psi->get_patch_implicit(); }
     const auto& get_cell_patch_adjacency() const { return m_psi->get_cell_patch_adjacency(); }
     const size_t get_num_implicits() const { return m_psi->get_num_implicits(); }
+    const size_t get_num_patches() const { return m_psi->get_num_patches(); }
+    const size_t get_num_cells() const { return m_psi->get_num_cells(); }
     const auto& get_bbox() const { return m_bbox; }
 
     const int get_implicit_from_patch(int patch_id) const { return get_patch_implicit()[patch_id]; }
