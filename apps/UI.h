@@ -31,7 +31,6 @@ public:
     void initialize(igl::opengl::glfw::Viewer& viewer)
     {
         initialize_data(viewer); // Data must be initialized first.
-        // initialize_debug_menu(viewer);
         initialize_menu(viewer);
         initialize_picking(viewer);
         initialize_hotkeys(viewer);
@@ -113,185 +112,6 @@ private:
         };
     }
 
-    void initialize_debug_menu(igl::opengl::glfw::Viewer& viewer)
-    {
-        // static auto is_patch_visible = [&](auto& viewer, size_t i) -> bool {
-        //    assert(i < m_data_ids.size());
-        //    auto pid = m_data_ids[i];
-        //    return viewer.core().is_set(viewer.data(pid).is_visible);
-        //};
-
-        static auto set_patch_visible = [&](auto& viewer, size_t i, bool val) {
-            assert(i < m_data_ids.size());
-            m_patch_visible[i] = val;
-            auto pid = m_data_ids[i];
-            viewer.data(pid).set_visible(val);
-            assert(viewer.core().is_set(viewer.data(pid).is_visible) == val);
-        };
-
-        static auto update_cell_visibility = [&](auto& viewer, size_t i) {
-            const auto& cell = m_states->get_cells()[i];
-            bool curr_cell_visible = m_cell_visible[i];
-            if (i == m_hovered_cell) {
-                curr_cell_visible = !curr_cell_visible;
-            }
-            const auto& adj_list = m_states->get_cell_patch_adjacency();
-            for (auto patch_index : cell) {
-                const auto& adj_cells = adj_list[patch_index];
-                bool val = false;
-                for (auto cell_index : adj_cells) {
-                    if (m_cell_visible[cell_index] != curr_cell_visible) {
-                        val = true;
-                    }
-                }
-
-                set_patch_visible(viewer, patch_index, val);
-            }
-        };
-
-        static auto update_implicit_visibility = [&](auto& viewer, size_t i) {
-            const auto& patch_implicit = m_states->get_patch_implicit();
-            const auto num_patches = patch_implicit.size();
-            for (size_t patch_index = 0; patch_index < num_patches; patch_index++) {
-                if (patch_implicit[patch_index] == i) {
-                    set_patch_visible(viewer, patch_index, m_implicit_visible[i]);
-                }
-            }
-
-            const auto control_id = m_control_view_ids[i];
-            viewer.data(control_id).set_visible(m_implicit_visible[i]);
-            const auto sample_id = m_sample_view_ids[i];
-            viewer.data(sample_id).set_visible(m_implicit_visible[i]);
-        };
-
-        static auto hide_control_pts = [&](auto& viewer) {
-            const auto num_implicits = m_states->get_num_implicits();
-            for (size_t i = 0; i < num_implicits; i++) {
-                const int control_id = m_control_view_ids[i];
-                viewer.data(control_id).set_visible(false);
-                const int sample_id = m_sample_view_ids[i];
-                viewer.data(sample_id).set_visible(true);
-                m_implicit_visible[i] = false;
-            }
-        };
-
-        viewer.plugins.push_back(&m_debug_menu);
-        m_debug_menu.callback_draw_viewer_menu = [&]() {
-            // m_debug_menu.draw_viewer_menu();
-            if (ImGui::Button("Center object", ImVec2(-1, 0))) {
-                auto bbox = m_states->get_bbox();
-                viewer.core().align_camera_center(bbox);
-            }
-
-            static int view_type = 1;
-            ImGui::RadioButton("Cells", &view_type, 0);
-            ImGui::SameLine();
-            ImGui::RadioButton("Patches", &view_type, 1);
-            ImGui::SameLine();
-            ImGui::RadioButton("Implicits", &view_type, 2);
-
-            auto add_cell_menu = [&]() {
-                hide_control_pts(viewer);
-                if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
-                    const auto& cells = m_states->get_cells();
-                    const size_t num_cells = cells.size();
-
-                    m_cell_visible = m_states->get_cell_labels();
-                    for (size_t i = 0; i < num_cells; i++) {
-                        update_cell_visibility(viewer, i);
-                    }
-                }
-
-                if (ImGui::CollapsingHeader("Cells", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    const auto& cells = m_states->get_cells();
-                    const size_t num_cells = cells.size();
-
-                    int hovered_cell = -1;
-                    for (size_t i = 0; i < num_cells; i++) {
-                        ImGui::PushID(i);
-                        // std::string name = "Cells " + std::to_string(i);
-                        if (ImGui::Checkbox(
-                                // name.c_str(),
-                                "",
-                                [&]() { return m_cell_visible[i]; },
-                                [&](bool val) { m_cell_visible[i] = val; })) {
-                            update_cell_visibility(viewer, i);
-                        }
-                        if (!m_cell_visible[i]) {
-                            if (ImGui::IsItemHovered()) {
-                                hovered_cell = i;
-                            }
-                        }
-                        if (i % 5 != 4 && i != num_cells - 1) ImGui::SameLine();
-                        ImGui::PopID();
-                    }
-
-                    int prev_hovered_cell = m_hovered_cell;
-                    m_hovered_cell = hovered_cell;
-                    if (prev_hovered_cell >= 0) {
-                        update_cell_visibility(viewer, prev_hovered_cell);
-                    }
-                    if (hovered_cell >= 0) {
-                        update_cell_visibility(viewer, hovered_cell);
-                    }
-                }
-            };
-
-            auto add_patch_menu = [&]() {
-                hide_control_pts(viewer);
-                if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
-                    reset_patch_visibility(viewer);
-                }
-
-                if (ImGui::CollapsingHeader("Patches", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    const auto& patches = m_states->get_patches();
-                    const size_t num_patches = patches.size();
-
-                    for (size_t i = 0; i < num_patches; i++) {
-                        std::string name = "Patch " + std::to_string(i);
-                        if (ImGui::Checkbox(
-                                name.c_str(),
-                                [&]() { return m_patch_visible[i]; },
-                                [&](bool val) { m_patch_visible[i] = val; })) {
-                            set_patch_visible(viewer, i, m_patch_visible[i]);
-                        }
-                    }
-                }
-            };
-
-            auto add_implicit_menu = [&]() {
-                if (ImGui::Button("Refresh", ImVec2(-1, 0))) {
-                    const size_t num_implicits = m_states->get_num_implicits();
-                    m_implicit_visible.assign(num_implicits, true);
-                    for (size_t i = 0; i < num_implicits; i++) {
-                        update_implicit_visibility(viewer, i);
-                    }
-                }
-
-                if (ImGui::CollapsingHeader("Implicits", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    const size_t num_implicits = m_states->get_num_implicits();
-                    for (size_t i = 0; i < num_implicits; i++) {
-                        std::string name = "Implicit " + std::to_string(i);
-                        if (ImGui::Checkbox(
-                                name.c_str(),
-                                [&]() { return m_implicit_visible[i]; },
-                                [&](bool val) { m_implicit_visible[i] = val; })) {
-                            update_implicit_visibility(viewer, i);
-                        }
-                    }
-                }
-            };
-
-            if (view_type == 0) {
-                add_cell_menu();
-            } else if (view_type == 1) {
-                add_patch_menu();
-            } else {
-                add_implicit_menu();
-            }
-        };
-    }
-
     void clear_data(igl::opengl::glfw::Viewer& viewer)
     {
         // Clear viewer data.
@@ -315,10 +135,7 @@ private:
 
     void initialize_visibility()
     {
-        const auto num_implicits = m_states->get_num_implicits();
         m_patch_visible = m_states->get_patch_labels();
-        m_cell_visible = m_states->get_cell_labels();
-        m_implicit_visible.assign(num_implicits, false);
     }
 
     void initialize_patch_data(igl::opengl::glfw::Viewer& viewer)
@@ -442,7 +259,6 @@ private:
             hit_patches.reserve(num_patches);
             for (size_t i = 0; i < num_patches; i++) {
                 if (!m_patch_visible[i]) continue;
-                // if (!m_implicit_visible[m_states->get_implicit_from_patch(i)]) continue;
                 const auto pid = m_data_ids[i];
                 const auto& V = viewer.data(pid).V;
                 const auto& F = viewer.data(pid).F;
@@ -545,7 +361,8 @@ private:
                     if (m_active_control_point < 0 && m_active_sample_point < 0) {
                         if (m_ui_mode == 0) {
                             const auto view_id = m_sample_view_ids[m_hit_implicit];
-                            viewer.data(view_id).add_points(m_hit_pt, get_sample_pt_color(m_hit_implicit));
+                            viewer.data(view_id).add_points(
+                                m_hit_pt, get_sample_pt_color(m_hit_implicit));
 
                             const auto& fn = m_states->get_implicit_function(m_hit_implicit);
                             auto pts = fn.get_sample_points();
@@ -554,7 +371,8 @@ private:
                             m_states->update_sample_points(m_hit_implicit, pts);
                         } else {
                             const auto view_id = m_control_view_ids[m_hit_implicit];
-                            viewer.data(view_id).add_points(m_hit_pt, get_control_pt_color(m_hit_implicit));
+                            viewer.data(view_id).add_points(
+                                m_hit_pt, get_control_pt_color(m_hit_implicit));
 
                             const auto& fn = m_states->get_implicit_function(m_hit_implicit);
                             auto pts = fn.get_control_points();
@@ -684,15 +502,11 @@ private:
     std::vector<int> m_sample_view_ids; // sample point views.
 
     std::vector<bool> m_patch_visible;
-    std::vector<bool> m_cell_visible;
-    std::vector<bool> m_implicit_visible;
 
-    igl::opengl::glfw::imgui::ImGuiMenu m_debug_menu;
     igl::opengl::glfw::imgui::ImGuiMenu m_menu;
     PSIStates* m_states;
     int m_active_control_point = -1;
     int m_active_sample_point = -1;
-    int m_hovered_cell = -1;
     bool m_hit;
     int m_hit_implicit = -1;
     Eigen::RowVector3d m_hit_pt;
