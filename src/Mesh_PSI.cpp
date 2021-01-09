@@ -243,7 +243,18 @@ void Mesh_PSI::compute_arrangement(
 
     meshes.push_back(generate_cube(grid));
     for (const auto& fn : implicits) {
-        meshes.push_back(marching_cubes(*fn, grid));
+        //
+        if (fn->get_type() == "plane") {
+            Point p;
+            Eigen::Vector3d normal;
+            fn->get_point(p);
+            fn->get_normal(normal);
+            meshes.push_back(generate_plane(grid, p, normal));
+        } else {
+            meshes.push_back(marching_cubes(*fn, grid));
+        }
+//
+//        meshes.push_back(marching_cubes(*fn, grid));
         // test: random planes
 //        meshes.push_back(generate_random_plane(grid));
     }
@@ -277,6 +288,30 @@ void Mesh_PSI::compute_arrangement(
         }
     }
 
+    //find vertices/faces outside of bounding box
+    const Point& bbox_min = grid.bbox_min;
+    const Point& bbox_max = grid.bbox_max;
+    std::vector<bool> V_outside(V.size(), false);
+    for (int i = 0; i < V.size(); ++i) {
+        double x = V[i].x();
+        double y = V[i].y();
+        double z = V[i].z();
+        if (x < bbox_min.x() || x > bbox_max.x()
+            || y < bbox_min.y() || y > bbox_max.y()
+            || z < bbox_min.z() || z > bbox_max.z()){
+            V_outside[i] = true;
+        }
+    }
+    std::vector<bool> F_outside(F.size(), false);
+    for (int i = 0; i < F.size(); ++i) {
+        for (auto vi : F[i]) {
+            if (V_outside[vi]) {
+                F_outside[i] = true;
+                break;
+            }
+        }
+    }
+
     // compute map: result face id -> input implicit id
     auto source_faces = engine->get_source_faces();
     Eigen::VectorXi result_face_to_implicit(source_faces.size());
@@ -293,7 +328,8 @@ void Mesh_PSI::compute_arrangement(
 
     for (int i=0; i<F.size(); i++) {
         int implicit_id = result_face_to_implicit(i);
-        if (implicit_id == -1) continue; // the current face belongs to grid cube
+        // the current face (belongs to OR resides outside) grid cube
+        if (implicit_id == -1 || F_outside[i]) continue;
         int patch_id = face_to_patch(i);
         patch_impl[patch_id] = implicit_id;
     }
@@ -308,7 +344,7 @@ void Mesh_PSI::compute_arrangement(
         patch_sign.emplace_back(std::vector<int> {1, -1});
     }
 
-    // remove patches from the grid cube
+    // remove patches from the grid cube OR outside the grid cube
     std::vector<int> P_old_to_new_index(patch_impl.size());
 
     P_block.clear();
@@ -353,10 +389,10 @@ void Mesh_PSI::compute_arrangement(
     P.clear();
     P.resize(num_patch);
     F_Impl.clear();
-    F_Impl.resize(F.size(), -1);  // -1 for faces on grid cube
+    F_Impl.resize(F.size(), -1);  // -1 for faces on/outside grid cube
     for (int i=0; i<F.size(); ++i) {
         int patch_id = P_old_to_new_index[face_to_patch(i)];
-        if (patch_id != -1) {
+        if (patch_id != -1) {  // current patch not deleted
             P[patch_id].push_back(i);
             F_Impl[i] = P_Impl[patch_id];
         }
