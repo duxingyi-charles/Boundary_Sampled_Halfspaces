@@ -24,6 +24,13 @@ public:
 
     static bool import_xyz(const std::string &filename, std::vector<Point> &pts);
 
+    virtual std::string get_type() const { return "unknown"; }
+
+    // public getter
+    virtual void get_point(Point&) const {};
+    virtual void get_normal(Eigen::Vector3d&) const {};
+
+
 protected:
 
 	std::vector<Point> sample_points;
