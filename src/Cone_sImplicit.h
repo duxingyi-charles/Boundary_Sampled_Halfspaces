@@ -22,8 +22,17 @@ public:
 
     ~Cone_sImplicit() override = default;
 
+    std::string get_type() const override { return "cone"; }
+
+
     double function_at(const Point &x) const override;
     Eigen::Vector3d   gradient_at(const Point &x) const override;
+
+    void get_apex(Point &p) const override { p = apex; };
+    void get_axis_unit_vector(Eigen::Vector3d &vec) const override { vec = axis_unit_vector; };
+    void get_apex_angle(double &a) const override { a = apex_angle; };
+    void get_is_flipped(bool &flip) const override { flip = is_flipped; };
+
 
 private:
     // p: cone apex
