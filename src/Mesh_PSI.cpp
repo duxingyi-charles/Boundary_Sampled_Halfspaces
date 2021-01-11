@@ -540,23 +540,23 @@ IGL_Mesh Mesh_PSI::generate_torus(const GridSpec &grid, int n_major, int n_minor
     if (is_flipped) {
         for (int i = 0; i < n_major; ++i) {
             for (int j = 0; j < n_minor; ++j) {
-                torus.faces.row(i*n_minor+j) << ((i+1)%n_major)*n_major+j,
-                                                    i*n_major+j,
-                                                    i*n_major+((j+1)%n_minor);
-                torus.faces.row(i*n_minor+j+n_major*n_minor) << ((i+1)%n_major)*n_major+j,
-                                                                    i*n_major+((j+1)%n_minor),
-                                                                    ((i+1)%n_major)*n_major+((j+1)%n_minor);
+                torus.faces.row(i*n_minor+j) << ((i+1)%n_major)*n_minor+j,
+                        i*n_minor+j,
+                        i*n_minor+((j+1)%n_minor);
+                torus.faces.row(i*n_minor+j+n_major*n_minor) << ((i+1)%n_major)*n_minor+j,
+                        i*n_minor+((j+1)%n_minor),
+                        ((i+1)%n_major)*n_minor+((j+1)%n_minor);
             }
         }
     } else {
         for (int i = 0; i < n_major; ++i) {
             for (int j = 0; j < n_minor; ++j) {
-                torus.faces.row(i*n_minor+j) << i*n_major+j,
-                                                ((i+1)%n_major)*n_major+j,
-                                                i*n_major+((j+1)%n_minor);
-                torus.faces.row(i*n_minor+j+n_major*n_minor) << i*n_major+((j+1)%n_minor),
-                                                                ((i+1)%n_major)*n_major+j,
-                                                                ((i+1)%n_major)*n_major+((j+1)%n_minor);
+                torus.faces.row(i*n_minor+j) << i*n_minor+j,
+                                                ((i+1)%n_major)*n_minor+j,
+                                                i*n_minor+((j+1)%n_minor);
+                torus.faces.row(i*n_minor+j+n_major*n_minor) << i*n_minor+((j+1)%n_minor),
+                                                                ((i+1)%n_major)*n_minor+j,
+                                                                ((i+1)%n_major)*n_minor+((j+1)%n_minor);
             }
         }
     }
@@ -646,7 +646,7 @@ void Mesh_PSI::compute_arrangement(
             fn->get_radius(radius);
             fn->get_is_flipped(is_flipped);
             int n = (radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/radius)));
-            std::cout << "cylinder n: " << n << std::endl;
+//            std::cout << "cylinder n: " << n << std::endl;
             n = (n < 15) ? 15 : n;
             meshes.push_back(generate_cylinder(grid,n,axis_point,axis_unit_vector,radius,is_flipped));
         } else if (fn->get_type() == "cone") {
@@ -659,7 +659,7 @@ void Mesh_PSI::compute_arrangement(
             fn->get_apex_angle(apex_angle);
             fn->get_is_flipped(is_flipped);
             int n = (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(tan(apex_angle))))));
-            std::cout << "cone n: " << n << std::endl;
+//            std::cout << "cone n: " << n << std::endl;
             n = (n < 15) ? 15 : n;
             meshes.push_back(generate_cone(grid,n,apex,axis_unit_vector,apex_angle,is_flipped));
         } else if (fn->get_type() == "torus") {
@@ -675,8 +675,8 @@ void Mesh_PSI::compute_arrangement(
             fn->get_is_flipped(is_flipped);
             int n_major = (major_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/major_radius)));
             int n_minor = (minor_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/minor_radius)));
-            std::cout << "n_major: " << n_major << std::endl;
-            std::cout << "n_minor: " << n_minor << std::endl;
+//            std::cout << "n_major: " << n_major << std::endl;
+//            std::cout << "n_minor: " << n_minor << std::endl;
             n_major = (n_major < 15) ? 15 : n_major;
             n_minor = (n_minor < 15) ? 15 : n_minor;
             meshes.push_back(generate_torus(grid,n_major,n_minor,center,axis_unit_vector,major_radius,minor_radius,is_flipped));
