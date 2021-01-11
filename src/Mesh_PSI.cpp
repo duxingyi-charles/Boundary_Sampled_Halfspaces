@@ -508,10 +508,62 @@ IGL_Mesh Mesh_PSI::generate_cone(const GridSpec &grid, int n,
     return cone;
 }
 
-//    IGL_Mesh generate_torus(const GridSpec &grid, int n_major, int n_minor,
-//                            const Point& center, const Eigen::Vector3d& axis_unit_vector,
-//                            double major_radius, double minor_radius,
-//                            bool is_flipped);
+IGL_Mesh Mesh_PSI::generate_torus(const GridSpec &grid, int n_major, int n_minor,
+                            const Point& center, const Eigen::Vector3d& axis_unit_vector,
+                            double major_radius, double minor_radius,
+                            bool is_flipped)
+{
+    Eigen::Vector3d axis1 = axis_unit_vector.cross(Eigen::Vector3d(1,0,0));
+    if (axis1.norm() == 0) {
+        axis1 = axis_unit_vector.cross(Eigen::Vector3d(0,1,0));
+    }
+    axis1.normalize();
+    Eigen::Vector3d axis2 = axis_unit_vector.cross(axis1);
+
+    IGL_Mesh torus;
+    torus.vertices.resize(n_major*n_minor, 3);
+
+    for (int i = 0; i < n_major; ++i) {
+        Point m_center = center + major_radius * cos(i*2*M_PI/n_major) * axis1
+                         + major_radius * sin(i*2*M_PI/n_major) * axis2;
+        Eigen::Vector3d m_axis = (m_center - center);
+        m_axis.normalize();
+
+        for (int j = 0; j < n_minor; ++j) {
+            torus.vertices.row(i*n_minor + j) = m_center
+                                                    + minor_radius * cos(j*2*M_PI/n_minor) * m_axis
+                                                    + minor_radius * sin(j*2*M_PI/n_minor) * axis_unit_vector;
+        }
+    }
+
+    torus.faces.resize(n_major*n_minor*2, 3);
+    if (is_flipped) {
+        for (int i = 0; i < n_major; ++i) {
+            for (int j = 0; j < n_minor; ++j) {
+                torus.faces.row(i*n_minor+j) << ((i+1)%n_major)*n_major+j,
+                                                    i*n_major+j,
+                                                    i*n_major+((j+1)%n_minor);
+                torus.faces.row(i*n_minor+j+n_major*n_minor) << ((i+1)%n_major)*n_major+j,
+                                                                    i*n_major+((j+1)%n_minor),
+                                                                    ((i+1)%n_major)*n_major+((j+1)%n_minor);
+            }
+        }
+    } else {
+        for (int i = 0; i < n_major; ++i) {
+            for (int j = 0; j < n_minor; ++j) {
+                torus.faces.row(i*n_minor+j) << i*n_major+j,
+                                                ((i+1)%n_major)*n_major+j,
+                                                i*n_major+((j+1)%n_minor);
+                torus.faces.row(i*n_minor+j+n_major*n_minor) << i*n_major+((j+1)%n_minor),
+                                                                ((i+1)%n_major)*n_major+j,
+                                                                ((i+1)%n_major)*n_major+((j+1)%n_minor);
+            }
+        }
+    }
+
+    return torus;
+
+}
 
 IGL_Mesh Mesh_PSI::generate_random_plane(const GridSpec &grid)
 {
@@ -594,6 +646,7 @@ void Mesh_PSI::compute_arrangement(
             fn->get_radius(radius);
             fn->get_is_flipped(is_flipped);
             int n = (radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/radius)));
+            std::cout << "cylinder n: " << n << std::endl;
             n = (n < 15) ? 15 : n;
             meshes.push_back(generate_cylinder(grid,n,axis_point,axis_unit_vector,radius,is_flipped));
         } else if (fn->get_type() == "cone") {
@@ -605,10 +658,28 @@ void Mesh_PSI::compute_arrangement(
             fn->get_axis_unit_vector(axis_unit_vector);
             fn->get_apex_angle(apex_angle);
             fn->get_is_flipped(is_flipped);
-//            int n = (int)round(M_PI/acos(1-error_bound/(grid_diag*abs(tan(apex_angle)))));
             int n = (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(tan(apex_angle))))));
+            std::cout << "cone n: " << n << std::endl;
             n = (n < 15) ? 15 : n;
             meshes.push_back(generate_cone(grid,n,apex,axis_unit_vector,apex_angle,is_flipped));
+        } else if (fn->get_type() == "torus") {
+            Point center;
+            Eigen::Vector3d axis_unit_vector;
+            double major_radius;
+            double minor_radius;
+            bool is_flipped;
+            fn->get_center(center);
+            fn->get_axis_unit_vector(axis_unit_vector);
+            fn->get_major_radius(major_radius);
+            fn->get_minor_radius(minor_radius);
+            fn->get_is_flipped(is_flipped);
+            int n_major = (major_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/major_radius)));
+            int n_minor = (minor_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/minor_radius)));
+            std::cout << "n_major: " << n_major << std::endl;
+            std::cout << "n_minor: " << n_minor << std::endl;
+            n_major = (n_major < 15) ? 15 : n_major;
+            n_minor = (n_minor < 15) ? 15 : n_minor;
+            meshes.push_back(generate_torus(grid,n_major,n_minor,center,axis_unit_vector,major_radius,minor_radius,is_flipped));
         }
         else {
             meshes.push_back(marching_cubes(*fn, grid));
