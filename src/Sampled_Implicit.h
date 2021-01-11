@@ -27,9 +27,16 @@ public:
     virtual std::string get_type() const { return "unknown"; }
 
     // public getter
-    virtual void get_point(Point&) const {};
-    virtual void get_normal(Eigen::Vector3d&) const {};
+    virtual void get_point(Point&) const {};    //plane
+    virtual void get_normal(Eigen::Vector3d&) const {};  //plane
 
+    virtual void get_axis_point(Point &) const {};   //cylinder
+    virtual void get_axis_unit_vector(Eigen::Vector3d &) const {}; //cylinder, cone
+    virtual void get_radius(double &) const {};     //cylinder
+    virtual void get_is_flipped(bool &) const {};   //cylinder, cone, sphere, torus
+
+    virtual void get_apex(Point&) const {};  //cone
+    virtual void get_apex_angle(double&) const {}; //cone
 
 protected:
 
