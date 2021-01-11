@@ -124,7 +124,7 @@ private:
         static bool imgui_demo = false;
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {
-            ImGui::Checkbox("imgui demo", &imgui_demo);
+            //ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
                 m_active_state.reset();
@@ -218,6 +218,7 @@ private:
             for (const auto& p : pts) {
                 viewer.data(id).add_points(p.transpose(), get_control_pt_color(i));
             }
+            viewer.data(id).show_overlay_depth = 0;
         }
 
         m_sample_view_ids.reserve(num_implicits);
@@ -231,6 +232,7 @@ private:
             for (const auto& p : pts) {
                 viewer.data(id).add_points(p.transpose(), get_sample_pt_color(i));
             }
+            viewer.data(id).show_overlay_depth = 0;
         }
     }
 
