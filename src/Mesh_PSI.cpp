@@ -160,8 +160,8 @@ IGL_Mesh Mesh_PSI::generate_plane(const GridSpec &grid, const Point &p, const Ei
     axis1.normalize();
     Eigen::Vector3d axis2 = normal.cross(axis1);
 
-    std::cout << "plane center: " << p << std::endl;
-    std::cout << "max_dist: " << max_dist << std::endl;
+//    std::cout << "plane center: " << p << std::endl;
+//    std::cout << "max_dist: " << max_dist << std::endl;
 
     Point p0 = p + max_dist * (-axis1-axis2);
     Point p1 = p + max_dist * (axis1 -axis2);
@@ -175,7 +175,7 @@ IGL_Mesh Mesh_PSI::generate_plane(const GridSpec &grid, const Point &p, const Ei
     plane.vertices.row(2) = p2;
     plane.vertices.row(3) = p3;
 
-    std::cout << "point0: " << p0 << std::endl;
+//    std::cout << "point0: " << p0 << std::endl;
 
 
     plane.faces.resize(2, 3);
@@ -183,6 +183,335 @@ IGL_Mesh Mesh_PSI::generate_plane(const GridSpec &grid, const Point &p, const Ei
 
     return plane;
 }
+
+
+//IGL_Mesh Mesh_PSI::generate_cylinder(const GridSpec &grid, int n,
+//                           const Point& axis_point, const Eigen::Vector3d &axis_unit_vector,
+//                           double radius, bool is_flipped)
+//{
+//    auto pmin = grid.bbox_min;
+//    auto pmax = grid.bbox_max;
+//    double diag_dist = (pmax - pmin).norm();
+//
+//    // find intersection of the cylinder axis and the bounding box
+//    double px = axis_point.x();
+//    double py = axis_point.y();
+//    double pz = axis_point.z();
+//
+//    double vx = axis_unit_vector.x();
+//    double vy = axis_unit_vector.y();
+//    double vz = axis_unit_vector.z();
+//
+//    double pmin_x = pmin.x();
+//    double pmin_y = pmin.y();
+//    double pmin_z = pmin.z();
+//
+//    double pmax_x = pmax.x();
+//    double pmax_y = pmax.y();
+//    double pmax_z = pmax.z();
+//
+//    //
+//    bool find_intersection = false;
+//    Point q(0,0,0);
+//    while (true) {
+//        if (vx != 0) {
+//            // large x
+//            double t = (pmax_x - px)/vx;
+//            q = axis_point + t * axis_unit_vector;
+//            if (pmin_y <= q.y() <= pmax_y && pmin_z <= q.z() <= pmax_z) {
+//                find_intersection = true;
+//                break;
+//            }
+//            // small x
+//            t = (pmin_x - px)/vx;
+//            q = axis_point + t * axis_unit_vector;
+//            if (pmin_y <= q.y() <= pmax_y && pmin_z <= q.z() <= pmax_z) {
+//                find_intersection = true;
+//                break;
+//            }
+//        }
+//
+//        if (vy != 0) {
+//            // large y
+//            double t = (pmax_y - py)/vy;
+//            q = axis_point + t * axis_unit_vector;
+//            if (pmin_x <= q.x() <= pmax_x && pmin_z <= q.z() <= pmax_z) {
+//                find_intersection = true;
+//                break;
+//            }
+//            // small y
+//            t = (pmin_y - py)/vy;
+//            q = axis_point + t * axis_unit_vector;
+//            if (pmin_x <= q.x() <= pmax_x && pmin_z <= q.z() <= pmax_z) {
+//                find_intersection = true;
+//                break;
+//            }
+//        }
+//
+//        if (vz != 0) {
+//            // large z
+//            double t = (pmax_z - pz)/vz;
+//            q = axis_point + t * axis_unit_vector;
+//            if (pmin_x <= q.x() <= pmax_x && pmin_y <= q.y() <= pmax_y) {
+//                find_intersection = true;
+//                break;
+//            }
+//            // small z
+//            t = (pmin_z - pz)/vz;
+//            q = axis_point + t * axis_unit_vector;
+//            if (pmin_x <= q.x() <= pmax_x && pmin_y <= q.y() <= pmax_y) {
+//                find_intersection = true;
+//                break;
+//            }
+//        }
+//        // find_intersection = false
+//        break;
+//    }
+//    if (!find_intersection) {
+//        if (vx != 0) {
+//            double t = (pmax_x - px)/vx;
+//            q = axis_point + t * axis_unit_vector;
+//        } else if (vy != 0) {
+//            double t = (pmax_y - py)/vy;
+//            q = axis_point + t * axis_unit_vector;
+//        } else { // vz != 0
+//            double t = (pmax_z - pz)/vz;
+//            q = axis_point + t * axis_unit_vector;
+//        }
+//    }
+//
+//    std::cout << "q:" << q << std::endl;
+//
+//
+//
+//    //
+//    Point p1 = q - 2 * diag_dist * axis_unit_vector;
+////    Point p2 = q + 2 * diag_dist * axis_unit_vector;
+//    std::cout << "p1: " << p1 << std::endl;
+//
+//    //
+//    Eigen::Vector3d axis1 = axis_unit_vector.cross(Eigen::Vector3d(1,0,0));
+//    if (axis1.norm() == 0) {
+//        axis1 = axis_unit_vector.cross(Eigen::Vector3d(0,1,0));
+//    }
+//    axis1.normalize();
+//    Eigen::Vector3d axis2 = axis_unit_vector.cross(axis1);
+//
+//    IGL_Mesh cylinder;
+//    cylinder.vertices.resize(2 * n, 3);
+//    for (int i = 0; i < n; ++i) {
+//        cylinder.vertices.row(i) = p1 + radius * cos(1.0 * i * 2 * M_PI / n) * axis1
+//                + radius * sin(1.0 * i * 2 * M_PI / n) * axis2;
+//    }
+//    for (int i = 0; i < n; ++i) {
+////        cylinder.vertices.row(n+i) = cylinder.vertices.row(i) + 2 * diag_dist * axis_unit_vector;
+//        cylinder.vertices.row(n+i) = cylinder.vertices.row(i);
+//        cylinder.vertices(n+i,0) += 2 * diag_dist * axis_unit_vector.x();
+//        cylinder.vertices(n+i,1) += 2 * diag_dist * axis_unit_vector.y();
+//        cylinder.vertices(n+i,2) += 2 * diag_dist * axis_unit_vector.z();
+//    }
+//
+//    // flip or not
+//    Point q0 = cylinder.vertices.row(0);
+//    Point q1 = cylinder.vertices.row(1);
+//    Point q2 = cylinder.vertices.row(n);
+//    Eigen::Vector3d face_normal = (q1-q0).cross(q2-q0);
+//    Eigen::Vector3d radius_vector = q0 - p1;
+//    bool need_flip = false;
+//
+//    if (radius_vector.dot(face_normal) > 0) {
+//        if (is_flipped) need_flip = true;
+//    } else {
+//        if (!is_flipped) need_flip = true;
+//    }
+//
+//    cylinder.faces.resize(2 * n, 3);
+//    int num_vert = 2*n;
+//    for (int i = 0; i < n; ++i) {
+//        if (need_flip) {
+//            cylinder.faces <<  (i+n % num_vert), (i+1 % num_vert), (i % num_vert);
+//            cylinder.faces <<  ((i+n+1) % num_vert), ((i+1) % num_vert), ((i+n) % num_vert);
+//        } else {
+//            cylinder.faces << (i % num_vert), (i+1 % num_vert), (i+n % num_vert);
+//            cylinder.faces << ((i+n) % num_vert), ((i+1) % num_vert), ((i+n+1) % num_vert);
+//        }
+//
+//    }
+//
+//    return cylinder;
+//}
+
+
+IGL_Mesh Mesh_PSI::generate_cylinder(const GridSpec &grid, int n,
+                                     const Point& axis_point, const Eigen::Vector3d &axis_unit_vector,
+                                     double radius, bool is_flipped)
+{
+    n = (n < 3) ? 3 : n;
+    auto pmin = grid.bbox_min;
+    auto pmax = grid.bbox_max;
+    auto center = (pmin + pmax) /2;
+
+    Eigen::Vector3d xAxi(pmax.x()-center.x(),0,0);
+    Eigen::Vector3d yAxi(0,pmax.y()-center.y(),0);
+    Eigen::Vector3d zAxi(0,0,pmax.z()-center.z());
+
+    // find the corner farthest to axis_point
+    double max_dist = 0;
+    for (int i = 0; i < 2; ++i) {
+        int sx = (i == 0 ? -1 : 1);
+        for (int j = 0; j < 2; ++j) {
+            int sy = (j == 0 ? -1 : 1);
+            for (int k = 0; k < 2; ++k) {
+                int sz = (k == 0 ? -1 : 1);
+                auto q_ijk = center + sx * xAxi + sy * yAxi + sz * zAxi;
+                double dist = (axis_point-q_ijk).norm();
+                if (dist > max_dist) {
+                    max_dist = dist;
+                }
+            }
+        }
+    }
+    max_dist *= 1.001;
+
+
+    // center of the base disk of cylinder
+    Point p1 = axis_point - max_dist * axis_unit_vector;
+//    std::cout << "p1: " << p1 << std::endl;
+
+    //
+    Eigen::Vector3d axis1 = axis_unit_vector.cross(Eigen::Vector3d(1,0,0));
+    if (axis1.norm() == 0) {
+        axis1 = axis_unit_vector.cross(Eigen::Vector3d(0,1,0));
+    }
+    axis1.normalize();
+    Eigen::Vector3d axis2 = axis_unit_vector.cross(axis1);
+
+    IGL_Mesh cylinder;
+    cylinder.vertices.resize(2 * n, 3);
+    for (int i = 0; i < n; ++i) { // base circle
+        cylinder.vertices.row(i) = p1 + radius * cos(i * 2 * M_PI / n) * axis1
+                                   + radius * sin(i * 2 * M_PI / n) * axis2;
+    }
+    for (int i = 0; i < n; ++i) { // top circle
+//        cylinder.vertices.row(n+i) = cylinder.vertices.row(i) + 2 * diag_dist * axis_unit_vector;
+        cylinder.vertices.row(n+i) = cylinder.vertices.row(i);
+        cylinder.vertices(n+i,0) += 2 * max_dist * axis_unit_vector.x();
+        cylinder.vertices(n+i,1) += 2 * max_dist * axis_unit_vector.y();
+        cylinder.vertices(n+i,2) += 2 * max_dist * axis_unit_vector.z();
+    }
+
+    // flip orientation or not
+    Point q0 = cylinder.vertices.row(0);
+    Point q1 = cylinder.vertices.row(1);
+    Point q2 = cylinder.vertices.row(n);
+    Eigen::Vector3d face_normal = (q1-q0).cross(q2-q0);
+    Eigen::Vector3d radius_vector = q0 - p1;
+    bool need_flip = false;
+
+    if (radius_vector.dot(face_normal) > 0) {
+        if (is_flipped) need_flip = true;
+    } else {
+        if (!is_flipped) need_flip = true;
+    }
+
+    cylinder.faces.resize(2 * n, 3);
+    for (int i = 0; i < n; ++i) {
+        if (need_flip) {
+            cylinder.faces.row(i) << (i+n), (i+1)%n, (i);
+            cylinder.faces.row(i+n) << (i+1)%n + n, (i+1)%n, (i+n);
+        } else {
+            cylinder.faces.row(i) << (i), (i+1)%n, (i+n);
+            cylinder.faces.row(i+n) << (i+n), (i+1)%n, (i+1)%n + n;
+        }
+    }
+//    std::cout << cylinder.faces << std::endl;
+
+    return cylinder;
+}
+
+IGL_Mesh Mesh_PSI::generate_cone(const GridSpec &grid, int n,
+                       const Point& apex, const Eigen::Vector3d& axis_unit_vector,
+                       double apex_angle, bool is_flipped)
+{
+    if (cos(apex_angle) == 0) {
+        if (is_flipped) {
+            return generate_plane(grid,apex,axis_unit_vector);
+        } else {
+            return generate_plane(grid,apex,-axis_unit_vector);
+        }
+    }
+
+    n = (n < 3) ? 3 : n;
+    auto pmin = grid.bbox_min;
+    auto pmax = grid.bbox_max;
+    auto center = (pmin + pmax) /2;
+
+    Eigen::Vector3d xAxi(pmax.x()-center.x(),0,0);
+    Eigen::Vector3d yAxi(0,pmax.y()-center.y(),0);
+    Eigen::Vector3d zAxi(0,0,pmax.z()-center.z());
+
+    // find the corner farthest to apex
+    double max_dist = 0;
+    for (int i = 0; i < 2; ++i) {
+        int sx = (i == 0 ? -1 : 1);
+        for (int j = 0; j < 2; ++j) {
+            int sy = (j == 0 ? -1 : 1);
+            for (int k = 0; k < 2; ++k) {
+                int sz = (k == 0 ? -1 : 1);
+                auto q_ijk = center + sx * xAxi + sy * yAxi + sz * zAxi;
+                double dist = (apex-q_ijk).norm();
+                if (dist > max_dist) {
+                    max_dist = dist;
+                }
+            }
+        }
+    }
+    max_dist *= 1.001;
+
+    Point base_center(0,0,0);
+    if (cos(apex_angle) > 0) {
+        base_center = apex + max_dist * axis_unit_vector;
+    } else {
+        base_center = apex - max_dist * axis_unit_vector;
+    }
+
+    //
+    Eigen::Vector3d axis1 = axis_unit_vector.cross(Eigen::Vector3d(1,0,0));
+    if (axis1.norm() == 0) {
+        axis1 = axis_unit_vector.cross(Eigen::Vector3d(0,1,0));
+    }
+    axis1.normalize();
+    Eigen::Vector3d axis2 = axis_unit_vector.cross(axis1);
+
+    double radius = fabs(max_dist * tan(apex_angle));
+
+    IGL_Mesh cone;
+    cone.vertices.resize(n+1, 3);
+    if (is_flipped) {
+        for (int i = 0; i < n; ++i) {
+            cone.vertices.row(i) = base_center + radius * cos(i*2*M_PI/n) * axis1
+                                    + radius * sin(i*2*M_PI/n) * axis2;
+        }
+    } else {
+        for (int i = 0; i < n; ++i) {
+            cone.vertices.row(i) = base_center + radius * cos(-i*2*M_PI/n) * axis1
+                                   + radius * sin(-i*2*M_PI/n) * axis2;
+        }
+    }
+    cone.vertices.row(n) = apex;
+
+    cone.faces.resize(n,3);
+    for (int i = 0; i < n; ++i) {
+        cone.faces.row(i) << n, i, (i+1)%n;
+    }
+
+    return cone;
+}
+
+//    IGL_Mesh generate_torus(const GridSpec &grid, int n_major, int n_minor,
+//                            const Point& center, const Eigen::Vector3d& axis_unit_vector,
+//                            double major_radius, double minor_radius,
+//                            bool is_flipped);
 
 IGL_Mesh Mesh_PSI::generate_random_plane(const GridSpec &grid)
 {
