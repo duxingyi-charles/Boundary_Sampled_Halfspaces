@@ -571,6 +571,11 @@ void Mesh_PSI::compute_arrangement(
     meshes.reserve(implicits.size()+1);
 
     meshes.push_back(generate_cube(grid));
+    double grid_diag = (grid.bbox_max - grid.bbox_min).norm();
+    Eigen::Vector3d delta_diag((grid.bbox_max.x()-grid.bbox_min.x())/grid.resolution.x(),
+                               (grid.bbox_max.y()-grid.bbox_min.y())/grid.resolution.y(),
+                               (grid.bbox_max.z()-grid.bbox_min.z())/grid.resolution.z());
+    double error_bound = delta_diag.norm();
     for (const auto& fn : implicits) {
         //
         if (fn->get_type() == "plane") {
@@ -579,7 +584,33 @@ void Mesh_PSI::compute_arrangement(
             fn->get_point(p);
             fn->get_normal(normal);
             meshes.push_back(generate_plane(grid, p, normal));
-        } else {
+        } else if (fn->get_type() == "cylinder") {
+            Point axis_point;
+            Eigen::Vector3d axis_unit_vector;
+            double radius;
+            bool is_flipped;
+            fn->get_axis_point(axis_point);
+            fn->get_axis_unit_vector(axis_unit_vector);
+            fn->get_radius(radius);
+            fn->get_is_flipped(is_flipped);
+            int n = (radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/radius)));
+            n = (n < 15) ? 15 : n;
+            meshes.push_back(generate_cylinder(grid,n,axis_point,axis_unit_vector,radius,is_flipped));
+        } else if (fn->get_type() == "cone") {
+            Point apex;
+            Eigen::Vector3d axis_unit_vector;
+            double apex_angle;
+            bool is_flipped;
+            fn->get_apex(apex);
+            fn->get_axis_unit_vector(axis_unit_vector);
+            fn->get_apex_angle(apex_angle);
+            fn->get_is_flipped(is_flipped);
+//            int n = (int)round(M_PI/acos(1-error_bound/(grid_diag*abs(tan(apex_angle)))));
+            int n = (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(tan(apex_angle))))));
+            n = (n < 15) ? 15 : n;
+            meshes.push_back(generate_cone(grid,n,apex,axis_unit_vector,apex_angle,is_flipped));
+        }
+        else {
             meshes.push_back(marching_cubes(*fn, grid));
         }
 //
