@@ -67,7 +67,7 @@ private:
         auto set_patch_visible = [&](auto& viewer, size_t i, bool val) {
             assert(i < m_data_ids.size());
             m_patch_visible[i] = val;
-            auto pid = m_data_ids[i];
+            const auto pid = m_data_ids[i];
 
             const int implicit_id = m_states->get_implicit_from_patch(i);
             Eigen::RowVector4d color = m_states->get_implicit_color(implicit_id);
@@ -92,8 +92,7 @@ private:
             }
         };
 
-        const auto& patches = m_states->get_patches();
-        const size_t num_patches = patches.size();
+        const size_t num_patches = m_states->get_num_patches();
 
         m_patch_visible = m_states->get_patch_labels();
 
@@ -109,10 +108,11 @@ private:
         const auto num_implicits = m_states->get_num_implicits();
         for (size_t i = 0; i < num_implicits; i++) {
             const int control_id = m_control_view_ids[i];
-            viewer.data(control_id).set_visible(m_ui_mode == 1);
+            const bool is_active = m_active_state.active_implicit_id == i;
+            viewer.data(control_id).set_visible(m_ui_mode == 1 && is_active);
 
             const int sample_id = m_sample_view_ids[i];
-            viewer.data(sample_id).set_visible(m_ui_mode == 0);
+            viewer.data(sample_id).set_visible(m_ui_mode == 0 && is_active);
         }
         m_pick_state.reset();
     }
