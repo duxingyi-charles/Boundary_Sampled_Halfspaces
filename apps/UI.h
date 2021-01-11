@@ -114,7 +114,6 @@ private:
             const int sample_id = m_sample_view_ids[i];
             viewer.data(sample_id).set_visible(m_ui_mode == 0);
         }
-        m_active_state.reset();
         m_pick_state.reset();
     }
 
@@ -128,9 +127,11 @@ private:
             ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
+                m_active_state.reset();
                 update_mode(viewer);
             }
             if (ImGui::RadioButton("Control Points", &m_ui_mode, 1)) {
+                m_active_state.reset();
                 update_mode(viewer);
             }
             if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
@@ -422,7 +423,10 @@ private:
                     m_states->update_control_points(implicit_id, pts);
                     initialize_data(viewer);
                 }
-            } else if (is_patch_active && !mouse_moved && m_pick_state.hit) {
+            } else if (is_point_active) {
+                // A point is clicked.  Do nothing.
+            } else if (is_patch_active && !mouse_moved && m_pick_state.hit &&
+                       m_pick_state.hit_implicit_id == m_active_state.active_implicit_id) {
                 // Insert new point to the active patch.
                 const auto& hit_point = m_pick_state.hit_point;
                 const auto& fn = m_states->get_implicit_function(implicit_id);
@@ -445,12 +449,13 @@ private:
                     initialize_data(viewer);
                 }
             } else if (!mouse_moved) {
-                // Nothing was active.
+                // Nothing was active, or another patch is being activated.
                 if (m_pick_state.hit) {
                     // Clicked a non-active patch, just activate it.
                     m_active_state.active_implicit_id = m_pick_state.hit_implicit_id;
                     m_active_state.active_point_id = -1;
                 } else {
+                    // Clicked on empty space.  Deactivate all.
                     m_active_state.reset();
                 }
             }
