@@ -33,6 +33,14 @@ public:
     double function_at(const Point &x) const override;
     Eigen::Vector3d gradient_at(const Point &x) const override;
 
+    std::string get_type() const override { return "torus"; }
+
+    void get_center(Point &p) const override { p = center; };
+    void get_axis_unit_vector(Eigen::Vector3d &vec) const override { vec = axis_unit_vector; };
+    void get_major_radius(double &R) const override { R = major_radius; };
+    void get_minor_radius(double &r) const override { r = minor_radius; };
+    void get_is_flipped(bool &flip)  const override { flip = is_flipped; };
+
 private:
     // p: center point of torus
     Point center;

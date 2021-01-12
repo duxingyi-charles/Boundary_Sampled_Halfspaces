@@ -24,6 +24,25 @@ public:
 
     static bool import_xyz(const std::string &filename, std::vector<Point> &pts);
 
+    virtual std::string get_type() const { return "unknown"; }
+
+    // public getter
+    virtual void get_point(Point&) const {};    //plane
+    virtual void get_normal(Eigen::Vector3d&) const {};  //plane
+
+    virtual void get_axis_point(Point &) const {};   //cylinder
+    virtual void get_axis_unit_vector(Eigen::Vector3d &) const {}; //cylinder, cone, torus
+    virtual void get_radius(double &) const {};     //cylinder, sphere
+    virtual void get_is_flipped(bool &) const {};   //cylinder, cone, sphere, torus
+
+    virtual void get_apex(Point&) const {};  //cone
+    virtual void get_apex_angle(double&) const {}; //cone
+
+    virtual void get_center(Point&) const {}; //torus, sphere
+    virtual void get_major_radius(double&) const {}; //torus
+    virtual void get_minor_radius(double&) const {}; //torus
+
+
 protected:
 
 	std::vector<Point> sample_points;

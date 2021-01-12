@@ -37,7 +37,14 @@ class Cylinder_sImplicit : public Sampled_Implicit {
     double function_at(const Point &x) const override;
     Eigen::Vector3d gradient_at(const Point &x) const override;
 
-   private:
+    std::string get_type() const override { return "cylinder"; }
+
+    void get_axis_point(Point &p) const override { p = axis_point; };
+    void get_axis_unit_vector(Eigen::Vector3d &vec) const override { vec = axis_unit_vector; };
+    void get_radius(double &r) const override { r = radius; };
+    void get_is_flipped(bool &flip) const override { flip = is_flipped; };
+
+private:
     // p: point on cylinder axis
     Point axis_point;
     // v: unit vector along axis
