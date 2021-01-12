@@ -54,6 +54,14 @@ class Sphere_sImplicit : public Sampled_Implicit {
         center = pts[0];
     }
 
+    double get_radius() const {
+        return radius;
+    }
+
+    void set_radius(double r) {
+        radius = r;
+    }
+
    private:
     Point center;
     double radius;

@@ -124,7 +124,7 @@ private:
         static bool imgui_demo = false;
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {
-            //ImGui::Checkbox("imgui demo", &imgui_demo);
+            // ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
                 m_active_state.reset();
@@ -218,6 +218,8 @@ private:
             for (const auto& p : pts) {
                 viewer.data(id).add_points(p.transpose(), get_control_pt_color(i));
             }
+
+            add_secondary_implicit_data(viewer, id, fn);
             viewer.data(id).show_overlay_depth = 0;
         }
 
@@ -233,6 +235,24 @@ private:
                 viewer.data(id).add_points(p.transpose(), get_sample_pt_color(i));
             }
             viewer.data(id).show_overlay_depth = 0;
+        }
+    }
+
+    void add_secondary_implicit_data(
+        igl::opengl::glfw::Viewer& viewer, int id, const Sampled_Implicit& fn)
+    {
+        assert(id >= 0);
+        if (const Sphere_sImplicit* sphere = dynamic_cast<const Sphere_sImplicit*>(&fn)) {
+            std::cout << "Sphere!" << std::endl;
+        } else if (const Cylinder_sImplicit* cylinder =
+                       dynamic_cast<const Cylinder_sImplicit*>(&fn)) {
+            std::cout << "Cylinder!" << std::endl;
+        } else if (const Plane_sImplicit* plane = dynamic_cast<const Plane_sImplicit*>(&fn)) {
+            std::cout << "Plane!" << std::endl;
+        } else if (const Cone_sImplicit* cone = dynamic_cast<const Cone_sImplicit*>(&fn)) {
+            std::cout << "Cone!" << std::endl;
+        } else {
+            std::cout << "Other!" << std::endl;
         }
     }
 

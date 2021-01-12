@@ -2,6 +2,9 @@
 #include <Mesh_PSI.h>
 #include <PSI.h>
 #include <Sphere_sImplicit.h>
+#include <Cylinder_sImplicit.h>
+#include <Plane_sImplicit.h>
+#include <Cone_sImplicit.h>
 
 #include <Eigen/Core>
 
@@ -53,7 +56,7 @@ public:
         initialize_colors();
     }
 
-    const Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
+    Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
 
     void update_control_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
     {
