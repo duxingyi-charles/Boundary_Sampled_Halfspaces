@@ -36,7 +36,14 @@ class Sphere_sImplicit : public Sampled_Implicit {
     double function_at(const Point &p) const override;
     Eigen::Vector3d gradient_at(const Point &p) const override;
 
-   private:
+    std::string get_type() const override { return "sphere"; }
+
+    void get_radius(double &r) const override { r = radius; };
+    void get_is_flipped(bool &flip) const override { flip = is_flipped; };
+    void get_center(Point &p) const override { p = center; };
+
+
+private:
     Point center;
     double radius;
     // is_flipped = false: f(x) = (||x-center||^2 - r^2)
