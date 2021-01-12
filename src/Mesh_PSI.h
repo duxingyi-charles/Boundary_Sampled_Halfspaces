@@ -47,10 +47,12 @@ private:
     IGL_Mesh generate_cone(const GridSpec &grid, int n,
                            const Point& apex, const Eigen::Vector3d& axis_unit_vector,
                            double apex_angle, bool is_flipped);
-//
-//    IGL_Mesh generate_sphere(const GridSpec &grid, int num_subdivide,
-//                             const Point& center, double radius, bool is_flipped);
-//
+
+    static IGL_Mesh generate_unit_sphere(bool is_flipped);
+
+    IGL_Mesh generate_sphere(const GridSpec &grid,
+                             const Point& center, double radius, bool is_flipped);
+
     IGL_Mesh generate_torus(const GridSpec &grid, int n_major, int n_minor,
                             const Point& center, const Eigen::Vector3d& axis_unit_vector,
                             double major_radius, double minor_radius,
