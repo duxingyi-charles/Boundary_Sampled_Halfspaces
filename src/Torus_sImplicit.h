@@ -8,6 +8,7 @@
 #include "Sampled_Implicit.h"
 
 #include <iostream>
+#include <Eigen/Dense>
 
 class Torus_sImplicit : public Sampled_Implicit {
 public:
@@ -38,6 +39,15 @@ public:
     const std::vector<Point>& get_control_points() const override {
         if (m_control_pts.empty()) {
             m_control_pts.push_back(center);
+            m_control_pts.push_back(center + axis_unit_vector);
+            Point dir;
+            if (std::abs(axis_unit_vector[1]) < 0.9) {
+                dir = Point(0, 1, 0).cross(axis_unit_vector).normalized();
+            } else {
+                dir = Point(0, 0, 1).cross(axis_unit_vector).normalized();
+            }
+            m_control_pts.push_back(center + dir * major_radius);
+            m_control_pts.push_back(center + dir * (major_radius + minor_radius));
         }
         return m_control_pts;
     }
@@ -46,9 +56,37 @@ public:
             std::cerr << "Torus primitive expects at least 1 control points";
             return;
         }
+        if ((center - pts[0]).norm() < 1e-6) {
+            Point dir = (pts[1] - pts[0]).normalized();
+            if ((dir - axis_unit_vector).norm() < 1e-6) {
+                major_radius = (pts[2] - pts[0]).norm();
+                minor_radius  = (pts[3] - pts[2]).norm();
+            } else {
+                axis_unit_vector = pts[1];
+            }
+        } else {
+            center = pts[0];
+        }
         m_control_pts = pts;
-        center = pts[0];
+        m_control_pts[1] = center + axis_unit_vector;
+
+        Point dir;
+        if (std::abs(axis_unit_vector[1]) < 0.9) {
+            dir = Point(0, 1, 0).cross(axis_unit_vector).normalized();
+        } else {
+            dir = Point(0, 0, 1).cross(axis_unit_vector).normalized();
+        }
+        m_control_pts[2] = center + dir * major_radius;
+        m_control_pts[3] = center + dir * (major_radius + minor_radius);
     }
+
+    std::string get_type() const override { return "torus"; }
+
+    void get_center(Point &p) const override { p = center; };
+    void get_axis_unit_vector(Eigen::Vector3d &vec) const override { vec = axis_unit_vector; };
+    void get_major_radius(double &R) const override { R = major_radius; };
+    void get_minor_radius(double &r) const override { r = minor_radius; };
+    void get_is_flipped(bool &flip)  const override { flip = is_flipped; };
 
 private:
     // p: center point of torus

@@ -215,11 +215,34 @@ private:
             if (!fn.has_control_points()) continue;
             const auto& pts = fn.get_control_points();
 
-            for (const auto& p : pts) {
-                viewer.data(id).add_points(p.transpose(), get_control_pt_color(i));
+            if (fn.get_type() == "sphere") {
+                assert(pts.size() == 2);
+                viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
+                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+            } else if (fn.get_type() == "cone") {
+                assert(pts.size() == 2);
+                viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
+                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
+            } else if (fn.get_type() == "cylinder") {
+                viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
+                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
+            } else if (fn.get_type() == "plane") {
+                viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
+                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+            } else if (fn.get_type() == "torus") {
+                viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
+                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
+                viewer.data(id).add_points(pts[3].transpose(), Eigen::Matrix<double, 1, 3>(0.25, 0.75, 0));
+            } else {
+                for (const auto& p : pts) {
+                    viewer.data(id).add_points(p.transpose(), get_control_pt_color(i));
+                }
             }
 
-            add_secondary_implicit_data(viewer, id, fn);
+            //add_secondary_implicit_data(viewer, id, fn);
             viewer.data(id).show_overlay_depth = 0;
         }
 
@@ -244,6 +267,12 @@ private:
         assert(id >= 0);
         if (const Sphere_sImplicit* sphere = dynamic_cast<const Sphere_sImplicit*>(&fn)) {
             std::cout << "Sphere!" << std::endl;
+            double r = sphere->get_radius();
+            Eigen::Vector3d dir(1, 0, 0);
+            Eigen::MatrixXd p(1, 3);
+            p = (sphere->get_center() + dir.normalized() * r).transpose();
+            Eigen::Matrix<double, 1, 3> c(1, 1, 0);
+            viewer.data(id).add_points(p, c);
         } else if (const Cylinder_sImplicit* cylinder =
                        dynamic_cast<const Cylinder_sImplicit*>(&fn)) {
             std::cout << "Cylinder!" << std::endl;
@@ -517,6 +546,8 @@ private:
             }
             if (key == 259 || key == 88) {
                 remove_active_point(viewer);
+                reset_patch_visibility(viewer);
+                return true;
             }
             return false;
         };
