@@ -273,9 +273,43 @@ bool Hermite_RBF_sImplicit::export_RBF_coeff(const std::string &filename) const 
     return true;
 }
 
-void Hermite_RBF_sImplicit::update_RBF_coeff(const std::vector<Point> &points) {
-    control_points = points;
-    compute_RBF_coeff(points, coeff_a, coeff_b);
+void Hermite_RBF_sImplicit::consistent_update_RBF_coeff(const std::vector<Point> &points) {
+    int n_total = sample_points.size() + control_points.size();
+    if (n_total == 0) {  // nothing to keep consistency
+        update_RBF_coeff(points);
+        return;
+    }
+    //before update, compute gradient at samples and control points
+    std::vector<Point> prev_control_points = control_points;
+    std::vector<Eigen::Vector3d> prev_grads(n_total);
+    for (const auto &p : sample_points) {
+        prev_grads.emplace_back(gradient_at(p));
+    }
+    for (const auto &p : prev_control_points) {
+        prev_grads.emplace_back(gradient_at(p));
+    }
+
+    update_RBF_coeff(points);
+
+    // orientation consistency check
+    std::vector<Eigen::Vector3d> new_grads(n_total);
+    for (const auto &p : sample_points) {
+        new_grads.emplace_back(gradient_at(p));
+    }
+    for (const auto &p : prev_control_points) {
+        new_grads.emplace_back(gradient_at(p));
+    }
+
+    int n_consistent = 0;
+    for (int i = 0; i < n_total; ++i) {
+        if (prev_grads[i].dot(new_grads[i]) > 0) {
+            ++n_consistent;
+        }
+    }
+
+    if (2 * n_consistent < n_total) {
+        flip_sign();
+    }
 }
 
 void Hermite_RBF_sImplicit::print_coeff() const {

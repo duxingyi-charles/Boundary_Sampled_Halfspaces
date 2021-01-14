@@ -18,7 +18,9 @@ public:
     // initialize with control points
     Hermite_RBF_sImplicit(const std::vector<Point> &control_pts,
                           const std::vector<Point> &sample_pts)
-                          : Sampled_Implicit(sample_pts) { update_RBF_coeff(control_pts);}
+                          : Sampled_Implicit(sample_pts), control_points(control_pts) {
+        compute_RBF_coeff(control_pts, coeff_a, coeff_b);
+    }
 
     bool import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file);
     bool import_sampled_Hermite_RBF(const std::string &pts_file,
@@ -34,7 +36,12 @@ public:
 
     void fit_RBF(const std::vector<Point> &points, double error_bound);
 
-    void update_RBF_coeff(const std::vector<Point> &points);
+    void update_RBF_coeff(const std::vector<Point> &points) {
+        control_points = points;
+        compute_RBF_coeff(points, coeff_a, coeff_b);
+    }
+
+    void consistent_update_RBF_coeff(const std::vector<Point> &points);
 
     void flip_sign() {
         coeff_a *= -1;
