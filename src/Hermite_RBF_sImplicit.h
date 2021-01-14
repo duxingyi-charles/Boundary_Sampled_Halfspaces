@@ -31,10 +31,9 @@ public:
 
     static void compute_RBF_coeff(const std::vector<Point> &points, Eigen::VectorXd &a, Eigen::Vector4d &b);
 
-    void update_RBF_coeff(const std::vector<Point> &points) {
-        control_points = points;
-        compute_RBF_coeff(points, coeff_a, coeff_b);
-    }
+    void fit_RBF(const std::vector<Point> &points, double error_bound);
+
+    void update_RBF_coeff(const std::vector<Point> &points);
 
     void flip_sign() {
         coeff_a *= -1;
