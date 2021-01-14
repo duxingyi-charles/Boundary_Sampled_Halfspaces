@@ -23,6 +23,7 @@ public:
 	virtual Eigen::Vector3d gradient_at(const Point &) const = 0;
 
     static bool import_xyz(const std::string &filename, std::vector<Point> &pts);
+    static bool export_xyz(const std::string &filename, const std::vector<Point> &pts);
 
     virtual std::string get_type() const { return "unknown"; }
 
@@ -41,6 +42,8 @@ public:
     virtual void get_center(Point&) const {}; //torus, sphere
     virtual void get_major_radius(double&) const {}; //torus
     virtual void get_minor_radius(double&) const {}; //torus
+
+
 
 
 protected:
