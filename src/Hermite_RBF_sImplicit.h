@@ -25,6 +25,7 @@ public:
                                     const std::string &coeff_file,
                                     const std::string &sample_file);
 
+    bool export_RBF_coeff(const std::string &filename) const;
 
     double function_at(const Point &) const override;
     Eigen::Vector3d gradient_at(const Point &) const override;
@@ -39,6 +40,14 @@ public:
         coeff_a *= -1;
         coeff_b *= -1;
     }
+
+    Eigen::VectorXd get_coeff_a() const { return coeff_a; };
+    Eigen::Vector4d get_ceoff_b() const { return coeff_b; };
+    std::vector<Point> get_control_points() const { return control_points; };
+
+    void print_coeff() const;
+    void print_control_points() const;
+
 
 protected:
 

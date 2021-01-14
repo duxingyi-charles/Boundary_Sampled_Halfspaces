@@ -191,6 +191,11 @@ bool Hermite_RBF_sImplicit::import_sampled_Hermite_RBF(const std::string &pts_fi
         return false;
     }
 
+    //debug
+//    print_control_points();
+//    print_coeff();
+//    std::cout << "function value at (0,0,0) = " << function_at(Point(0,0,0)) << std::endl;
+
     // import sample points
     std::vector<Point> pts;
     succeed = import_xyz(sample_file, pts);
@@ -240,6 +245,63 @@ bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen:
     reader.close();
     return true;
 }
+
+bool Hermite_RBF_sImplicit::export_RBF_coeff(const std::string &filename) const {
+    std::ofstream fout(filename, std::ofstream::out);
+    if (!fout.good()) {
+        std::cout << "Can not create output file " << filename << std::endl;
+        return false;
+    }
+
+    //precision of output
+    fout.precision(std::numeric_limits<double>::max_digits10);
+
+    // coef_a
+    for (int i = 0; i < coeff_a.size(); ++i) {
+        fout << coeff_a(i) << " ";
+    }
+    fout << std::endl;
+
+    // coef_b
+    for (int i = 0; i < coeff_b.size(); ++i) {
+        fout << coeff_b(i) << " ";
+    }
+    fout << std::endl;
+
+    fout.close();
+    std::cout << "export_RBF_coeff finish: " << filename << std::endl;
+    return true;
+}
+
+void Hermite_RBF_sImplicit::update_RBF_coeff(const std::vector<Point> &points) {
+    control_points = points;
+    compute_RBF_coeff(points, coeff_a, coeff_b);
+}
+
+void Hermite_RBF_sImplicit::print_coeff() const {
+    // coef_a
+    std::cout << "coef_a: " << std::endl;
+    for (int i = 0; i < coeff_a.size(); ++i) {
+        std::cout << coeff_a(i) << " ";
+    }
+    std::cout << std::endl;
+
+    // coef_b
+    std::cout << "coef_b: " << std::endl;
+    for (int i = 0; i < coeff_b.size(); ++i) {
+        std::cout << coeff_b(i) << " ";
+    }
+    std::cout << std::endl;
+}
+
+void Hermite_RBF_sImplicit::print_control_points() const {
+    std::cout << "control points: " << std::endl;
+    for (const auto &p : control_points) {
+        std::cout << p.x() << " " << p.y() << " " << p.z() << std::endl;
+    }
+    std::cout << std::endl;
+}
+
 
 double Hermite_RBF_sImplicit::kernel_function(const Point &p1, const Point &p2) {
     return pow((p1-p2).norm(), 3);
