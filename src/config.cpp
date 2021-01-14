@@ -26,25 +26,25 @@ std::unique_ptr<Sampled_Implicit> initialize_RBF(const nlohmann::json& entry,
 
     auto fn = std::make_unique<Hermite_RBF_sImplicit>();
 
-//    if (entry.contains("samples")) {
-//        sample_file = path_name + entry["samples"].get<std::string>();
-//        fn->import_sampled_Hermite_RBF(point_file, coeff_file, sample_file);
-//    } else {
-//        fn->import_Hermite_RBF(point_file, coeff_file);
-//    }
-
     if (entry.contains("samples")) {
         sample_file = path_name + entry["samples"].get<std::string>();
-        std::vector<Point> control_pts, sample_pts;
-        Sampled_Implicit::import_xyz(sample_file, sample_pts);
-        Sampled_Implicit::import_xyz(point_file, control_pts);
-        fn->set_sample_points(sample_pts);
-        fn->update_RBF_coeff(control_pts);
+        fn->import_sampled_Hermite_RBF(point_file, coeff_file, sample_file);
     } else {
-        std::vector<Point> control_pts;
-        Sampled_Implicit::import_xyz(point_file, control_pts);
-        fn->update_RBF_coeff(control_pts);
+        fn->import_Hermite_RBF(point_file, coeff_file);
     }
+
+//    if (entry.contains("samples")) {
+//        sample_file = path_name + entry["samples"].get<std::string>();
+//        std::vector<Point> control_pts, sample_pts;
+//        Sampled_Implicit::import_xyz(sample_file, sample_pts);
+//        Sampled_Implicit::import_xyz(point_file, control_pts);
+//        fn->set_sample_points(sample_pts);
+//        fn->update_RBF_coeff(control_pts);
+//    } else {
+//        std::vector<Point> control_pts;
+//        Sampled_Implicit::import_xyz(point_file, control_pts);
+//        fn->update_RBF_coeff(control_pts);
+//    }
 
     return fn;
 }
