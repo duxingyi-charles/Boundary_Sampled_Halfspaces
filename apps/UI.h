@@ -218,31 +218,40 @@ private:
             if (fn.get_type() == "sphere") {
                 assert(pts.size() == 2);
                 viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
-                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(
+                    pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
             } else if (fn.get_type() == "cone") {
                 assert(pts.size() == 2);
                 viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
-                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
-                viewer.data(id).add_points(pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
+                viewer.data(id).add_points(
+                    pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(
+                    pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
             } else if (fn.get_type() == "cylinder") {
                 viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
-                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
-                viewer.data(id).add_points(pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
+                viewer.data(id).add_points(
+                    pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(
+                    pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
             } else if (fn.get_type() == "plane") {
                 viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
-                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(
+                    pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
             } else if (fn.get_type() == "torus") {
                 viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
-                viewer.data(id).add_points(pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
-                viewer.data(id).add_points(pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
-                viewer.data(id).add_points(pts[3].transpose(), Eigen::Matrix<double, 1, 3>(0.25, 0.75, 0));
+                viewer.data(id).add_points(
+                    pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
+                viewer.data(id).add_points(
+                    pts[2].transpose(), Eigen::Matrix<double, 1, 3>(0, 1, 0));
+                viewer.data(id).add_points(
+                    pts[3].transpose(), Eigen::Matrix<double, 1, 3>(0.25, 0.75, 0));
             } else {
                 for (const auto& p : pts) {
                     viewer.data(id).add_points(p.transpose(), get_control_pt_color(i));
                 }
             }
 
-            //add_secondary_implicit_data(viewer, id, fn);
+            // add_secondary_implicit_data(viewer, id, fn);
             viewer.data(id).show_overlay_depth = 0;
         }
 
@@ -411,23 +420,69 @@ private:
                 }
                 assert(view_id >= 0);
 
-                Eigen::RowVector3d p =
-                    viewer.data(view_id).points.row(point_id).template segment<3>(0);
-                Eigen::RowVector3d n(0, 0, 1);
-                n = (viewer.core().view.block(0, 0, 3, 3).template cast<double>().inverse() *
-                     n.transpose())
-                        .transpose();
-                Eigen::RowVector4d plane;
-                plane << n, -n.dot(p);
+                if (m_ui_mode == 1) {
+                    // Update control point.
+                    Eigen::RowVector3d p =
+                        viewer.data(view_id).points.row(point_id).template segment<3>(0);
+                    Eigen::RowVector3d n(0, 0, 1);
+                    n = (viewer.core().view.block(0, 0, 3, 3).template cast<double>().inverse() *
+                         n.transpose())
+                            .transpose();
+                    Eigen::RowVector4d plane;
+                    plane << n, -n.dot(p);
 
-                Eigen::RowVector3d q;
-                igl::unproject_on_plane(Eigen::Vector2f(x, y),
-                    viewer.core().proj * viewer.core().view,
-                    viewer.core().viewport,
-                    plane,
-                    q);
-                viewer.data(view_id).points.row(point_id).template segment<3>(0) = q;
-                viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
+                    Eigen::RowVector3d q;
+                    igl::unproject_on_plane(Eigen::Vector2f(x, y),
+                        viewer.core().proj * viewer.core().view,
+                        viewer.core().viewport,
+                        plane,
+                        q);
+                    viewer.data(view_id).points.row(point_id).template segment<3>(0) = q;
+                    viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
+                } else {
+                    // Update sample point.  Keep sample point on the implicit
+                    // surface.
+                    const auto num_patches = m_states->get_num_patches();
+                    Eigen::RowVector3d hit_point;
+                    double dist_to_camera = std::numeric_limits<double>::max();
+                    for (int i = 0; i < num_patches; i++) {
+                        if (m_states->get_implicit_from_patch(i) !=
+                            m_active_state.active_implicit_id)
+                            continue;
+                        int fid;
+                        Eigen::Vector3f bc;
+                        auto pid = m_data_ids[i];
+                        const auto& V = viewer.data(pid).V;
+                        const auto& F = viewer.data(pid).F;
+                        if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
+                                viewer.core().view,
+                                viewer.core().proj,
+                                viewer.core().viewport,
+                                V,
+                                F,
+                                fid,
+                                bc)) {
+                            const int v0 = F(fid, 0);
+                            const int v1 = F(fid, 1);
+                            const int v2 = F(fid, 2);
+                            Eigen::RowVector3d p =
+                                V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
+                            double d =
+                                (p -
+                                    viewer.core().camera_center.template cast<double>().transpose())
+                                    .norm();
+                            if (d < dist_to_camera) {
+                                dist_to_camera = d;
+                                hit_point = p;
+                            }
+                        }
+                    }
+                    if (dist_to_camera < std::numeric_limits<double>::max()) {
+                        viewer.data(view_id).points.row(point_id).template segment<3>(0) =
+                            hit_point;
+                        viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
+                    }
+                }
             };
 
             if (m_mouse_down) {
