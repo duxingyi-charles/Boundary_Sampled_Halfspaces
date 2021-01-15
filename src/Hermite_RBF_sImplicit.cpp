@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <limits>
 #include "Hermite_RBF_sImplicit.h"
 
 #include "vipss/rbfcore.h"
@@ -48,6 +49,114 @@ void Hermite_RBF_sImplicit::compute_RBF_coeff(const std::vector<Point> &points, 
 }
 
 
+void Hermite_RBF_sImplicit::fit_RBF(const std::vector<Point> &points, double error_bound)
+{
+    if (error_bound <= 0 || points.size() <= 3) {   // interpolation
+        update_RBF_coeff(points);
+        return;
+    }
+
+    // find mass center of points
+    Point mass_center(0,0,0);
+    for (const auto &p : points) {
+        mass_center += p;
+    }
+    mass_center /= points.size();
+
+    // first control point: the point closest to mass center
+    std::vector<bool> selected(points.size(),false);
+    std::vector<Point> control_pts;
+
+    double min_dist = std::numeric_limits<double>::max();
+    int selected_id = -1;
+    for (int i = 0; i < points.size(); ++i) {
+        double dist = (points[i] - mass_center).norm();
+        if (dist < min_dist) {
+            min_dist = dist;
+            selected_id = i;
+        }
+    }
+    selected[selected_id] = true;
+    Point p1 = points[selected_id];
+    control_pts.push_back(p1);
+
+    // second control point: the point farthest from the first control point
+    double max_dist = 0;
+    selected_id = -1;
+    for (int i = 0; i < points.size(); ++i) {
+        double dist = (points[i] - p1).norm();
+        if (dist > max_dist) {
+            max_dist = dist;
+            selected_id = i;
+        }
+    }
+    if (max_dist == 0) {  // all points coincide
+        update_RBF_coeff(control_pts);
+        return;
+    }
+    selected[selected_id] = true;
+    Point p2 = points[selected_id];
+    control_pts.push_back(p2);
+
+    // third control point: the point farthest from the first two control points
+    max_dist = 0;
+    selected_id = -1;
+    for (int i = 0; i < points.size(); ++i) {
+        double dist = min((points[i]-p1).norm(), (points[i]-p2).norm());
+        if (dist > max_dist) {
+            max_dist = dist;
+            selected_id = i;
+        }
+    }
+    if (max_dist == 0) {  // there are only two distinct points
+        update_RBF_coeff(control_pts);
+        return;
+    }
+    selected[selected_id] = true;
+    Point p3 = points[selected_id];
+    control_pts.push_back(p3);
+
+    // initialize rbf with three points
+    update_RBF_coeff(control_pts);
+
+    // add control point until error falls below error bound
+    max_dist = 0;
+    selected_id = -1;
+    for (int i = 0; i < points.size(); ++i) {
+        if (!selected[i]) {
+            double f_i = function_at(points[i]);
+            auto   g_i = gradient_at(points[i]);
+            double dist = (g_i.norm() > 0) ? fabs(f_i)/(g_i.norm()) : fabs(f_i);
+            if (dist > max_dist) {
+                max_dist = dist;
+                selected_id = i;
+            }
+        }
+    }
+
+    while ((max_dist > error_bound) && (selected_id != -1)) {
+        selected[selected_id] = true;
+        control_pts.push_back(points[selected_id]);
+        update_RBF_coeff(control_pts);
+
+        max_dist = 0;
+        selected_id = -1;
+        for (int i = 0; i < points.size(); ++i) {
+            if (!selected[i]) {
+                double f_i = function_at(points[i]);
+                auto   g_i = gradient_at(points[i]);
+                double dist = (g_i.norm() > 0) ? fabs(f_i)/(g_i.norm()) : fabs(f_i);
+                if (dist > max_dist) {
+                    max_dist = dist;
+                    selected_id = i;
+                }
+            }
+        }
+    }
+
+}
+
+
 bool Hermite_RBF_sImplicit::import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file)
 {
     // import control points
@@ -81,6 +190,11 @@ bool Hermite_RBF_sImplicit::import_sampled_Hermite_RBF(const std::string &pts_fi
         std::cout << "Fail to import Hermite RBF control points or coefficients." << std::endl;
         return false;
     }
+
+    //debug
+//    print_control_points();
+//    print_coeff();
+//    std::cout << "function value at (0,0,0) = " << function_at(Point(0,0,0)) << std::endl;
 
     // import sample points
     std::vector<Point> pts;
@@ -131,6 +245,98 @@ bool Hermite_RBF_sImplicit::import_RBF_coeff(const std::string &filename, Eigen:
     reader.close();
     return true;
 }
+
+bool Hermite_RBF_sImplicit::export_RBF_coeff(const std::string &filename) const {
+    std::ofstream fout(filename, std::ofstream::out);
+    if (!fout.good()) {
+        std::cout << "Can not create output file " << filename << std::endl;
+        return false;
+    }
+
+    //precision of output
+    fout.precision(std::numeric_limits<double>::max_digits10);
+
+    // coef_a
+    for (int i = 0; i < coeff_a.size(); ++i) {
+        fout << coeff_a(i) << " ";
+    }
+    fout << std::endl;
+
+    // coef_b
+    for (int i = 0; i < coeff_b.size(); ++i) {
+        fout << coeff_b(i) << " ";
+    }
+    fout << std::endl;
+
+    fout.close();
+    std::cout << "export_RBF_coeff finish: " << filename << std::endl;
+    return true;
+}
+
+void Hermite_RBF_sImplicit::consistent_update_RBF_coeff(const std::vector<Point> &points) {
+    int n_total = sample_points.size() + control_points.size();
+    if (n_total == 0) {  // nothing to keep consistent
+        update_RBF_coeff(points);
+        return;
+    }
+    //before update, compute gradient at samples and control points
+    std::vector<Point> prev_control_points = control_points;
+    std::vector<Eigen::Vector3d> prev_grads(n_total);
+    for (const auto &p : sample_points) {
+        prev_grads.emplace_back(gradient_at(p));
+    }
+    for (const auto &p : prev_control_points) {
+        prev_grads.emplace_back(gradient_at(p));
+    }
+
+    update_RBF_coeff(points);
+
+    // after update, compute gradients
+    std::vector<Eigen::Vector3d> new_grads(n_total);
+    for (const auto &p : sample_points) {
+        new_grads.emplace_back(gradient_at(p));
+    }
+    for (const auto &p : prev_control_points) {
+        new_grads.emplace_back(gradient_at(p));
+    }
+
+    // orientation consistency check
+    int n_consistent = 0;
+    for (int i = 0; i < n_total; ++i) {
+        if (prev_grads[i].dot(new_grads[i]) > 0) {
+            ++n_consistent;
+        }
+    }
+
+    if (2 * n_consistent < n_total) {
+        flip_sign();
+    }
+}
+
+void Hermite_RBF_sImplicit::print_coeff() const {
+    // coef_a
+    std::cout << "coef_a: " << std::endl;
+    for (int i = 0; i < coeff_a.size(); ++i) {
+        std::cout << coeff_a(i) << " ";
+    }
+    std::cout << std::endl;
+
+    // coef_b
+    std::cout << "coef_b: " << std::endl;
+    for (int i = 0; i < coeff_b.size(); ++i) {
+        std::cout << coeff_b(i) << " ";
+    }
+    std::cout << std::endl;
+}
+
+void Hermite_RBF_sImplicit::print_control_points() const {
+    std::cout << "control points: " << std::endl;
+    for (const auto &p : control_points) {
+        std::cout << p.x() << " " << p.y() << " " << p.z() << std::endl;
+    }
+    std::cout << std::endl;
+}
+
 
 double Hermite_RBF_sImplicit::kernel_function(const Point &p1, const Point &p2) {
     return pow((p1-p2).norm(), 3);

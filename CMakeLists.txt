@@ -92,3 +92,6 @@ target_link_libraries(psi_cli_sample_reduction PRIVATE psi CLI11::CLI11)
 add_executable(psi_ui apps/psi_ui.cpp apps/UI.h)
 target_link_libraries(psi_ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
     cell_partition)
+
+add_executable(vipss_fitting apps/vipss_fitting.cpp)
+target_link_libraries(vipss_fitting PRIVATE psi CLI11::CLI11)
