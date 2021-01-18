@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(PSI VERSION 0.1.0 LANGUAGES CXX)
+project(PSI VERSION 0.1.0 LANGUAGES CXX C)
 
 SET(CMAKE_CXX_STANDARD 14)
 
@@ -7,6 +7,7 @@ include(FetchContent)
 include(cmake/Eigen3.cmake)
 include(cmake/cli11.cmake)
 include(cmake/nlohmann-json.cmake)
+include(cmake/fast_arrangement.cmake)
 
 option(LIBIGL_WITH_CGAL "Build CGAL support in libigl" On)
 option(LIBIGL_WITH_OPENGL_GLFW_IMGUI "Build with UI" On)
@@ -66,16 +67,17 @@ set_target_properties(vipss PROPERTIES LINKER_LANGUAGE CXX)
 
 add_library(cell_partition STATIC
     ${PROJECT_SOURCE_DIR}/src/PyMesh/CellPartition.cpp)
-target_link_libraries(cell_partition PUBLIC igl::core igl::cgal)
+target_link_libraries(cell_partition PUBLIC igl::core igl::cgal
+    fast_arrangement::fast_arrangement)
 
 add_library(psi STATIC ${SRC_LIST})
 target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
 target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core cell_partition vipss)
 target_compile_options(psi PUBLIC "-Wall")
-target_compile_definitions(psi PUBLIC "-DLIBIGL_NUM_THREADS=16")
+target_compile_definitions(psi PUBLIC "-DLIBIGL_NUM_THREADS=2")
 
-add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
-target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
+add_executable(arrangement apps/mesh_arrangement.cpp)
+target_link_libraries(arrangement psi CLI11::CLI11 nlohmann::json igl::core
     cell_partition)
 
 add_executable(psi_cli apps/psi_cli.cpp)
