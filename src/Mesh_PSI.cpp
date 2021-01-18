@@ -10,7 +10,7 @@
 
 #include <numeric> //std::partial_sum
 
-#include "PyMesh/CellPartition.h"
+#include "PyMesh/Arrangement.h"
 #include "ScopedTimer.h"
 
 #include <Eigen/Geometry> //cross product
@@ -772,7 +772,7 @@ void Mesh_PSI::compute_arrangement(
 
     // compute arrangement
     ScopedTimer<> timer("mesh arrangement for graph-cut");
-    auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
+    auto engine = PyMesh::Arrangement::create_raw(merged_mesh.vertices, merged_mesh.faces);
     engine->run();
 
     auto vertices = engine->get_vertices();

@@ -65,20 +65,20 @@ target_link_libraries(vipss PUBLIC ${ARMADILLO_LIB} ${NLOPT_LIB})
 set_target_properties(vipss PROPERTIES LINKER_LANGUAGE CXX)
 
 
-add_library(cell_partition STATIC
-    ${PROJECT_SOURCE_DIR}/src/PyMesh/CellPartition.cpp)
-target_link_libraries(cell_partition PUBLIC igl::core igl::cgal
+add_library(arrangement STATIC
+    ${PROJECT_SOURCE_DIR}/src/PyMesh/Arrangement.cpp)
+target_link_libraries(arrangement PUBLIC igl::core igl::cgal
     fast_arrangement::fast_arrangement)
 
 add_library(psi STATIC ${SRC_LIST})
 target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
-target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core cell_partition vipss)
+target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core arrangement vipss)
 target_compile_options(psi PUBLIC "-Wall")
 target_compile_definitions(psi PUBLIC "-DLIBIGL_NUM_THREADS=2")
 
-add_executable(arrangement apps/mesh_arrangement.cpp)
-target_link_libraries(arrangement psi CLI11::CLI11 nlohmann::json igl::core
-    cell_partition)
+add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
+target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
+    arrangement)
 
 add_executable(psi_cli apps/psi_cli.cpp)
 target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11)
@@ -94,7 +94,7 @@ target_link_libraries(psi_cli_sample_reduction PRIVATE psi CLI11::CLI11)
 
 add_executable(psi_ui apps/psi_ui.cpp apps/UI.h)
 target_link_libraries(psi_ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
-    cell_partition)
+    arrangement)
 
 add_executable(vipss_fitting apps/vipss_fitting.cpp)
 target_link_libraries(vipss_fitting PRIVATE psi CLI11::CLI11)

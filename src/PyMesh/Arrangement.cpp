@@ -1,5 +1,5 @@
 /* This file is part of PyMesh. Copyright (c) 2016 by Qingnan Zhou */
-#include "CellPartition.h"
+#include "Arrangement.h"
 #include "MatrixUtils.h"
 
 #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
@@ -16,12 +16,12 @@
 
 using namespace PyMesh;
 
-CellPartition::Ptr CellPartition::create_raw(
+Arrangement::Ptr Arrangement::create_raw(
         const MatrixFr& vertices, const MatrixIr& faces) {
-    return CellPartition::Ptr(new CellPartition(vertices, faces));
+    return Arrangement::Ptr(new Arrangement(vertices, faces));
 }
 
-void CellPartition::run() {
+void Arrangement::run() {
     typedef CGAL::Epeck Kernel;
     typedef Kernel::FT ExactScalar;
     typedef Eigen::Matrix<ExactScalar,
@@ -102,12 +102,12 @@ void CellPartition::run() {
     std::cout << "Arrangement: extracting arrangement: " << extract_time.count() << std::endl;
 }
 
-size_t CellPartition::get_num_cells() const {
+size_t Arrangement::get_num_cells() const {
     if (m_cells.rows() > 0) return m_cells.maxCoeff();
     else return 0;
 }
 
-MatrixIr CellPartition::get_cell_faces(const size_t cell_id) const {
+MatrixIr Arrangement::get_cell_faces(const size_t cell_id) const {
     const size_t num_faces = m_faces.rows();
     std::vector<VectorI> cell_faces;
     for (size_t i=0; i<num_faces; i++) {
@@ -122,7 +122,7 @@ MatrixIr CellPartition::get_cell_faces(const size_t cell_id) const {
     return faces;
 }
 
-size_t CellPartition::get_num_patches() const {
+size_t Arrangement::get_num_patches() const {
     if (m_patches.size() > 0) return m_patches.maxCoeff();
     else return 0;
 }

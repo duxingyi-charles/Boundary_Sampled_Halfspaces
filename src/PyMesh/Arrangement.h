@@ -6,13 +6,13 @@
 
 namespace PyMesh {
 
-class CellPartition {
+class Arrangement {
     public:
-        typedef std::shared_ptr<CellPartition> Ptr;
+        typedef std::shared_ptr<Arrangement> Ptr;
         static Ptr create_raw(const MatrixFr& vertices, const MatrixIr& faces);
 
     public:
-        CellPartition(const MatrixFr& vertices, const MatrixIr& faces) :
+        Arrangement(const MatrixFr& vertices, const MatrixIr& faces) :
             m_vertices(vertices), m_faces(faces) { }
 
         void run();
