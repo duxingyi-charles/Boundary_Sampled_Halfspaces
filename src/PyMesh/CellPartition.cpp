@@ -12,6 +12,8 @@
 #include <igl/remove_unreferenced.h>
 #include <igl/unique_edge_map.h>
 
+#include <chrono>
+
 using namespace PyMesh;
 
 CellPartition::Ptr CellPartition::create_raw(
@@ -24,6 +26,8 @@ void CellPartition::run() {
     typedef Kernel::FT ExactScalar;
     typedef Eigen::Matrix<ExactScalar,
             Eigen::Dynamic,Eigen::Dynamic, Eigen::RowMajor> MatrixEr;
+
+    auto t_begin = std::chrono::high_resolution_clock::now();
 
     // Resolve self intersection
     igl::copyleft::cgal::RemeshSelfIntersectionsParam params;
@@ -56,6 +60,7 @@ void CellPartition::run() {
         Eigen::VectorXi UIM;
         igl::remove_unreferenced(V, F, resolved_vertices, resolved_faces, UIM);
     }
+    auto t_mid = std::chrono::high_resolution_clock::now();
 
     // Build edge map
     Eigen::MatrixXi E, uE;
@@ -89,6 +94,12 @@ void CellPartition::run() {
                 return CGAL::to_double(val);
             });
     m_faces = resolved_faces;
+
+    auto t_end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> resolve_time = t_mid - t_begin;
+    std::chrono::duration<double> extract_time = t_end - t_mid;
+    std::cout << "Arrangement: resolving self-intersection: " << resolve_time.count() << std::endl;
+    std::cout << "Arrangement: extracting arrangement: " << extract_time.count() << std::endl;
 }
 
 size_t CellPartition::get_num_cells() const {
