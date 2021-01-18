@@ -265,6 +265,8 @@ private:
 
             for (const auto& p : pts) {
                 viewer.data(id).add_points(p.transpose(), get_sample_pt_color(i));
+                //auto n = fn.gradient_at(p);
+                //viewer.data(id).add_edges(p.transpose(), (p+n).transpose(), get_sample_pt_color(i));
             }
             viewer.data(id).show_overlay_depth = 0;
         }

@@ -72,6 +72,7 @@ add_library(psi STATIC ${SRC_LIST})
 target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
 target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core cell_partition vipss)
 target_compile_options(psi PUBLIC "-Wall")
+target_compile_definitions(psi PUBLIC "-DLIBIGL_NUM_THREADS=16")
 
 add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
 target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
