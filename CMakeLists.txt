@@ -92,6 +92,15 @@ target_link_libraries(psi_cli_sample_reduction PRIVATE psi CLI11::CLI11)
 add_executable(vipss_fitting apps/vipss_fitting.cpp)
 target_link_libraries(vipss_fitting PRIVATE psi CLI11::CLI11)
 
+add_executable(efficient_ransac_test apps/efficient_ransac_test.cpp)
+target_link_libraries(efficient_ransac_test PRIVATE CLI11::CLI11 igl::cgal)
+
+add_executable(efficient_ransac_fitting apps/efficient_ransac_fitting.cpp)
+target_link_libraries(efficient_ransac_fitting PRIVATE CLI11::CLI11 igl::cgal)
+
+add_executable(mixed_fitting apps/mixed_fitting.cpp)
+target_link_libraries(mixed_fitting PRIVATE psi CLI11::CLI11 igl::cgal)
+
 add_executable(ui apps/ui.cpp)
 target_link_libraries(ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
     cell_partition)
