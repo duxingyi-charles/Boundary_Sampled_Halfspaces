@@ -25,7 +25,7 @@ void FastArrangement::run()
     std::vector<double> in_coords, out_coords;
     std::vector<uint> in_tris, out_tris, in_labels;
     std::vector<genericPoint*> gen_points;
-    std::vector< std::bitset<NBIT> > out_labels;
+    std::vector<std::bitset<NBIT>> out_labels;
 
     in_coords.reserve(m_vertices.size());
     std::copy(
@@ -33,8 +33,11 @@ void FastArrangement::run()
     in_tris.reserve(m_faces.size());
     std::copy(m_faces.data(), m_faces.data() + m_faces.size(), std::back_inserter(in_tris));
     in_labels.reserve(m_vertices.size());
-    std::iota(in_labels.begin(), in_labels.end(), 0);
-
+    const auto max_label = m_in_face_labels.maxCoeff();
+    assert(max_label < NBIT);
+    std::copy(m_in_face_labels.data(),
+        m_in_face_labels.data() + m_in_face_labels.size(),
+        std::back_inserter(in_labels));
 
     /*-------------------------------------------------------------------
      * There are 4 versions of the solveIntersections function. Please
@@ -46,9 +49,18 @@ void FastArrangement::run()
 
     // Copy source face labels over.
     assert(out_labels.size() == out_tris.size() / 3);
-    // TODO...
-    //m_source_faces.resize(out_labels.size());
-    //std::copy(out_labels.begin(), out_labels.end(), m_source_faces.data());
+    m_out_face_labels.resize(out_labels.size());
+    for (size_t i=0; i<m_out_face_labels.size(); i++) {
+        const auto& bits = out_labels[i];
+        m_out_face_labels[i] = max_label + 1;
+        for (size_t j=0; j<NBIT; j++) {
+            if (bits[j]) {
+                m_out_face_labels[i] = static_cast<int>(j);
+                break;
+            }
+        }
+        assert(m_out_face_labels[i] <= max_label);
+    }
 
     typedef CGAL::Epeck Kernel;
     typedef Kernel::FT ExactScalar;

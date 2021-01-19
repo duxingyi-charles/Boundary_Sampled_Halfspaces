@@ -34,6 +34,7 @@ void MeshArrangement::run()
         MatrixIr F;
         MatrixIr intersecting_faces;
         VectorI source_vertices;
+        VectorI source_faces;
         igl::copyleft::cgal::SelfIntersectMesh<Kernel,
             MatrixFr,
             MatrixIr,
@@ -48,7 +49,7 @@ void MeshArrangement::run()
                 V,
                 F,
                 intersecting_faces,
-                m_source_faces,
+                source_faces,
                 source_vertices);
 
         // Merge coinciding vertices into non-manifold vertices.
@@ -59,6 +60,12 @@ void MeshArrangement::run()
         // Remove unreferenced vertices.
         Eigen::VectorXi UIM;
         igl::remove_unreferenced(V, F, resolved_vertices, resolved_faces, UIM);
+
+        // Map face labels
+        m_out_face_labels.resize(resolved_faces.rows());
+        for (Eigen::Index i=0; i<resolved_faces.rows(); i++) {
+            m_out_face_labels[i] = m_in_face_labels[source_faces[i]];
+        }
     }
     auto t_mid = std::chrono::high_resolution_clock::now();
 
