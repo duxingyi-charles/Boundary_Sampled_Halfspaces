@@ -119,7 +119,7 @@ IGL_Mesh marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec) {
 std::vector<IGL_Mesh> compute_arrangement(const std::vector<IGL_Mesh>& meshes) {
     ScopedTimer<> timer("mesh arrangement");
     auto merged_mesh = merge_meshes(meshes);
-    auto engine = PyMesh::Arrangement::create_raw(merged_mesh.vertices, merged_mesh.faces);
+    auto engine = PyMesh::Arrangement::create_mesh_arrangement(merged_mesh.vertices, merged_mesh.faces);
     engine->run();
 
     size_t num_cells = engine->get_num_cells();
@@ -185,7 +185,7 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
 
     // compute arrangement
 //    ScopedTimer<> timer("mesh arrangement");
-    auto engine = PyMesh::Arrangement::create_raw(merged_mesh.vertices, merged_mesh.faces);
+    auto engine = PyMesh::Arrangement::create_mesh_arrangement(merged_mesh.vertices, merged_mesh.faces);
     engine->run();
 
     auto vertices = engine->get_vertices();

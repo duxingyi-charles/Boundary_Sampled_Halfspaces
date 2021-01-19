@@ -10,7 +10,8 @@ class Arrangement
 {
 public:
     typedef std::shared_ptr<Arrangement> Ptr;
-    static Ptr create_raw(const MatrixFr& vertices, const MatrixIr& faces);
+    static Ptr create_mesh_arrangement(const MatrixFr& vertices, const MatrixIr& faces);
+    static Ptr create_fast_arrangement(const MatrixFr& vertices, const MatrixIr& faces);
 
 public:
     Arrangement(const MatrixFr& vertices, const MatrixIr& faces)

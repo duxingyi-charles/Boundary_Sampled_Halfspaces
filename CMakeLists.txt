@@ -67,6 +67,7 @@ set_target_properties(vipss PROPERTIES LINKER_LANGUAGE CXX)
 
 add_library(arrangement STATIC
     ${PROJECT_SOURCE_DIR}/src/PyMesh/Arrangement.cpp
+    ${PROJECT_SOURCE_DIR}/src/PyMesh/FastArrangement.cpp
     ${PROJECT_SOURCE_DIR}/src/PyMesh/MeshArrangement.cpp)
 target_link_libraries(arrangement PUBLIC igl::core igl::cgal
     fast_arrangement::fast_arrangement)
