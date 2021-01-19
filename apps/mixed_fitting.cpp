@@ -7,6 +7,8 @@
 
 #include "Hermite_RBF_sImplicit.h"
 
+#include <Eigen/Dense>
+
 #include <iostream>
 #include <CGAL/property_map.h>
 #include <CGAL/IO/read_xyz_points.h>

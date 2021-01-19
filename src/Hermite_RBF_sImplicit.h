@@ -8,10 +8,14 @@
 #include "Sampled_Implicit.h"
 
 
-class Hermite_RBF_sImplicit : public Sampled_Implicit {
+class Hermite_RBF_sImplicit : public Sampled_Implicit
+{
 public:
     // constant 0 function
-    Hermite_RBF_sImplicit() : Sampled_Implicit(), coeff_a(), coeff_b(0,0,0,0) {};
+    Hermite_RBF_sImplicit()
+        : Sampled_Implicit()
+        , coeff_a()
+        , coeff_b(0, 0, 0, 0){};
 
     ~Hermite_RBF_sImplicit() override = default;
 
@@ -23,16 +27,16 @@ public:
     }
 
     bool import_Hermite_RBF(const std::string &pts_file, const std::string &coeff_file);
-    bool import_sampled_Hermite_RBF(const std::string &pts_file,
-                                    const std::string &coeff_file,
-                                    const std::string &sample_file);
+    bool import_sampled_Hermite_RBF(
+        const std::string &pts_file, const std::string &coeff_file, const std::string &sample_file);
 
     bool export_RBF_coeff(const std::string &filename) const;
 
     double function_at(const Point &) const override;
     Eigen::Vector3d gradient_at(const Point &) const override;
 
-    static void compute_RBF_coeff(const std::vector<Point> &points, Eigen::VectorXd &a, Eigen::Vector4d &b);
+    static void compute_RBF_coeff(
+        const std::vector<Point> &points, Eigen::VectorXd &a, Eigen::Vector4d &b);
 
     void fit_RBF(const std::vector<Point> &points, double error_bound);
 
@@ -48,16 +52,15 @@ public:
         coeff_b *= -1;
     }
 
+    bool has_control_points() const override { return true; }
+    const std::vector<Point> &get_control_points() const override { return control_points; }
+    void set_control_points(const std::vector<Point> &pts) override { update_RBF_coeff(pts); }
+
     Eigen::VectorXd get_coeff_a() const { return coeff_a; };
     Eigen::Vector4d get_ceoff_b() const { return coeff_b; };
-    std::vector<Point> get_control_points() const { return control_points; };
 
     void print_coeff() const;
     void print_control_points() const;
-
-
-protected:
-
 
 private:
     Eigen::VectorXd coeff_a;
@@ -65,7 +68,8 @@ private:
 
     std::vector<Point> control_points;
 
-    static bool import_RBF_coeff(const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b);
+    static bool import_RBF_coeff(
+        const std::string &filename, Eigen::VectorXd &a, Eigen::Vector4d &b);
 
     // |p1-p2|^3
     static double kernel_function(const Point &p1, const Point &p2);
@@ -73,9 +77,7 @@ private:
     static Eigen::Vector3d kernel_gradient(const Point &p1, const Point &p2);
     // 3 [ |p1-p2|I + (p1-p2)*(p1-p2)^T/|p1-p1| ]
     static Eigen::Matrix3d kernel_Hessian(const Point &p1, const Point &p2);
-
-
 };
 
 
-#endif //PSI_HERMITE_RBF_SIMPLICIT_H
+#endif // PSI_HERMITE_RBF_SIMPLICIT_H

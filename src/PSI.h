@@ -36,6 +36,8 @@ public:
 
     void run(const GridSpec &grid,
              std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
+    void process_samples();
+    void graph_cut();
 
     bool export_data(const std::string &filename) const;
 
@@ -52,7 +54,6 @@ protected:
             const GridSpec &grid,
             const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) = 0;
 
-    void process_samples();
     static void process_samples(
             //input
             const std::vector<Point> &V,
@@ -66,7 +67,6 @@ protected:
             std::vector<double> &P_dist
     );
 
-    void graph_cut();
     static void simple_graph_cut(
             //input
             const std::vector<double> &P_dist,
@@ -160,6 +160,13 @@ public:
     const std::vector<std::vector<int>>& get_patches() const { return P; }
     const std::vector<std::vector<int>>& get_cells() const { return B_patch; }
     const std::vector<bool>& get_cell_labels() const { return B_label; }
+    const std::vector<std::vector<int>>& get_cell_patch_adjacency() const { return P_block; }
+    const std::vector<std::vector<int>>& get_cell_patch_sign() const { return P_sign; }
+    const std::vector<bool>& get_patch_labels() const { return P_label; }
+    const std::vector<int>& get_patch_implicit() const { return P_Impl; }
+    size_t get_num_implicits() const { return Impl_ptr->size(); }
+    size_t get_num_patches() const { return P.size(); }
+    size_t get_num_cells() const { return B_patch.size(); }
 
 protected:
     // vertices

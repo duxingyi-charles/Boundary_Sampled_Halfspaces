@@ -10,7 +10,7 @@
 
 #include <numeric> //std::partial_sum
 
-#include "PyMesh/CellPartition.h"
+#include "PyMesh/Arrangement.h"
 #include "ScopedTimer.h"
 
 #include <Eigen/Geometry> //cross product
@@ -772,12 +772,12 @@ void Mesh_PSI::compute_arrangement(
 
     // compute arrangement
     ScopedTimer<> timer("mesh arrangement for graph-cut");
-    auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
+    auto engine = PyMesh::Arrangement::create_mesh_arrangement(
+        merged_mesh.vertices, merged_mesh.faces, face_to_mesh);
     {
         ScopedTimer<> timer("mesh arrangement");
         engine->run();
     }
-
 
     auto vertices = engine->get_vertices();
     auto faces = engine->get_faces();
@@ -820,13 +820,8 @@ void Mesh_PSI::compute_arrangement(
         }
     }
 
-    // compute map: result face id -> input implicit id
-    auto source_faces = engine->get_source_faces();
-    Eigen::VectorXi result_face_to_implicit(source_faces.size());
-    for (int i=0; i<result_face_to_implicit.size(); ++i) {
-        // -1: grid bounding cube
-        result_face_to_implicit(i) = face_to_mesh(source_faces(i)) - 1;
-    }
+    // compute face to implicit mapping.  -1 means mapped to bounding box.
+    Eigen::VectorXi result_face_to_implicit = engine->get_out_face_labels().array() -1;
 
     auto cells = engine->get_cells();
     int num_patch = cells.rows();

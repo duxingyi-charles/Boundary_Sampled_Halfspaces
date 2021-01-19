@@ -7,6 +7,8 @@
 
 #include "Sampled_Implicit.h"
 
+#include <iostream>
+#include <Eigen/Dense>
 
 class Torus_sImplicit : public Sampled_Implicit {
 public:
@@ -33,6 +35,51 @@ public:
     double function_at(const Point &x) const override;
     Eigen::Vector3d gradient_at(const Point &x) const override;
 
+    bool has_control_points() const override { return true; }
+    const std::vector<Point>& get_control_points() const override {
+        if (m_control_pts.empty()) {
+            m_control_pts.push_back(center);
+            m_control_pts.push_back(center + axis_unit_vector);
+            Point dir;
+            if (std::abs(axis_unit_vector[1]) < 0.9) {
+                dir = Point(0, 1, 0).cross(axis_unit_vector).normalized();
+            } else {
+                dir = Point(0, 0, 1).cross(axis_unit_vector).normalized();
+            }
+            m_control_pts.push_back(center + dir * major_radius);
+            m_control_pts.push_back(center + dir * (major_radius + minor_radius));
+        }
+        return m_control_pts;
+    }
+    void set_control_points(const std::vector<Point>& pts) override {
+        if (pts.size() < 1) {
+            std::cerr << "Torus primitive expects at least 1 control points";
+            return;
+        }
+        if ((center - pts[0]).norm() < 1e-6) {
+            Point dir = (pts[1] - pts[0]).normalized();
+            if ((dir - axis_unit_vector).norm() < 1e-6) {
+                major_radius = (pts[2] - pts[0]).norm();
+                minor_radius  = (pts[3] - pts[2]).norm();
+            } else {
+                axis_unit_vector = pts[1];
+            }
+        } else {
+            center = pts[0];
+        }
+        m_control_pts = pts;
+        m_control_pts[1] = center + axis_unit_vector;
+
+        Point dir;
+        if (std::abs(axis_unit_vector[1]) < 0.9) {
+            dir = Point(0, 1, 0).cross(axis_unit_vector).normalized();
+        } else {
+            dir = Point(0, 0, 1).cross(axis_unit_vector).normalized();
+        }
+        m_control_pts[2] = center + dir * major_radius;
+        m_control_pts[3] = center + dir * (major_radius + minor_radius);
+    }
+
     std::string get_type() const override { return "torus"; }
 
     void get_center(Point &p) const override { p = center; };
@@ -54,6 +101,7 @@ private:
     // is_flipped = true : function value is positive inside the torus
     bool is_flipped;
 
+    mutable std::vector<Point> m_control_pts;
 };
 
 

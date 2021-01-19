@@ -9,7 +9,7 @@
 #include <limits>
 #include <Eigen/Geometry>
 
-#include "PyMesh/CellPartition.h"
+#include "PyMesh/Arrangement.h"
 #include "config.h"
 #include "ScopedTimer.h"
 
@@ -119,7 +119,9 @@ IGL_Mesh marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec) {
 std::vector<IGL_Mesh> compute_arrangement(const std::vector<IGL_Mesh>& meshes) {
     ScopedTimer<> timer("mesh arrangement");
     auto merged_mesh = merge_meshes(meshes);
-    auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
+    PyMesh::VectorI face_labels(merged_mesh.faces.rows());
+    face_labels.setZero(); // Use dummy labels.
+    auto engine = PyMesh::Arrangement::create_mesh_arrangement(merged_mesh.vertices, merged_mesh.faces, face_labels);
     engine->run();
 
     size_t num_cells = engine->get_num_cells();
@@ -185,7 +187,7 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
 
     // compute arrangement
 //    ScopedTimer<> timer("mesh arrangement");
-    auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
+    auto engine = PyMesh::Arrangement::create_mesh_arrangement(merged_mesh.vertices, merged_mesh.faces, face_to_mesh);
     engine->run();
 
     auto vertices = engine->get_vertices();
@@ -206,13 +208,7 @@ void prepare_graph_cut(const std::vector<std::unique_ptr<Sampled_Implicit>> &imp
     }
 
     // compute map: result face id -> input implicit id
-    auto source_faces = engine->get_source_faces();
-    Eigen::VectorXi result_face_to_implicit(source_faces.size());
-    for (int i=0; i<result_face_to_implicit.size(); ++i) {
-        // -1: grid cube
-        result_face_to_implicit(i) = face_to_mesh(source_faces(i)) - 1;
-    }
-
+    Eigen::VectorXi result_face_to_implicit = engine->get_out_face_labels().array()-1;
 
 
     // compute distance weighted area, as well as sample points of patches
