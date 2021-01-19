@@ -42,22 +42,6 @@ int main(int argc, char** argv) {
     rbf.export_RBF_coeff(args.output_coef_file);
     Sampled_Implicit::export_xyz(args.output_pts_file,rbf.get_control_points());
 
-
-    //debug: read rbf coef back
-//    std::cout << "before export ..." << std::endl;
-//    rbf.print_control_points();
-//    rbf.print_coeff();
-//    std::cout << "f(0,0,0) = " << rbf.function_at(Point(0,0,0)) << std::endl;
-//    //
-//    rbf.import_Hermite_RBF(args.output_pts_file, args.output_coef_file);
-//    std::cout << "read rbf coef back..." << std::endl;
-//    rbf.print_control_points();
-//    rbf.print_coeff();
-//    std::cout << "f(0,0,0) = " << rbf.function_at(Point(0,0,0)) << std::endl;
-
-
-
-
     return 0;
 }
 

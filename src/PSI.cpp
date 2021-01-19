@@ -566,6 +566,9 @@ bool PSI::export_data(const std::string &filename) const
         return false;
     }
 
+    //precision of output
+    fout.precision(std::numeric_limits<double>::max_digits10);
+
     // V
     fout << "vert ";
     fout << V.size() << " " << V[0].size() << std::endl;
