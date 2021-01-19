@@ -18,6 +18,7 @@
 
 using namespace PyMesh;
 
+__attribute__((optnone))
 void FastArrangement::run()
 {
     auto t_begin = std::chrono::high_resolution_clock::now();
