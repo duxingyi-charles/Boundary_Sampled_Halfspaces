@@ -773,7 +773,11 @@ void Mesh_PSI::compute_arrangement(
     // compute arrangement
     ScopedTimer<> timer("mesh arrangement for graph-cut");
     auto engine = PyMesh::CellPartition::create_raw(merged_mesh.vertices, merged_mesh.faces);
-    engine->run();
+    {
+        ScopedTimer<> timer("mesh arrangement");
+        engine->run();
+    }
+
 
     auto vertices = engine->get_vertices();
     auto faces = engine->get_faces();
