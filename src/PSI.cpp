@@ -79,40 +79,55 @@ void PSI::process_samples(
         auto samples = (*Impl_ptr)[impl]->get_sample_points();
         for (int f : patch) {
             auto &face = F[f];
-            // compute center of the face
-            Point face_center(0,0,0);
-            for (int v : face) {
-                face_center += V[v];
-            }
-            face_center /= face.size();
-            // compute distance between face center and nearest sample point
             double min_distance = infinity;
-            for (int j = 0; j < samples.size(); ++j) {
-                double distance = (face_center - samples[j]).norm();
-                if (distance < sample_min_dist[impl][j]) {
-                    sample_min_dist[impl][j] = distance;
-                    sample_nearest_patch[impl][j] = i;
-                }
-                if (distance < min_distance) {
-                    min_distance = distance;
-                }
-            }
-
-            // compute distance weighted area of the face
             double weighted_area = 0;
-            if (face.size() == 3) {  //triangle
+
+            if (face.size() == 3) { // triangle face
                 const Point &p1 = V[face[0]];
                 const Point &p2 = V[face[1]];
                 const Point &p3 = V[face[2]];
                 double tri_area = (p2-p1).cross(p3-p1).norm()/2;
+                if (tri_area == 0) { continue; }
+                // compute distance between triangle and nearest sample point
+                for (int j = 0; j < samples.size(); ++j) {
+//                    double distance = (face_center - samples[j]).norm();
+                    double distance = point_triangle_distance(p1,p2,p3,samples[j]);
+                    if (distance < sample_min_dist[impl][j]) {
+                        sample_min_dist[impl][j] = distance;
+                        sample_nearest_patch[impl][j] = i;
+                    }
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                    }
+                }
+
+                // compute distance weighted area of the face
                 if (use_distance_weighted_area) {
                     weighted_area = min_distance * tri_area;
                 } else {
                     weighted_area = tri_area;
                 }
 
-            }
-            else {   // general polygon
+            } else { // general polygon
+                // compute center of the face
+                Point face_center(0,0,0);
+                for (int v : face) {
+                    face_center += V[v];
+                }
+                face_center /= face.size();
+                // compute distance between face center and nearest sample point
+                for (int j = 0; j < samples.size(); ++j) {
+                    double distance = (face_center - samples[j]).norm();
+                    if (distance < sample_min_dist[impl][j]) {
+                        sample_min_dist[impl][j] = distance;
+                        sample_nearest_patch[impl][j] = i;
+                    }
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                    }
+                }
+
+                // compute distance weighted area of the face
                 for (size_t vi=0; vi < face.size(); ++vi) {
                     size_t vj = (vi + 1) % face.size();
                     const Point &p1 = V[face[vi]];
@@ -125,6 +140,36 @@ void PSI::process_samples(
                     }
                 }
             }
+
+
+
+//            // compute distance weighted area of the face
+//            double weighted_area = 0;
+//            if (face.size() == 3) {  //triangle
+//                const Point &p1 = V[face[0]];
+//                const Point &p2 = V[face[1]];
+//                const Point &p3 = V[face[2]];
+//                double tri_area = (p2-p1).cross(p3-p1).norm()/2;
+//                if (use_distance_weighted_area) {
+//                    weighted_area = min_distance * tri_area;
+//                } else {
+//                    weighted_area = tri_area;
+//                }
+//
+//            }
+//            else {   // general polygon
+//                for (size_t vi=0; vi < face.size(); ++vi) {
+//                    size_t vj = (vi + 1) % face.size();
+//                    const Point &p1 = V[face[vi]];
+//                    const Point &p2 = V[face[vj]];
+//                    double area = ((p1 - face_center).cross(p2 - face_center)).norm() / 2;
+//                    if (use_distance_weighted_area) {
+//                        weighted_area += min_distance * area;
+//                    } else {
+//                        weighted_area += area;
+//                    }
+//                }
+//            }
             //
             P_dist[i] += weighted_area;
         }
@@ -144,6 +189,65 @@ void PSI::process_samples(
             }
         }
     }
+}
+
+double PSI::point_triangle_distance(const Point &p1, const Point &p2, const Point &p3, const Point &q) {
+    // assume: triangle (p1,p2,p3) is not degenerate
+
+    //debug
+//    return ((p1+p2+p3)/3-q).norm();
+    //
+
+    Eigen::Vector3d zAxis = (p2-p1).cross(p3-p1);
+    if (zAxis.norm() == 0) {
+        std::cout << "warning: degenerate triangle!" << std::endl;
+    }
+    zAxis.normalize();
+
+    double z = (q-p1).dot(zAxis);
+    Point q_proj = q - z * zAxis;
+
+    double A1 = zAxis.dot((p2-q_proj).cross(p3-q_proj));
+    double A2 = zAxis.dot((p3-q_proj).cross(p1-q_proj));
+    double A3 = zAxis.dot((p1-q_proj).cross(p2-q_proj));
+
+    if (A1>=0 && A2>=0 && A3>=0) {
+        return fabs(z);
+    } else if (A1 < 0) {
+        double len = (p2-p3).norm();
+        double prod = (q_proj-p2).dot(p3-p2);
+        if (prod > len * len) {
+            return (q-p3).norm();
+        } else if (prod < 0) {
+            return (q-p2).norm();
+        } else {
+            double l = -A1/len;
+            return sqrt(l*l + z*z);
+        }
+    } else if (A2 < 0) {
+        double len = (p1-p3).norm();
+        double prod = (q_proj-p1).dot(p3-p1);
+        if (prod > len * len) {
+            return (q-p3).norm();
+        } else if (prod < 0) {
+            return (q-p1).norm();
+        } else {
+            double l = -A2/len;
+            return sqrt(l*l + z*z);
+        }
+    } else { // A3 < 0
+        double len = (p1-p2).norm();
+        double prod = (q_proj-p1).dot(p2-p1);
+        if (prod > len * len) {
+            return (q-p2).norm();
+        } else if (prod < 0) {
+            return (q-p1).norm();
+        } else {
+            double l = -A3/len;
+            return sqrt(l*l + z*z);
+        }
+    }
+
 }
 
 
