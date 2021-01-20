@@ -154,6 +154,9 @@ protected:
             std::vector<std::vector<int>> &components
             );
 
+    // helpers
+    static double point_triangle_distance(const Point &p1, const Point &p2, const Point& p3, const Point& q);
+
 public:
     const std::vector<Point>& get_vertices() const { return V; }
     const std::vector<std::vector<int>>& get_faces() const { return F; }

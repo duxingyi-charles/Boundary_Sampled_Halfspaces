@@ -187,6 +187,7 @@ int main(int argc, char** argv) {
     struct {
         std::string point_normal_file;
         double error_bound;
+        double vipss_error_bound;
         // Set probability to miss the largest primitive at each iteration.
         double probability = -1;
         // Detect shapes with at least xxx points.
@@ -214,6 +215,8 @@ int main(int argc, char** argv) {
                    "input point/normal file")->required();
     app.add_option("-E,--error-bound", args.error_bound,
                    "Error bound for fitting")->required();
+    app.add_option("-V,--vipss-error-bound", args.vipss_error_bound,
+                   "Error bound for vipss fitting")->required();
     app.add_option("-p,--probability", args.probability,
                    "probability to miss the largest primitive at each iteration");
     app.add_option("-m,--min_points", args.min_points,
@@ -286,7 +289,8 @@ int main(int argc, char** argv) {
 
     // vipss fitting
     Hermite_RBF_sImplicit rbf;
-    rbf.fit_RBF(sample_pts, args.error_bound);
+//    rbf.fit_RBF(sample_pts, args.error_bound);
+    rbf.fit_RBF(sample_pts, args.vipss_error_bound);
 
     // if vipss fits a plane, output it as a primitive
     std::vector<Point> control_pts = rbf.get_control_points();
