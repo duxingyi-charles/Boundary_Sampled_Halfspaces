@@ -137,6 +137,18 @@ private:
             if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
                 reset_patch_visibility(viewer);
             }
+            static int res = m_states->get_resolution();
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
+                m_states->set_resolution(res);
+            }
+            ImGui::Checkbox("Interactive", &m_interactive);
+            if (ImGui::Button("Update", ImVec2(ImGui::GetContentRegionAvailWidth(), 0.0f))) {
+                m_states->refresh();
+                initialize_data(viewer);
+                m_active_state.reset();
+                reset_patch_visibility(viewer);
+            }
         };
     }
 
@@ -206,6 +218,7 @@ private:
     {
         const auto num_implicits = m_states->get_num_implicits();
         m_control_view_ids.reserve(num_implicits);
+        const auto l = m_states->get_grid_diag();
 
         for (size_t i = 0; i < num_implicits; i++) {
             int id = viewer.append_mesh();
@@ -265,10 +278,13 @@ private:
 
             for (const auto& p : pts) {
                 viewer.data(id).add_points(p.transpose(), get_sample_pt_color(i));
-                //auto n = fn.gradient_at(p);
-                //viewer.data(id).add_edges(p.transpose(), (p+n).transpose(), get_sample_pt_color(i));
+                auto n = fn.gradient_at(p);
+                viewer.data(id).add_edges(p.transpose(),
+                    (p + n.normalized() * l / 20).transpose(),
+                    Eigen::RowVector3d(0, 0, 0));
             }
             viewer.data(id).show_overlay_depth = 0;
+            viewer.data(id).show_lines = true;
         }
     }
 
@@ -482,7 +498,15 @@ private:
                     if (dist_to_camera < std::numeric_limits<double>::max()) {
                         viewer.data(view_id).points.row(point_id).template segment<3>(0) =
                             hit_point;
+                        const auto& fn =
+                            m_states->get_implicit_function(m_active_state.active_implicit_id);
+                        auto n = fn.gradient_at(hit_point);
+                        const auto l = m_states->get_grid_diag();
+                        viewer.data(view_id).lines.row(point_id).template segment<3>(0) = hit_point;
+                        viewer.data(view_id).lines.row(point_id).template segment<3>(3) =
+                            hit_point + n.transpose().normalized() * l / 20;
                         viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
+                        viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_LINES;
                     }
                 }
             };
@@ -529,7 +553,10 @@ private:
                     pts[point_id] =
                         viewer.data(view_id).points.row(point_id).template segment<3>(0);
                     m_states->update_control_points(implicit_id, pts);
-                    initialize_data(viewer);
+                    if (m_interactive) {
+                        m_states->refresh();
+                        initialize_data(viewer);
+                    }
                 }
             } else if (is_point_active) {
                 // A point is clicked.  Do nothing.
@@ -538,10 +565,16 @@ private:
                 // Insert new point to the active patch.
                 const auto& hit_point = m_pick_state.hit_point;
                 const auto& fn = m_states->get_implicit_function(implicit_id);
+                const auto l = m_states->get_grid_diag();
 
                 if (m_ui_mode == 0) {
                     const auto view_id = m_sample_view_ids[implicit_id];
                     viewer.data(view_id).add_points(hit_point, get_sample_pt_color(implicit_id));
+
+                    auto n = fn.gradient_at(hit_point);
+                    viewer.data(view_id).add_edges(hit_point,
+                        hit_point + n.transpose().normalized() * l / 20,
+                        Eigen::RowVector3d(0, 0, 0));
 
                     auto pts = fn.get_sample_points();
                     pts.push_back(hit_point);
@@ -554,7 +587,10 @@ private:
                     auto pts = fn.get_control_points();
                     pts.push_back(hit_point);
                     m_states->update_control_points(implicit_id, pts);
-                    initialize_data(viewer);
+                    if (m_interactive) {
+                        m_states->refresh();
+                        initialize_data(viewer);
+                    }
                 }
             } else if (!mouse_moved) {
                 // Nothing was active, or another patch is being activated.
@@ -618,6 +654,7 @@ private:
         const auto implicit_id = m_active_state.active_implicit_id;
         const auto point_id = m_active_state.active_point_id;
         const auto& fn = m_states->get_implicit_function(implicit_id);
+        const auto l = m_states->get_grid_diag();
 
         if (m_ui_mode == 0) {
             // Working with sample points.
@@ -627,9 +664,15 @@ private:
             m_states->update_sample_points(implicit_id, pts);
 
             viewer.data(view_id).clear_points();
+            viewer.data(view_id).clear_edges();
             auto c = get_sample_pt_color(implicit_id);
             for (auto& p : pts) {
                 viewer.data(view_id).add_points(p.transpose(), c);
+
+                auto n = fn.gradient_at(p);
+                viewer.data(view_id).add_edges(p.transpose(),
+                    (p + n.normalized() * l / 20).transpose(),
+                    Eigen::RowVector3d(0, 0, 0));
             }
             m_active_state.active_point_id = -1;
         } else {
@@ -638,6 +681,7 @@ private:
             auto pts = fn.get_control_points();
             pts.erase(pts.begin() + point_id);
             m_states->update_control_points(implicit_id, pts);
+            m_states->refresh();
 
             viewer.data(view_id).clear_points();
             auto c = get_control_pt_color(implicit_id);
@@ -678,6 +722,7 @@ private:
     double m_down_x, m_down_y;
     int m_ui_mode = 0;
     bool m_show_wire_frame = false;
+    bool m_interactive = true;
 
     bool m_mouse_down = false;
     PickState m_pick_state;

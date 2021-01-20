@@ -41,11 +41,19 @@ public:
     const size_t get_num_patches() const { return m_psi->get_num_patches(); }
     const size_t get_num_cells() const { return m_psi->get_num_cells(); }
     const auto& get_bbox() const { return m_bbox; }
+    const auto get_grid_diag() const { return (m_grid.bbox_max - m_grid.bbox_min).norm(); }
 
     const int get_implicit_from_patch(int patch_id) const { return get_patch_implicit()[patch_id]; }
     const Eigen::RowVector4d get_implicit_color(int implicit_id) const
     {
         return m_colors.row(implicit_id);
+    }
+
+    void set_resolution(int res) {
+        m_grid.resolution << res, res, res;
+    }
+    int get_resolution() const {
+        return m_grid.resolution.maxCoeff();
     }
 
     void add_sphere(const Point& center, double radius)
@@ -61,9 +69,6 @@ public:
     void update_control_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
     {
         m_implicits[implicit_id]->set_control_points(pts);
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
     }
 
     void update_sample_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
@@ -71,6 +76,13 @@ public:
         m_implicits[implicit_id]->set_sample_points(pts);
         m_psi->process_samples();
         m_psi->graph_cut();
+    }
+
+    void refresh()
+    {
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
     }
 
 private:
@@ -147,7 +159,7 @@ private:
 
 private:
     // Input states.
-    const GridSpec& m_grid;
+    GridSpec m_grid;
     std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
     std::unique_ptr<PSI> m_psi;
 
