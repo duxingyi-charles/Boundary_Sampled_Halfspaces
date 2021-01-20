@@ -56,9 +56,45 @@ public:
         return m_grid.resolution.maxCoeff();
     }
 
+    void add_plane(const Point& p, const Point& n)
+    {
+        m_implicits.push_back(std::make_unique<Plane_sImplicit>(p, n));
+        auto& fn = m_implicits.back();
+        fn->set_sample_points({p});
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
     void add_sphere(const Point& center, double radius)
     {
         m_implicits.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
+        auto& fn = m_implicits.back();
+        fn->set_sample_points({Point(center + Point(radius, 0, 0))});
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
+    void add_cylinder(const Point& center, const Point& axis, double radius)
+    {
+        m_implicits.push_back(std::make_unique<Cylinder_sImplicit>(center, axis, radius, false));
+        auto& fn = m_implicits.back();
+        Point d = Point(0, 1, 0).cross(axis);
+        if (d.norm() < 1e-3) {
+            d = Point(0, 0, 1).cross(axis);
+        }
+        fn->set_sample_points({Point(center + d * radius)});
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
+    void add_cone(const Point& center, const Point& axis, double angle)
+    {
+        m_implicits.push_back(std::make_unique<Cone_sImplicit>(center, axis, angle, false));
+        auto& fn = m_implicits.back();
+        fn->set_sample_points({center});
         m_psi->run(m_grid, m_implicits);
         initialize_states();
         initialize_colors();

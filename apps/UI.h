@@ -124,7 +124,14 @@ private:
         static bool imgui_demo = false;
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {
+            auto post_update_geometry = [&]() {
+                initialize_data(viewer);
+                m_active_state.reset();
+                reset_patch_visibility(viewer);
+            };
+
             ImGui::StyleColorsLight();
+            const auto width = ImGui::GetContentRegionAvailWidth();
             // ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
@@ -144,23 +151,41 @@ private:
             if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
                 m_states->set_resolution(res);
             }
-            if (ImGui::Button("Flip", ImVec2(ImGui::GetContentRegionAvailWidth(), 0.0f))) {
+            if (ImGui::Button("Plane", ImVec2(width / 2, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                m_states->add_plane(bbox.colwise().mean(), Point(0, 0, 1));
+                post_update_geometry();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Sphere", ImVec2(width / 2, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
+                m_states->add_sphere(bbox.colwise().mean(), l / 3);
+                post_update_geometry();
+            }
+            if (ImGui::Button("Cylinder", ImVec2(width / 2, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
+                m_states->add_cylinder(bbox.colwise().mean(), Point(0, 0, 1), l / 10);
+                post_update_geometry();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cone", ImVec2(width / 2, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI/4);
+                post_update_geometry();
+            }
+            if (ImGui::Button("Flip", ImVec2(width, 0.0f))) {
                 if (m_active_state.active_implicit_id >= 0) {
-                    auto& fn =
-                        m_states->get_implicit_function(m_active_state.active_implicit_id);
+                    auto& fn = m_states->get_implicit_function(m_active_state.active_implicit_id);
                     fn.flip();
-
                     m_states->refresh();
-                    initialize_data(viewer);
-                    m_active_state.reset();
-                    reset_patch_visibility(viewer);
+                    post_update_geometry();
                 }
             }
-            if (ImGui::Button("Update", ImVec2(ImGui::GetContentRegionAvailWidth(), 0.0f))) {
+            if (ImGui::Button("Update", ImVec2(width, 0.0f))) {
                 m_states->refresh();
-                initialize_data(viewer);
-                m_active_state.reset();
-                reset_patch_visibility(viewer);
+                post_update_geometry();
             }
         };
     }
@@ -242,12 +267,10 @@ private:
             const auto& pts = fn.get_control_points();
 
             if (fn.get_type() == "sphere") {
-                assert(pts.size() == 2);
                 viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
                 viewer.data(id).add_points(
                     pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
             } else if (fn.get_type() == "cone") {
-                assert(pts.size() == 2);
                 viewer.data(id).add_points(pts[0].transpose(), get_control_pt_color(i));
                 viewer.data(id).add_points(
                     pts[1].transpose(), Eigen::Matrix<double, 1, 3>(1, 1, 0));
