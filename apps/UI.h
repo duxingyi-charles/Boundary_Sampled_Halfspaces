@@ -124,6 +124,7 @@ private:
         static bool imgui_demo = false;
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {
+            ImGui::StyleColorsLight();
             // ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
@@ -137,12 +138,24 @@ private:
             if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
                 reset_patch_visibility(viewer);
             }
+            ImGui::Checkbox("Interactive", &m_interactive);
             static int res = m_states->get_resolution();
             ImGui::SetNextItemWidth(-1);
             if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
                 m_states->set_resolution(res);
             }
-            ImGui::Checkbox("Interactive", &m_interactive);
+            if (ImGui::Button("Flip", ImVec2(ImGui::GetContentRegionAvailWidth(), 0.0f))) {
+                if (m_active_state.active_implicit_id >= 0) {
+                    auto& fn =
+                        m_states->get_implicit_function(m_active_state.active_implicit_id);
+                    fn.flip();
+
+                    m_states->refresh();
+                    initialize_data(viewer);
+                    m_active_state.reset();
+                    reset_patch_visibility(viewer);
+                }
+            }
             if (ImGui::Button("Update", ImVec2(ImGui::GetContentRegionAvailWidth(), 0.0f))) {
                 m_states->refresh();
                 initialize_data(viewer);

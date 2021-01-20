@@ -35,6 +35,8 @@ public:
     double function_at(const Point &) const override;
     Eigen::Vector3d gradient_at(const Point &) const override;
 
+    virtual void flip() override { flip_sign(); }
+
     static void compute_RBF_coeff(
         const std::vector<Point> &points, Eigen::VectorXd &a, Eigen::Vector4d &b);
 
