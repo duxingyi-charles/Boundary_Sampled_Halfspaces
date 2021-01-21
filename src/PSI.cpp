@@ -917,6 +917,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
             ready_for_connected_graph_cut = true;
         }
     }
+
     if (use_state_space_graph_cut) {
         connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
                             B_label_sparse,P_label_sparse);
@@ -986,6 +987,8 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
             double cut_cost;
             simple_graph_cut(P_dist, P_samples_sparse, P_block, P_sign, B_patch, B_label_sparse, P_label_sparse, cut_cost);
         }
+
+        // update num_diff_label
         num_diff_label = 0;
         for (int p=0; p<num_patch; ++p) {
             if (P_label[p] != P_label_sparse[p]) {
