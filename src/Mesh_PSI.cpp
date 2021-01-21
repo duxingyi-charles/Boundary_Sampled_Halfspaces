@@ -772,7 +772,7 @@ void Mesh_PSI::compute_arrangement(
 
     // compute arrangement
     ScopedTimer<> timer("mesh arrangement for graph-cut");
-    auto engine = PyMesh::Arrangement::create_mesh_arrangement(
+    auto engine = PyMesh::Arrangement::create_fast_arrangement(
         merged_mesh.vertices, merged_mesh.faces, face_to_mesh);
     {
         ScopedTimer<> timer("mesh arrangement");

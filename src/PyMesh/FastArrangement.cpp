@@ -11,6 +11,7 @@
 #include <igl/extract_manifold_patches.h>
 #include <igl/remove_unreferenced.h>
 #include <igl/unique_edge_map.h>
+#include <igl/write_triangle_mesh.h>
 
 #include <solve_intersections.h>
 
@@ -44,6 +45,7 @@ void FastArrangement::run()
      * There are 4 versions of the solveIntersections function. Please
      * refer to the solve_intersections.h file to see how to use them. */
 
+    //igl::write_triangle_mesh("arrangement_debug.ply", m_vertices, m_faces, igl::FileEncoding::Binary);
     solveIntersections(in_coords, in_tris, in_labels, gen_points, out_tris, out_labels);
 
     auto t_mid = std::chrono::high_resolution_clock::now();

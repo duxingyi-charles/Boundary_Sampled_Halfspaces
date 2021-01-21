@@ -44,5 +44,10 @@ target_include_directories(fast_arrangement
     ${cinolib_SOURCE_DIR}/include
     ${fast_arrangement_SOURCE_DIR}/code
     )
+#target_compile_options(fast_arrangement PRIVATE -O0)
+target_compile_definitions(fast_arrangement PUBLIC CINOLIB_USES_EXACT_PREDICATES)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    target_compile_definitions(fast_arrangement PUBLIC -DIS64BITPLATFORM)
+endif()
 
 add_library(fast_arrangement::fast_arrangement ALIAS fast_arrangement)

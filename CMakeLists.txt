@@ -71,6 +71,7 @@ add_library(arrangement STATIC
     ${PROJECT_SOURCE_DIR}/src/PyMesh/MeshArrangement.cpp)
 target_link_libraries(arrangement PUBLIC igl::core igl::cgal
     fast_arrangement::fast_arrangement)
+#target_compile_options(arrangement PUBLIC -O0)
 
 add_library(psi STATIC ${SRC_LIST})
 target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
