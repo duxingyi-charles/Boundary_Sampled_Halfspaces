@@ -1,10 +1,12 @@
 #pragma once
+#include <Cone_sImplicit.h>
+#include <Cylinder_sImplicit.h>
 #include <Mesh_PSI.h>
 #include <PSI.h>
-#include <Sphere_sImplicit.h>
-#include <Cylinder_sImplicit.h>
 #include <Plane_sImplicit.h>
-#include <Cone_sImplicit.h>
+#include <Sphere_sImplicit.h>
+#include <Torus_sImplicit.h>
+#include <Hermite_RBF_sImplicit.h>
 
 #include <Eigen/Core>
 
@@ -50,12 +52,8 @@ public:
         return m_colors.row(implicit_id);
     }
 
-    void set_resolution(int res) {
-        m_grid.resolution << res, res, res;
-    }
-    int get_resolution() const {
-        return m_grid.resolution.maxCoeff();
-    }
+    void set_resolution(int res) { m_grid.resolution << res, res, res; }
+    int get_resolution() const { return m_grid.resolution.maxCoeff(); }
 
     void add_plane(const Point& p, const Point& n)
     {
@@ -101,9 +99,32 @@ public:
         initialize_colors();
     }
 
+    void add_torus(const Point& center, const Point& axis, double R, double r)
+    {
+        m_implicits.push_back(std::make_unique<Torus_sImplicit>(center, axis, R, r, false));
+        auto& fn = m_implicits.back();
+        Point d = Point(0, 1, 0).cross(axis);
+        if (d.norm() < 1e-3) {
+            d = Point(0, 0, 1).cross(axis);
+        }
+        fn->set_sample_points({center + d * (R + r)});
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
+    void add_vipss(const std::vector<Point>& ctrl_pts, const std::vector<Point>& sample_pts)
+    {
+        m_implicits.push_back(std::make_unique<Hermite_RBF_sImplicit>(ctrl_pts, sample_pts));
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
     Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
 
-    void update_implicit(size_t implicit_id) {
+    void update_implicit(size_t implicit_id)
+    {
         m_psi->update_implicit(m_grid, m_implicits[implicit_id], implicit_id);
     }
 
@@ -163,18 +184,11 @@ private:
     {
         t = std::max<double>(std::min<double>(t, 1), 0);
         Eigen::Matrix<double, 8, 3> pallette;
-        //pallette << 0x8d, 0xd3, 0xc7, 0xff, 0xff, 0xb3, 0xbe, 0xba, 0xda, 0xfb, 0x80, 0x72, 0x80,
+        // pallette << 0x8d, 0xd3, 0xc7, 0xff, 0xff, 0xb3, 0xbe, 0xba, 0xda, 0xfb, 0x80, 0x72, 0x80,
         //    0xb1, 0xd3, 0xfd, 0xb4, 0x62, 0xb3, 0xde, 0x69, 0xfc, 0xcd, 0xe5;
 
-        pallette <<
-                0xe4, 0x1a, 0x1c,
-                0x37, 0x7e, 0xb8,
-                0x4d, 0xaf, 0x4a,
-                0x98, 0x4e, 0xa3,
-                0xff, 0x7f, 0x00,
-                0xff, 0xff, 0x33,
-                0xa6, 0x56, 0x28,
-                0xf7, 0x81, 0xbf;
+        pallette << 0xe4, 0x1a, 0x1c, 0x37, 0x7e, 0xb8, 0x4d, 0xaf, 0x4a, 0x98, 0x4e, 0xa3, 0xff,
+            0x7f, 0x00, 0xff, 0xff, 0x33, 0xa6, 0x56, 0x28, 0xf7, 0x81, 0xbf;
         size_t i0 = static_cast<size_t>(std::floor(t * 8));
         size_t i1 = static_cast<size_t>(std::ceil(t * 8));
         i0 = std::min<size_t>(i0, 7);

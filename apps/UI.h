@@ -191,6 +191,23 @@ private:
                 m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI / 4);
                 post_update_geometry();
             }
+            if (ImGui::Button("Torus", ImVec2(width / 2.1, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
+                m_states->add_torus(bbox.colwise().mean(), Point(0, 0, 1), l/3, l/20);
+                post_update_geometry();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Implicit", ImVec2(width / 2.1, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
+                std::vector<Point> pts(3);
+                pts[0] = bbox.colwise().mean();
+                pts[1] = pts[0] + Point(l/20, 0, 0);
+                pts[2] = pts[0] + Point(0, l/20, 0);
+                m_states->add_vipss(pts, pts);
+                post_update_geometry();
+            }
             ImGui::PushItemWidth(width);
             if (ImGui::SliderInt("Implicit id",
                     &m_active_state.active_implicit_id,
