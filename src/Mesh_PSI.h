@@ -24,6 +24,10 @@ public:
         return m_implicit_meshes;
     }
 
+    void update_implicit(
+            const GridSpec &grid,
+            const std::unique_ptr<Sampled_Implicit> &fn, size_t i) override;
+
 private:
     void compute_arrangement_for_graph_cut(
             const GridSpec &grid,

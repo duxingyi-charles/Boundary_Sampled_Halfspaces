@@ -648,7 +648,11 @@ private:
                         viewer.data(view_id).points.row(point_id).template segment<3>(0);
                     m_states->update_control_points(implicit_id, pts);
                     if (m_interactive) {
+                        // Todo: find ways to only update changed implicit.
                         m_states->refresh();
+                        initialize_data(viewer);
+                    } else {
+                        m_states->update_implicit(implicit_id);
                         initialize_data(viewer);
                     }
                 }

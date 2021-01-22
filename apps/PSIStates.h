@@ -103,6 +103,10 @@ public:
 
     Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
 
+    void update_implicit(size_t implicit_id) {
+        m_psi->update_implicit(m_grid, m_implicits[implicit_id], implicit_id);
+    }
+
     void update_control_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
     {
         m_implicits[implicit_id]->set_control_points(pts);
