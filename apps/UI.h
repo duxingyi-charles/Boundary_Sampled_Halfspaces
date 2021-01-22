@@ -534,51 +534,33 @@ private:
                 } else {
                     // Update sample point.  Keep sample point on the implicit
                     // surface.
-                    const auto num_patches = m_states->get_num_patches();
-                    Eigen::RowVector3d hit_point;
-                    double dist_to_camera = std::numeric_limits<double>::max();
-                    for (int i = 0; i < num_patches; i++) {
-                        if (m_states->get_implicit_from_patch(i) !=
-                            m_active_state.active_implicit_id)
-                            continue;
-                        int fid;
-                        Eigen::Vector3f bc;
-                        auto pid = m_data_ids[i];
-                        const auto& V = viewer.data(pid).V;
-                        const auto& F = viewer.data(pid).F;
-                        if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
-                                viewer.core().view,
-                                viewer.core().proj,
-                                viewer.core().viewport,
-                                V,
-                                F,
-                                fid,
-                                bc)) {
-                            const int v0 = F(fid, 0);
-                            const int v1 = F(fid, 1);
-                            const int v2 = F(fid, 2);
-                            Eigen::RowVector3d p =
-                                V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
-                            double d =
-                                (p -
-                                    viewer.core().camera_center.template cast<double>().transpose())
-                                    .norm();
-                            if (d < dist_to_camera) {
-                                dist_to_camera = d;
-                                hit_point = p;
-                            }
-                        }
-                    }
-                    if (dist_to_camera < std::numeric_limits<double>::max()) {
-                        viewer.data(view_id).points.row(point_id).template segment<3>(0) =
-                            hit_point;
+                    auto pid = m_implicit_data_ids[m_active_state.active_implicit_id];
+                    const auto& V = viewer.data(pid).V;
+                    const auto& F = viewer.data(pid).F;
+                    int fid;
+                    Eigen::Vector3f bc;
+                    if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
+                            viewer.core().view,
+                            viewer.core().proj,
+                            viewer.core().viewport,
+                            V,
+                            F,
+                            fid,
+                            bc)) {
+                        const int v0 = F(fid, 0);
+                        const int v1 = F(fid, 1);
+                        const int v2 = F(fid, 2);
+                        Eigen::RowVector3d p =
+                            V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
+
+                        viewer.data(view_id).points.row(point_id).template segment<3>(0) = p;
                         const auto& fn =
                             m_states->get_implicit_function(m_active_state.active_implicit_id);
-                        auto n = fn.gradient_at(hit_point);
+                        auto n = fn.gradient_at(p);
                         const auto l = m_states->get_grid_diag();
-                        viewer.data(view_id).lines.row(point_id).template segment<3>(0) = hit_point;
+                        viewer.data(view_id).lines.row(point_id).template segment<3>(0) = p;
                         viewer.data(view_id).lines.row(point_id).template segment<3>(3) =
-                            hit_point + n.transpose().normalized() * l / 20;
+                            p + n.transpose().normalized() * l / 20;
                         viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_POINTS;
                         viewer.data(view_id).dirty |= igl::opengl::MeshGL::DIRTY_OVERLAY_LINES;
                     }
