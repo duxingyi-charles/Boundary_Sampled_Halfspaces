@@ -92,7 +92,7 @@ private:
             if (implicit_id == m_active_state.active_implicit_id) {
                 viewer.data(pid).set_visible(true);
                 viewer.data(pid).show_lines = true;
-                viewer.data(pid).show_faces = false;
+                viewer.data(pid).show_faces = true;
                 viewer.data(pid).line_color = color.transpose().template cast<float>();
             } else {
                 viewer.data(pid).set_visible(true);
@@ -146,7 +146,7 @@ private:
 
             ImGui::StyleColorsLight();
             const auto width = ImGui::GetContentRegionAvailWidth();
-            // ImGui::Checkbox("imgui demo", &imgui_demo);
+            //ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
                 m_active_state.reset();
@@ -189,6 +189,18 @@ private:
                 m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI / 4);
                 post_update_geometry();
             }
+            ImGui::PushItemWidth(width);
+            if (ImGui::SliderInt("Implicit id",
+                    &m_active_state.active_implicit_id,
+                    -1,
+                    m_states->get_num_implicits(), "Implicit #%d")) {
+                const int num_implicits = m_states->get_num_implicits();
+                m_active_state.active_implicit_id =
+                    std::min(m_active_state.active_implicit_id, num_implicits - 1);
+                m_active_state.active_implicit_id = std::max(m_active_state.active_implicit_id, -1);
+                reset_patch_visibility(viewer);
+            }
+            ImGui::PopItemWidth();
             if (ImGui::Button("Flip", ImVec2(width, 0.0f))) {
                 if (m_active_state.active_implicit_id >= 0) {
                     auto& fn = m_states->get_implicit_function(m_active_state.active_implicit_id);
@@ -213,6 +225,7 @@ private:
         viewer.data().clear();
 
         m_data_ids.clear();
+        m_implicit_data_ids.clear();
         m_control_view_ids.clear();
         m_sample_view_ids.clear();
     }
@@ -280,13 +293,14 @@ private:
 
             const auto& mesh = implicit_meshes[i + 1]; // +1 to skip 1st mesh, which is bbox.
             Eigen::RowVector4d color = m_states->get_implicit_color(i);
+            color[3] = 0.2;
 
             viewer.data(id).set_mesh(mesh.vertices, mesh.faces);
             viewer.data(id).set_colors(color);
             viewer.data(id).set_visible(false);
             viewer.data(id).double_sided = true;
             viewer.data(id).show_lines = true;
-            viewer.data(id).show_faces = false;
+            viewer.data(id).show_faces = true;
         }
     }
 
@@ -403,9 +417,54 @@ private:
         int fid;
         Eigen::Vector3f bc;
 
-        for (size_t i = 0; i < num_patches; i++) {
-            if (!m_patch_visible[i]) continue;
-            const auto pid = m_data_ids[i];
+        if (m_active_state.active_implicit_id < 0) {
+            // Nothing is active, pick on visible patches.
+            for (size_t i = 0; i < num_patches; i++) {
+                if (!m_patch_visible[i]) continue;
+                const auto pid = m_data_ids[i];
+                const auto& V = viewer.data(pid).V;
+                const auto& F = viewer.data(pid).F;
+                if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
+                        viewer.core().view,
+                        viewer.core().proj,
+                        viewer.core().viewport,
+                        V,
+                        F,
+                        fid,
+                        bc)) {
+                    const int v0 = F(fid, 0);
+                    const int v1 = F(fid, 1);
+                    const int v2 = F(fid, 2);
+                    Eigen::RowVector3d p = V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
+
+                    hits.push_back(p);
+                    hit_patches.push_back(i);
+                }
+            }
+
+            if (hits.size() > 0) {
+                Eigen::RowVector3d best_hit;
+                double best_z = std::numeric_limits<double>::max();
+                int implicit_id;
+                for (size_t i = 0; i < hits.size(); i++) {
+                    const auto& p = hits[i];
+                    const auto patch_index = hit_patches[i];
+                    Eigen::RowVector4d q;
+                    q << p, 1;
+                    double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
+                    if (z < best_z) {
+                        best_hit = p;
+                        best_z = z;
+                        implicit_id = m_states->get_implicit_from_patch(patch_index);
+                    }
+                }
+
+                m_pick_state.hit = true;
+                m_pick_state.hit_implicit_id = implicit_id;
+                m_pick_state.hit_point = best_hit;
+            }
+        } else {
+            const auto pid = m_implicit_data_ids[m_active_state.active_implicit_id];
             const auto& V = viewer.data(pid).V;
             const auto& F = viewer.data(pid).F;
             if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
@@ -421,31 +480,10 @@ private:
                 const int v2 = F(fid, 2);
                 Eigen::RowVector3d p = V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
 
-                hits.push_back(p);
-                hit_patches.push_back(i);
+                m_pick_state.hit = true;
+                m_pick_state.hit_implicit_id = m_active_state.active_implicit_id;
+                m_pick_state.hit_point = p;
             }
-        }
-
-        if (hits.size() > 0) {
-            Eigen::RowVector3d best_hit;
-            double best_z = std::numeric_limits<double>::max();
-            int implicit_id;
-            for (size_t i = 0; i < hits.size(); i++) {
-                const auto& p = hits[i];
-                const auto patch_index = hit_patches[i];
-                Eigen::RowVector4d q;
-                q << p, 1;
-                double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
-                if (z < best_z) {
-                    best_hit = p;
-                    best_z = z;
-                    implicit_id = m_states->get_implicit_from_patch(patch_index);
-                }
-            }
-
-            m_pick_state.hit = true;
-            m_pick_state.hit_implicit_id = implicit_id;
-            m_pick_state.hit_point = best_hit;
         }
     }
 

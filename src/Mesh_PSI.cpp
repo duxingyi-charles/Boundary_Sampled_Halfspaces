@@ -118,6 +118,7 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
     // arrangement computation independent of samples
+    generate_meshes(grid, implicits);
     compute_arrangement(grid, implicits);
     arrangement_ready = true;
     //
@@ -679,11 +680,9 @@ IGL_Mesh Mesh_PSI::generate_sphere(const GridSpec &grid,
     return sphere;
 }
 
-void Mesh_PSI::compute_arrangement(
+void Mesh_PSI::generate_meshes(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits)
-{
-    // generate meshes
     auto& meshes = m_implicit_meshes;
     meshes.clear();
     meshes.reserve(implicits.size()+1);
@@ -749,8 +748,6 @@ void Mesh_PSI::compute_arrangement(
             fn->get_is_flipped(is_flipped);
             int n_major = (major_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/major_radius)));
             int n_minor = (minor_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/minor_radius)));
-//            std::cout << "n_major: " << n_major << std::endl;
-//            std::cout << "n_minor: " << n_minor << std::endl;
             n_major = (n_major < 15) ? 15 : n_major;
             n_minor = (n_minor < 15) ? 15 : n_minor;
             meshes.push_back(generate_torus(grid,n_major,n_minor,center,axis_unit_vector,major_radius,minor_radius,is_flipped));
@@ -758,17 +755,18 @@ void Mesh_PSI::compute_arrangement(
         else {
             meshes.push_back(marching_cubes(*fn, grid));
         }
-//
-//        meshes.push_back(marching_cubes(*fn, grid));
-        // test: random planes
-//        meshes.push_back(generate_random_plane(grid));
     }
+}
 
-
+void Mesh_PSI::compute_arrangement(
+        const GridSpec &grid,
+        const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits)
+{
+    // generate meshes
     // merge meshes
     IGL_Mesh merged_mesh;
     Eigen::VectorXi face_to_mesh;
-    merge_meshes(meshes,merged_mesh,face_to_mesh);
+    merge_meshes(m_implicit_meshes,merged_mesh,face_to_mesh);
 
 
     // compute arrangement

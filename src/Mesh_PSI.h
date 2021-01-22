@@ -29,6 +29,9 @@ private:
             const GridSpec &grid,
             const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) override;
 
+    void generate_meshes(const GridSpec &grid,
+            const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
+
     void compute_arrangement(
             const GridSpec &grid,
             const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
