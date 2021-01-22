@@ -146,7 +146,7 @@ private:
 
             ImGui::StyleColorsLight();
             const auto width = ImGui::GetContentRegionAvailWidth();
-            //ImGui::Checkbox("imgui demo", &imgui_demo);
+            // ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
                 m_active_state.reset();
@@ -159,7 +159,9 @@ private:
             if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
                 reset_patch_visibility(viewer);
             }
-            ImGui::Checkbox("Interactive", &m_interactive);
+            if (ImGui::Checkbox("Interactive", &m_interactive)) {
+                reset_patch_visibility(viewer);
+            }
             static int res = m_states->get_resolution();
             ImGui::SetNextItemWidth(-1);
             if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
@@ -193,7 +195,8 @@ private:
             if (ImGui::SliderInt("Implicit id",
                     &m_active_state.active_implicit_id,
                     -1,
-                    m_states->get_num_implicits(), "Implicit #%d")) {
+                    m_states->get_num_implicits()-1,
+                    "Implicit #%d")) {
                 const int num_implicits = m_states->get_num_implicits();
                 m_active_state.active_implicit_id =
                     std::min(m_active_state.active_implicit_id, num_implicits - 1);
@@ -435,7 +438,8 @@ private:
                     const int v0 = F(fid, 0);
                     const int v1 = F(fid, 1);
                     const int v2 = F(fid, 2);
-                    Eigen::RowVector3d p = V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
+                    Eigen::RowVector3d p =
+                        V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
 
                     hits.push_back(p);
                     hit_patches.push_back(i);
@@ -520,6 +524,7 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             m_down_x = x;
             m_down_y = y;
+            std::cout << "Mouse down: " << x << ", " << y << std::endl;
 
             auto hit_point_id = has_hit_point(x, y);
             if (hit_point_id >= 0) {
@@ -622,8 +627,13 @@ private:
     void initialize_mouse_up_behaviors(igl::opengl::glfw::Viewer& viewer)
     {
         viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
+            if (!m_mouse_down) {
+                // Clicked on menu item will not trigger mouse down callback.
+                return false;
+            }
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+            std::cout << "Mouse up: " << x << ", " << y << std::endl;
             const bool mouse_moved = (x != m_down_x) || (y != m_down_y);
             const bool is_patch_active = m_active_state.active_implicit_id >= 0;
             const bool is_point_active = is_patch_active && m_active_state.active_point_id >= 0;
