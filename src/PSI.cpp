@@ -943,7 +943,8 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
         double max_area = -1;
         double max_area_patch = -1;
         for (int p = 0; p < num_patch; ++p) {
-            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty()) {
+//            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty()) {
+            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty() && P_samples_sparse[p].empty()) {
                 if (P_dist[p] > max_area) {
                     max_area = P_dist[p];
                     max_area_patch = p;
