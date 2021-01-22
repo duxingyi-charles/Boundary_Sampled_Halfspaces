@@ -30,6 +30,7 @@ public:
 
     double function_at(const Point &x) const override;
     Eigen::Vector3d   gradient_at(const Point &x) const override;
+    void flip() override { is_flipped = !is_flipped; }
 
     bool has_control_points() const override { return true; }
     const std::vector<Point>& get_control_points() const override {

@@ -19,10 +19,22 @@ public:
 
     ~Mesh_PSI() override = default;
 
+public:
+    const std::vector<IGL_Mesh>& get_input_meshes() const  {
+        return m_implicit_meshes;
+    }
+
+    void update_implicit(
+            const GridSpec &grid,
+            const std::unique_ptr<Sampled_Implicit> &fn, size_t i) override;
+
 private:
     void compute_arrangement_for_graph_cut(
             const GridSpec &grid,
             const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) override;
+
+    void generate_meshes(const GridSpec &grid,
+            const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
 
     void compute_arrangement(
             const GridSpec &grid,
@@ -59,6 +71,9 @@ private:
                             bool is_flipped);
 
     IGL_Mesh generate_random_plane(const GridSpec &grid);
+
+private:
+    std::vector<IGL_Mesh> m_implicit_meshes;
 
 };
 

@@ -26,6 +26,7 @@ public:
 
     virtual double function_at(const Point &) const = 0;
 	virtual Eigen::Vector3d gradient_at(const Point &) const = 0;
+    virtual void flip() =0;
 
     static bool import_xyz(const std::string &filename, std::vector<Point> &pts);
     static bool export_xyz(const std::string &filename, const std::vector<Point> &pts);

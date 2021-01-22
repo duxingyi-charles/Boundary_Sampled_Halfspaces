@@ -25,6 +25,7 @@ public:
 
     double function_at(const Point &x) const override { return normal.dot(x - p); }
     Eigen::Vector3d gradient_at(const Point &x) const override { return normal; }
+    void flip() override { normal *= -1; }
 
     bool has_control_points() const override { return true; }
     const std::vector<Point> &get_control_points() const override

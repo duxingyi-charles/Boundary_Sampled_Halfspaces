@@ -113,11 +113,86 @@ void Mesh_PSI::merge_meshes(const std::vector<IGL_Mesh>& meshes,
 
 }
 
+void Mesh_PSI::update_implicit(
+        const GridSpec &grid,
+        const std::unique_ptr<Sampled_Implicit>& fn, size_t i) {
+    // Index of implicit goes from 1 to num_implicits.  Index 0 is for bbox.
+    auto& meshes = m_implicit_meshes;
+    assert(i+1 < meshes.size());
+
+    double grid_diag = (grid.bbox_max - grid.bbox_min).norm();
+    Eigen::Vector3d delta_diag((grid.bbox_max.x()-grid.bbox_min.x())/grid.resolution.x(),
+                               (grid.bbox_max.y()-grid.bbox_min.y())/grid.resolution.y(),
+                               (grid.bbox_max.z()-grid.bbox_min.z())/grid.resolution.z());
+    double error_bound = delta_diag.norm();
+
+    if (fn->get_type() == "plane") {
+        Point p;
+        Eigen::Vector3d normal;
+        fn->get_point(p);
+        fn->get_normal(normal);
+        meshes[i+1] = generate_plane(grid, p, normal);
+    } else if (fn->get_type() == "cylinder") {
+        Point axis_point;
+        Eigen::Vector3d axis_unit_vector;
+        double radius;
+        bool is_flipped;
+        fn->get_axis_point(axis_point);
+        fn->get_axis_unit_vector(axis_unit_vector);
+        fn->get_radius(radius);
+        fn->get_is_flipped(is_flipped);
+        int n = (radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/radius)));
+//            std::cout << "cylinder n: " << n << std::endl;
+        n = (n < 15) ? 15 : n;
+        meshes[i+1] = generate_cylinder(grid,n,axis_point,axis_unit_vector,radius,is_flipped);
+    } else if (fn->get_type() == "cone") {
+        Point apex;
+        Eigen::Vector3d axis_unit_vector;
+        double apex_angle;
+        bool is_flipped;
+        fn->get_apex(apex);
+        fn->get_axis_unit_vector(axis_unit_vector);
+        fn->get_apex_angle(apex_angle);
+        fn->get_is_flipped(is_flipped);
+        int n = (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(tan(apex_angle))))));
+//            std::cout << "cone n: " << n << std::endl;
+        n = (n < 15) ? 15 : n;
+        meshes[i+1] = generate_cone(grid,n,apex,axis_unit_vector,apex_angle,is_flipped);
+    } else if (fn->get_type() == "sphere") {
+        Point center;
+        double radius;
+        bool is_flipped;
+        fn->get_center(center);
+        fn->get_radius(radius);
+        fn->get_is_flipped(is_flipped);
+        meshes[i+1] = generate_sphere(grid,center,radius,is_flipped);
+    } else if (fn->get_type() == "torus") {
+        Point center;
+        Eigen::Vector3d axis_unit_vector;
+        double major_radius;
+        double minor_radius;
+        bool is_flipped;
+        fn->get_center(center);
+        fn->get_axis_unit_vector(axis_unit_vector);
+        fn->get_major_radius(major_radius);
+        fn->get_minor_radius(minor_radius);
+        fn->get_is_flipped(is_flipped);
+        int n_major = (major_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/major_radius)));
+        int n_minor = (minor_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/minor_radius)));
+        n_major = (n_major < 15) ? 15 : n_major;
+        n_minor = (n_minor < 15) ? 15 : n_minor;
+        meshes[i+1] = generate_torus(grid,n_major,n_minor,center,axis_unit_vector,major_radius,minor_radius,is_flipped);
+    }
+    else {
+        meshes[i+1] = marching_cubes(*fn, grid);
+    }
+}
 
 void Mesh_PSI::compute_arrangement_for_graph_cut(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
     // arrangement computation independent of samples
+    generate_meshes(grid, implicits);
     compute_arrangement(grid, implicits);
     arrangement_ready = true;
     //
@@ -679,100 +754,35 @@ IGL_Mesh Mesh_PSI::generate_sphere(const GridSpec &grid,
     return sphere;
 }
 
+void Mesh_PSI::generate_meshes(
+        const GridSpec &grid,
+        const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
+    auto& meshes = m_implicit_meshes;
+    meshes.clear();
+    meshes.resize(implicits.size()+1);
+
+    meshes[0] = generate_cube(grid);
+    size_t count = 0;
+    for (const auto& fn : implicits) {
+        update_implicit(grid, fn, count);
+        count++;
+    }
+}
+
 void Mesh_PSI::compute_arrangement(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits)
 {
     // generate meshes
-    std::vector<IGL_Mesh> meshes;
-    meshes.reserve(implicits.size()+1);
-
-    meshes.push_back(generate_cube(grid));
-    double grid_diag = (grid.bbox_max - grid.bbox_min).norm();
-    Eigen::Vector3d delta_diag((grid.bbox_max.x()-grid.bbox_min.x())/grid.resolution.x(),
-                               (grid.bbox_max.y()-grid.bbox_min.y())/grid.resolution.y(),
-                               (grid.bbox_max.z()-grid.bbox_min.z())/grid.resolution.z());
-    double error_bound = delta_diag.norm();
-    for (const auto& fn : implicits) {
-        //
-        if (fn->get_type() == "plane") {
-            Point p;
-            Eigen::Vector3d normal;
-            fn->get_point(p);
-            fn->get_normal(normal);
-            meshes.push_back(generate_plane(grid, p, normal));
-        } else if (fn->get_type() == "cylinder") {
-            Point axis_point;
-            Eigen::Vector3d axis_unit_vector;
-            double radius;
-            bool is_flipped;
-            fn->get_axis_point(axis_point);
-            fn->get_axis_unit_vector(axis_unit_vector);
-            fn->get_radius(radius);
-            fn->get_is_flipped(is_flipped);
-            int n = (radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/radius)));
-//            std::cout << "cylinder n: " << n << std::endl;
-            n = (n < 15) ? 15 : n;
-            meshes.push_back(generate_cylinder(grid,n,axis_point,axis_unit_vector,radius,is_flipped));
-        } else if (fn->get_type() == "cone") {
-            Point apex;
-            Eigen::Vector3d axis_unit_vector;
-            double apex_angle;
-            bool is_flipped;
-            fn->get_apex(apex);
-            fn->get_axis_unit_vector(axis_unit_vector);
-            fn->get_apex_angle(apex_angle);
-            fn->get_is_flipped(is_flipped);
-            int n = (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(tan(apex_angle))))));
-//            std::cout << "cone n: " << n << std::endl;
-            n = (n < 15) ? 15 : n;
-            meshes.push_back(generate_cone(grid,n,apex,axis_unit_vector,apex_angle,is_flipped));
-        } else if (fn->get_type() == "sphere") {
-            Point center;
-            double radius;
-            bool is_flipped;
-            fn->get_center(center);
-            fn->get_radius(radius);
-            fn->get_is_flipped(is_flipped);
-            meshes.push_back(generate_sphere(grid,center,radius,is_flipped));
-        } else if (fn->get_type() == "torus") {
-            Point center;
-            Eigen::Vector3d axis_unit_vector;
-            double major_radius;
-            double minor_radius;
-            bool is_flipped;
-            fn->get_center(center);
-            fn->get_axis_unit_vector(axis_unit_vector);
-            fn->get_major_radius(major_radius);
-            fn->get_minor_radius(minor_radius);
-            fn->get_is_flipped(is_flipped);
-            int n_major = (major_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/major_radius)));
-            int n_minor = (minor_radius < error_bound) ? 15: (int)round(abs(M_PI/asin(0.5*error_bound/minor_radius)));
-//            std::cout << "n_major: " << n_major << std::endl;
-//            std::cout << "n_minor: " << n_minor << std::endl;
-            n_major = (n_major < 15) ? 15 : n_major;
-            n_minor = (n_minor < 15) ? 15 : n_minor;
-            meshes.push_back(generate_torus(grid,n_major,n_minor,center,axis_unit_vector,major_radius,minor_radius,is_flipped));
-        }
-        else {
-            meshes.push_back(marching_cubes(*fn, grid));
-        }
-//
-//        meshes.push_back(marching_cubes(*fn, grid));
-        // test: random planes
-//        meshes.push_back(generate_random_plane(grid));
-    }
-
-
     // merge meshes
     IGL_Mesh merged_mesh;
     Eigen::VectorXi face_to_mesh;
-    merge_meshes(meshes,merged_mesh,face_to_mesh);
+    merge_meshes(m_implicit_meshes,merged_mesh,face_to_mesh);
 
 
     // compute arrangement
     ScopedTimer<> timer("mesh arrangement for graph-cut");
-    auto engine = PyMesh::Arrangement::create_mesh_arrangement(
+    auto engine = PyMesh::Arrangement::create_fast_arrangement(
         merged_mesh.vertices, merged_mesh.faces, face_to_mesh);
     {
         ScopedTimer<> timer("mesh arrangement");

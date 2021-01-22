@@ -37,6 +37,7 @@ class Sphere_sImplicit : public Sampled_Implicit {
 
     double function_at(const Point &p) const override;
     Eigen::Vector3d gradient_at(const Point &p) const override;
+    void flip() override { is_flipped = !is_flipped; }
 
     bool has_control_points() const override { return true; }
     const std::vector<Point>& get_control_points() const override {

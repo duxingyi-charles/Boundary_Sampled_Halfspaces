@@ -12,10 +12,14 @@ class ScopedTimer {
     }
 
     ~ScopedTimer() {
-        auto toc = Timer::now();
-        std::chrono::duration<double> t = toc - m_tic;
-        std::cout << "[" << m_name << "]: " << t.count() << "s"
+        std::cout << "[" << m_name << "]: " << toc() << "s"
                   << std::endl;
+    }
+
+    double toc() const {
+        const auto t = Timer::now();
+        std::chrono::duration<double> d = t - m_tic;
+        return d.count();
     }
 
    private:

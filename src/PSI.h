@@ -36,6 +36,8 @@ public:
 
     void run(const GridSpec &grid,
              std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
+    virtual void update_implicit(const GridSpec &grid,
+            const std::unique_ptr<Sampled_Implicit>& fn, size_t i) {}
     void process_samples();
     void graph_cut();
 
