@@ -149,12 +149,12 @@ private:
             // ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
-                m_active_state.reset();
-                update_mode(viewer);
+                m_active_state.active_point_id = -1;
+                reset_patch_visibility(viewer);
             }
             if (ImGui::RadioButton("Control Points", &m_ui_mode, 1)) {
-                m_active_state.reset();
-                update_mode(viewer);
+                m_active_state.active_point_id = -1;
+                reset_patch_visibility(viewer);
             }
             if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
                 reset_patch_visibility(viewer);
@@ -195,7 +195,7 @@ private:
             if (ImGui::SliderInt("Implicit id",
                     &m_active_state.active_implicit_id,
                     -1,
-                    m_states->get_num_implicits()-1,
+                    m_states->get_num_implicits() - 1,
                     "Implicit #%d")) {
                 const int num_implicits = m_states->get_num_implicits();
                 m_active_state.active_implicit_id =
@@ -420,54 +420,53 @@ private:
         int fid;
         Eigen::Vector3f bc;
 
-        if (m_active_state.active_implicit_id < 0) {
-            // Nothing is active, pick on visible patches.
-            for (size_t i = 0; i < num_patches; i++) {
-                if (!m_patch_visible[i]) continue;
-                const auto pid = m_data_ids[i];
-                const auto& V = viewer.data(pid).V;
-                const auto& F = viewer.data(pid).F;
-                if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
-                        viewer.core().view,
-                        viewer.core().proj,
-                        viewer.core().viewport,
-                        V,
-                        F,
-                        fid,
-                        bc)) {
-                    const int v0 = F(fid, 0);
-                    const int v1 = F(fid, 1);
-                    const int v2 = F(fid, 2);
-                    Eigen::RowVector3d p =
-                        V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
+        // Check if any visible patch is picked.
+        for (size_t i = 0; i < num_patches; i++) {
+            if (!m_patch_visible[i]) continue;
+            const auto pid = m_data_ids[i];
+            const auto& V = viewer.data(pid).V;
+            const auto& F = viewer.data(pid).F;
+            if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
+                    viewer.core().view,
+                    viewer.core().proj,
+                    viewer.core().viewport,
+                    V,
+                    F,
+                    fid,
+                    bc)) {
+                const int v0 = F(fid, 0);
+                const int v1 = F(fid, 1);
+                const int v2 = F(fid, 2);
+                Eigen::RowVector3d p = V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
 
-                    hits.push_back(p);
-                    hit_patches.push_back(i);
+                hits.push_back(p);
+                hit_patches.push_back(i);
+            }
+        }
+
+        if (hits.size() > 0) {
+            Eigen::RowVector3d best_hit;
+            double best_z = std::numeric_limits<double>::max();
+            int implicit_id;
+            for (size_t i = 0; i < hits.size(); i++) {
+                const auto& p = hits[i];
+                const auto patch_index = hit_patches[i];
+                Eigen::RowVector4d q;
+                q << p, 1;
+                double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
+                if (z < best_z) {
+                    best_hit = p;
+                    best_z = z;
+                    implicit_id = m_states->get_implicit_from_patch(patch_index);
                 }
             }
 
-            if (hits.size() > 0) {
-                Eigen::RowVector3d best_hit;
-                double best_z = std::numeric_limits<double>::max();
-                int implicit_id;
-                for (size_t i = 0; i < hits.size(); i++) {
-                    const auto& p = hits[i];
-                    const auto patch_index = hit_patches[i];
-                    Eigen::RowVector4d q;
-                    q << p, 1;
-                    double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
-                    if (z < best_z) {
-                        best_hit = p;
-                        best_z = z;
-                        implicit_id = m_states->get_implicit_from_patch(patch_index);
-                    }
-                }
-
-                m_pick_state.hit = true;
-                m_pick_state.hit_implicit_id = implicit_id;
-                m_pick_state.hit_point = best_hit;
-            }
-        } else {
+            m_pick_state.hit = true;
+            m_pick_state.hit_implicit_id = implicit_id;
+            m_pick_state.hit_point = best_hit;
+        } else if (m_active_state.active_implicit_id >= 0) {
+            // No visible patch is picked.
+            // Check if active impliciti surface it is picked.
             const auto pid = m_implicit_data_ids[m_active_state.active_implicit_id];
             const auto& V = viewer.data(pid).V;
             const auto& F = viewer.data(pid).F;
