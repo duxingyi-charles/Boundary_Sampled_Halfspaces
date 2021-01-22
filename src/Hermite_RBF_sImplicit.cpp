@@ -281,7 +281,8 @@ void Hermite_RBF_sImplicit::consistent_update_RBF_coeff(const std::vector<Point>
     }
     //before update, compute gradient at samples and control points
     std::vector<Point> prev_control_points = control_points;
-    std::vector<Eigen::Vector3d> prev_grads(n_total);
+    std::vector<Eigen::Vector3d> prev_grads;
+    prev_grads.reserve(n_total);
     for (const auto &p : sample_points) {
         prev_grads.emplace_back(gradient_at(p));
     }
@@ -292,7 +293,8 @@ void Hermite_RBF_sImplicit::consistent_update_RBF_coeff(const std::vector<Point>
     update_RBF_coeff(points);
 
     // after update, compute gradients
-    std::vector<Eigen::Vector3d> new_grads(n_total);
+    std::vector<Eigen::Vector3d> new_grads;
+    new_grads.reserve(n_total);
     for (const auto &p : sample_points) {
         new_grads.emplace_back(gradient_at(p));
     }

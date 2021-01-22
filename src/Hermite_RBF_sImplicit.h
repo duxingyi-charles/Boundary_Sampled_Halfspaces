@@ -56,7 +56,7 @@ public:
 
     bool has_control_points() const override { return true; }
     const std::vector<Point> &get_control_points() const override { return control_points; }
-    void set_control_points(const std::vector<Point> &pts) override { update_RBF_coeff(pts); }
+    void set_control_points(const std::vector<Point> &pts) override { consistent_update_RBF_coeff(pts); }
 
     Eigen::VectorXd get_coeff_a() const { return coeff_a; };
     Eigen::Vector4d get_ceoff_b() const { return coeff_b; };
