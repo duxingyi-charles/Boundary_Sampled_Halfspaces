@@ -42,6 +42,7 @@ public:
     const size_t get_num_cells() const { return m_psi->get_num_cells(); }
     const auto& get_bbox() const { return m_bbox; }
     const auto get_grid_diag() const { return (m_grid.bbox_max - m_grid.bbox_min).norm(); }
+    const auto& get_implicit_meshes() const { return m_psi->get_input_meshes(); }
 
     const int get_implicit_from_patch(int patch_id) const { return get_patch_implicit()[patch_id]; }
     const Eigen::RowVector4d get_implicit_color(int implicit_id) const
@@ -197,7 +198,7 @@ private:
     // Input states.
     GridSpec m_grid;
     std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
-    std::unique_ptr<PSI> m_psi;
+    std::unique_ptr<Mesh_PSI> m_psi;
 
     // Derived states.
     VertexArray m_vertices;

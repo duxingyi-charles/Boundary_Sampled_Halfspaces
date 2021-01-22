@@ -684,7 +684,8 @@ void Mesh_PSI::compute_arrangement(
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits)
 {
     // generate meshes
-    std::vector<IGL_Mesh> meshes;
+    auto& meshes = m_implicit_meshes;
+    meshes.clear();
     meshes.reserve(implicits.size()+1);
 
     meshes.push_back(generate_cube(grid));

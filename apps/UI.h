@@ -77,27 +77,41 @@ private:
                 viewer.data(pid).show_lines = false;
                 viewer.data(pid).show_faces = true;
             } else {
-                viewer.data(pid).set_visible(true);
-                viewer.data(pid).show_lines = m_show_wire_frame;
+                viewer.data(pid).set_visible(false);
+                viewer.data(pid).show_lines = false;
                 viewer.data(pid).show_faces = false;
                 viewer.data(pid).line_color = color.transpose().template cast<float>();
             }
+        };
+
+        auto set_implicit_visible = [&](auto& viewer, size_t implicit_id) {
+            const auto pid = m_implicit_data_ids[implicit_id];
+            Eigen::RowVector4d color = m_states->get_implicit_color(implicit_id);
 
             // Show hit implicit patches.
             if (implicit_id == m_active_state.active_implicit_id) {
                 viewer.data(pid).set_visible(true);
                 viewer.data(pid).show_lines = true;
-                viewer.data(pid).show_faces = val;
+                viewer.data(pid).show_faces = false;
+                viewer.data(pid).line_color = color.transpose().template cast<float>();
+            } else {
+                viewer.data(pid).set_visible(true);
+                viewer.data(pid).show_lines = m_show_wire_frame;
+                viewer.data(pid).show_faces = false;
                 viewer.data(pid).line_color = color.transpose().template cast<float>();
             }
         };
 
         const size_t num_patches = m_states->get_num_patches();
+        const size_t num_implicits = m_states->get_num_implicits();
 
         m_patch_visible = m_states->get_patch_labels();
 
         for (size_t i = 0; i < num_patches; i++) {
             set_patch_visible(viewer, i, m_patch_visible[i]);
+        }
+        for (size_t i = 0; i < num_implicits; i++) {
+            set_implicit_visible(viewer, i);
         }
 
         update_mode(viewer);
@@ -151,28 +165,28 @@ private:
             if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
                 m_states->set_resolution(res);
             }
-            if (ImGui::Button("Plane", ImVec2(width / 2, 0.0f))) {
+            if (ImGui::Button("Plane", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 m_states->add_plane(bbox.colwise().mean(), Point(0, 0, 1));
                 post_update_geometry();
             }
             ImGui::SameLine();
-            if (ImGui::Button("Sphere", ImVec2(width / 2, 0.0f))) {
+            if (ImGui::Button("Sphere", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
                 m_states->add_sphere(bbox.colwise().mean(), l / 3);
                 post_update_geometry();
             }
-            if (ImGui::Button("Cylinder", ImVec2(width / 2, 0.0f))) {
+            if (ImGui::Button("Cylinder", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
                 m_states->add_cylinder(bbox.colwise().mean(), Point(0, 0, 1), l / 10);
                 post_update_geometry();
             }
             ImGui::SameLine();
-            if (ImGui::Button("Cone", ImVec2(width / 2, 0.0f))) {
+            if (ImGui::Button("Cone", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
-                m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI/4);
+                m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI / 4);
                 post_update_geometry();
             }
             if (ImGui::Button("Flip", ImVec2(width, 0.0f))) {
@@ -208,6 +222,7 @@ private:
         clear_data(viewer);
         initialize_visibility();
         initialize_patch_data(viewer);
+        initialize_implicit_mesh_data(viewer);
         initialize_implicit_data(viewer);
     }
 
@@ -249,6 +264,29 @@ private:
             viewer.data(id).set_visible(m_patch_visible[i]);
             viewer.data(id).double_sided = true;
             viewer.data(id).show_lines = false;
+        }
+    }
+
+    void initialize_implicit_mesh_data(igl::opengl::glfw::Viewer& viewer)
+    {
+        const auto num_implicits = m_states->get_num_implicits();
+        m_implicit_data_ids.reserve(num_implicits);
+        const auto& implicit_meshes = m_states->get_implicit_meshes();
+        assert(num_implicits + 1 == implicit_meshes.size());
+
+        for (size_t i = 0; i < num_implicits; i++) {
+            int id = viewer.append_mesh();
+            m_implicit_data_ids.push_back(id);
+
+            const auto& mesh = implicit_meshes[i + 1]; // +1 to skip 1st mesh, which is bbox.
+            Eigen::RowVector4d color = m_states->get_implicit_color(i);
+
+            viewer.data(id).set_mesh(mesh.vertices, mesh.faces);
+            viewer.data(id).set_colors(color);
+            viewer.data(id).set_visible(false);
+            viewer.data(id).double_sided = true;
+            viewer.data(id).show_lines = true;
+            viewer.data(id).show_faces = false;
         }
     }
 
@@ -748,6 +786,7 @@ private:
 
 private:
     std::vector<int> m_data_ids; // data per patch.
+    std::vector<int> m_implicit_data_ids; // data per implicit surface.
     std::vector<int> m_control_view_ids; // control point views.
     std::vector<int> m_sample_view_ids; // sample point views.
 
