@@ -26,6 +26,14 @@ public:
         , m_implicits(implicits)
     {
         m_psi = std::make_unique<Mesh_PSI>();
+
+        PSI_Param params;
+        params.use_distance_weighted_area = false;
+        params.use_state_space_graph_cut = true;
+        params.topK = 1;
+        params.consider_adj_diff = true;
+        m_psi->set_parameters(params);
+
         m_psi->run(grid, implicits);
         initialize_states();
         initialize_colors();
