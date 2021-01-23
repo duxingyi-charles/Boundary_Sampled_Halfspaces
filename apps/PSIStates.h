@@ -1,12 +1,12 @@
 #pragma once
 #include <Cone_sImplicit.h>
 #include <Cylinder_sImplicit.h>
+#include <Hermite_RBF_sImplicit.h>
 #include <Mesh_PSI.h>
 #include <PSI.h>
 #include <Plane_sImplicit.h>
 #include <Sphere_sImplicit.h>
 #include <Torus_sImplicit.h>
-#include <Hermite_RBF_sImplicit.h>
 
 #include <Eigen/Core>
 
@@ -210,14 +210,14 @@ private:
     {
         const auto num_implicits = m_implicits.size();
         m_colors.resize(num_implicits, 4);
-        for (int i = 0; i < num_implicits; i++) {
-            double t = double(i) / double(num_implicits - 1);
-            m_colors.row(i) << map_color(t), 1;
+        if (num_implicits > 1) {
+            for (int i = 0; i < num_implicits; i++) {
+                double t = double(i) / double(num_implicits - 1);
+                m_colors.row(i) << map_color(t), 1;
+            }
+        } else if (num_implicits == 1) {
+            m_colors.row(0) << map_color(0.5), 1;
         }
-
-        // m_colors.setRandom(num_implicits, 4);
-        // m_colors = m_colors.array() * 0.5 + 0.5;
-        // m_colors.col(3).setConstant(0.5);
     }
 
 private:
