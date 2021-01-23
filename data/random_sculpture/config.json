@@ -1,0 +1,51 @@
+{
+    "input": [
+        {
+            "name": "1",
+            "points": "1.xyz",
+            "rbf_coeffs": "1_rbfCoeff",
+            "samples": "1_sample.xyz",
+            "type": "rbf"
+        },
+        {
+            "name": "2",
+            "points": "2.xyz",
+            "rbf_coeffs": "2_rbfCoeff",
+            "samples": "2_sample.xyz",
+            "type": "rbf"
+        },
+        {
+            "name": "3",
+            "points": "3.xyz",
+            "rbf_coeffs": "3_rbfCoeff",
+            "samples": "3_sample.xyz",
+            "type": "rbf"
+        },
+        {
+            "name": "4",
+            "points": "4.xyz",
+            "rbf_coeffs": "4_rbfCoeff",
+            "samples": "4_sample.xyz",
+            "type": "rbf"
+        },
+        {
+            "name": "5",
+            "points": "5.xyz",
+            "rbf_coeffs": "5_rbfCoeff",
+            "samples": "5_sample.xyz",
+            "type": "rbf"
+        },
+        {
+            "center": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "name": "6",
+            "radius": 1.9557755160248782,
+            "samples": "6_sample.xyz",
+            "type": "sphere"
+        }
+    ]
+}
