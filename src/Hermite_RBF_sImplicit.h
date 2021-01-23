@@ -64,6 +64,8 @@ public:
     void print_coeff() const;
     void print_control_points() const;
 
+    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
 private:
     Eigen::VectorXd coeff_a;
     Eigen::Vector4d coeff_b;

@@ -4,6 +4,8 @@
 #include <vector>
 #include <Eigen/Core>
 
+#include <nlohmann/json.hpp>
+
 
 typedef Eigen::Vector3d Point;
 
@@ -30,6 +32,8 @@ public:
 
     static bool import_xyz(const std::string &filename, std::vector<Point> &pts);
     static bool export_xyz(const std::string &filename, const std::vector<Point> &pts);
+
+    virtual bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const = 0;
 
     virtual std::string get_type() const { return "unknown"; }
 

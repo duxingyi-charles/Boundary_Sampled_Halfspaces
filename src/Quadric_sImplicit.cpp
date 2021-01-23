@@ -22,3 +22,25 @@ Eigen::Vector3d  Quadric_sImplicit::gradient_at(const Point &p) const {
                            coef(2) + coef(5)*x + coef(7)*2*y + coef(8)*z,
                            coef(3) + coef(6)*x + coef(8)*y + coef(9)*2*z);
 }
+
+
+bool Quadric_sImplicit::save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const
+{
+    json_obj.clear();
+    json_obj["type"] = "quadric";
+    json_obj["coef"] =  {
+            coef(0),coef(1),coef(2),coef(3),coef(4),
+            coef(5),coef(6),coef(7),coef(8),coef(9)
+    };
+    json_obj["name"] = name;
+
+    std::string sample_filename = name + "_sample.xyz";
+    json_obj["samples"] = sample_filename;
+
+    std::string sample_file = dir + sample_filename;
+    if (export_xyz(sample_file,sample_points)) {
+        return true;
+    } else {
+        return false;
+    }
+}

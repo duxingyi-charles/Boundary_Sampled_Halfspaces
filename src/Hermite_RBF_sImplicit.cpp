@@ -412,3 +412,41 @@ Eigen::Vector3d Hermite_RBF_sImplicit::gradient_at(const Point &p) const {
 
     return grad;
 }
+
+
+bool Hermite_RBF_sImplicit::save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const
+{
+    json_obj.clear();
+    json_obj["type"] = "rbf";
+    json_obj["name"] = name;
+
+    // control points
+    std::string point_filename = name + ".xyz";
+    json_obj["points"] = point_filename;
+
+    std::string point_file = dir + point_filename;
+    if (!export_xyz(point_file, control_points)) {
+        return false;
+    }
+
+    // rbf coef
+    std::string coef_filename = name + "_rbfCoeff";
+    json_obj["rbf_coeffs"] = coef_filename;
+
+    std::string coef_file = dir + coef_filename;
+    if(!export_RBF_coeff(coef_file)) {
+        return false;
+    }
+
+    // sample points
+    std::string sample_filename = name + "_sample.xyz";
+    json_obj["samples"] = sample_filename;
+
+    std::string sample_file = dir + sample_filename;
+    if (!export_xyz(sample_file,sample_points)) {
+        return false;
+    }
+
+    //
+    return true;
+}

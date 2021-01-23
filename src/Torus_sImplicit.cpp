@@ -45,3 +45,26 @@ Eigen::Vector3d Torus_sImplicit::gradient_at(const Point &x) const {
     }
 
 }
+
+
+bool Torus_sImplicit::save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const
+{
+    json_obj.clear();
+    json_obj["type"] = "torus";
+    json_obj["center"] = {center.x(), center.y(), center.z()};
+    json_obj["axis_vector"] = {axis_unit_vector.x(), axis_unit_vector.y(), axis_unit_vector.z()};
+    json_obj["major_radius"] = major_radius;
+    json_obj["minor_radius"] = minor_radius;
+    json_obj["is_flipped"] = is_flipped;
+    json_obj["name"] = name;
+
+    std::string sample_filename = name + "_sample.xyz";
+    json_obj["samples"] = sample_filename;
+
+    std::string sample_file = dir + sample_filename;
+    if (export_xyz(sample_file,sample_points)) {
+        return true;
+    } else {
+        return false;
+    }
+}

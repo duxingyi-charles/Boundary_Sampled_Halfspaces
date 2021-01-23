@@ -37,10 +37,10 @@ bool Sampled_Implicit::import_xyz(const std::string &filename, std::vector<Point
 }
 
 bool Sampled_Implicit::export_xyz(const std::string &filename, const std::vector<Point> &pts) {
-    if (pts.empty()) {
-        std::cout << "Vector of points is empty." << std::endl;
-        return false;
-    }
+//    if (pts.empty()) {
+//        std::cout << "Vector of points is empty." << std::endl;
+//        return false;
+//    }
     std::ofstream fout(filename, std::ofstream::out);
     if (!fout.good()) {
         std::cout << "Can not create output file " << filename << std::endl;

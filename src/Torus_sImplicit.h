@@ -89,6 +89,8 @@ public:
     void get_minor_radius(double &r) const override { r = minor_radius; };
     void get_is_flipped(bool &flip)  const override { flip = is_flipped; };
 
+    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
 private:
     // p: center point of torus
     Point center;

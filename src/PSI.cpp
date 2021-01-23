@@ -26,6 +26,8 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/boykov_kolmogorov_max_flow.hpp>
 
+#include <nlohmann/json.hpp>
+
 void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit>> &implicits){
     // make a pointer to the input implicits
     Impl_ptr = &implicits;
@@ -851,6 +853,43 @@ bool PSI::export_data(const std::string &filename) const
 
     fout.close();
     std::cout << "export_data finish: " << filename << std::endl;
+    return true;
+}
+
+bool PSI::export_sampled_implicits(const std::string &output_dir) const {
+    using json = nlohmann::json;
+
+    std::string out_dir = output_dir;
+    if (out_dir.back() != '/') {
+        out_dir = out_dir + "/";
+    }
+
+    json sImpl_obj_array;
+
+    // save each sImplicit
+    for (int i = 0; i < Impl_ptr->size(); ++i) {
+       json sImpl_obj;
+       if ((*Impl_ptr)[i]->save(out_dir,std::to_string(i+1),sImpl_obj)) {
+           sImpl_obj_array.push_back(sImpl_obj);
+       } else {
+           return false;
+       }
+    }
+
+    json input_obj;
+    input_obj["input"] = sImpl_obj_array;
+
+    std::string config_filename = out_dir + "config.json";
+
+    std::ofstream fout(config_filename, std::ofstream::out);
+    if (!fout.good()) {
+        std::cout << "Can not create config file " << config_filename << std::endl;
+        return false;
+    }
+
+    fout << std::setw(4) << input_obj << std::endl;
+
+    fout.close();
     return true;
 }
 
