@@ -257,6 +257,10 @@ public:
         igl::write_triangle_mesh(filename, m_vertices, visible_faces);
     }
 
+    void save_implicits(const std::string& output_dir) const {
+        m_psi->export_sampled_implicits(output_dir);
+    }
+
 private:
     // Input states.
     GridSpec m_grid;

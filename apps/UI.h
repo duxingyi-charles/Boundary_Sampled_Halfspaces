@@ -235,6 +235,7 @@ private:
             }
             if (ImGui::Button("Save mesh", ImVec2(width, 0.0f))) {
                 m_states->save_output("psi_output.obj");
+                m_states->save_implicits("psi_cache");
             }
         };
     }
