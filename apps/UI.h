@@ -182,7 +182,7 @@ private:
             if (ImGui::Button("Cylinder", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
-                m_states->add_cylinder(bbox.colwise().mean(), Point(0, 0, 1), l / 10);
+                m_states->add_cylinder(bbox.colwise().mean(), Point(0, 1, 0), l / 10);
                 post_update_geometry();
             }
             ImGui::SameLine();
