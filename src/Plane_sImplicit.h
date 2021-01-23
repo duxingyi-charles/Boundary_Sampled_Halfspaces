@@ -58,6 +58,8 @@ public:
 
     std::string get_type() const override { return "plane"; }
 
+    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
 private:
     Point p;
     Eigen::Vector3d normal;

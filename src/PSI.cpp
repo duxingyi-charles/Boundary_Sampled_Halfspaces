@@ -26,6 +26,8 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/boykov_kolmogorov_max_flow.hpp>
 
+#include <nlohmann/json.hpp>
+
 void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit>> &implicits){
     // make a pointer to the input implicits
     Impl_ptr = &implicits;
@@ -855,6 +857,43 @@ bool PSI::export_data(const std::string &filename) const
     return true;
 }
 
+bool PSI::export_sampled_implicits(const std::string &output_dir) const {
+    using json = nlohmann::json;
+
+    std::string out_dir = output_dir;
+    if (out_dir.back() != '/') {
+        out_dir = out_dir + "/";
+    }
+
+    json sImpl_obj_array;
+
+    // save each sImplicit
+    for (int i = 0; i < Impl_ptr->size(); ++i) {
+       json sImpl_obj;
+       if ((*Impl_ptr)[i]->save(out_dir,std::to_string(i+1),sImpl_obj)) {
+           sImpl_obj_array.push_back(sImpl_obj);
+       } else {
+           return false;
+       }
+    }
+
+    json input_obj;
+    input_obj["input"] = sImpl_obj_array;
+
+    std::string config_filename = out_dir + "config.json";
+
+    std::ofstream fout(config_filename, std::ofstream::out);
+    if (!fout.good()) {
+        std::cout << "Can not create config file " << config_filename << std::endl;
+        return false;
+    }
+
+    fout << std::setw(4) << input_obj << std::endl;
+
+    fout.close();
+    return true;
+}
+
 
 // Algorithms for reverse engineering
 
@@ -918,6 +957,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
             ready_for_connected_graph_cut = true;
         }
     }
+
     if (use_state_space_graph_cut) {
         connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
                             B_label_sparse,P_label_sparse);
@@ -943,7 +983,8 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
         double max_area = -1;
         double max_area_patch = -1;
         for (int p = 0; p < num_patch; ++p) {
-            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty()) {
+//            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty()) {
+            if (P_label[p] && !P_label_sparse[p] && !P_samples_dense[p].empty() && P_samples_sparse[p].empty()) {
                 if (P_dist[p] > max_area) {
                     max_area = P_dist[p];
                     max_area_patch = p;
@@ -987,6 +1028,8 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
             double cut_cost;
             simple_graph_cut(P_dist, P_samples_sparse, P_block, P_sign, B_patch, B_label_sparse, P_label_sparse, cut_cost);
         }
+
+        // update num_diff_label
         num_diff_label = 0;
         for (int p=0; p<num_patch; ++p) {
             if (P_label[p] != P_label_sparse[p]) {

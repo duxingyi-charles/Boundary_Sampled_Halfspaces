@@ -93,6 +93,8 @@ public:
     void get_radius(double &r) const override { r = radius; };
     void get_is_flipped(bool &flip) const override { flip = is_flipped; };
 
+    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
 private:
     // p: point on cylinder axis
     Point axis_point;

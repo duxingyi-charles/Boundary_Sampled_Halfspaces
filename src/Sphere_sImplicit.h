@@ -75,6 +75,8 @@ class Sphere_sImplicit : public Sampled_Implicit {
     const Point& get_center() const { return center; }
     void set_center(const Point& p) { center = p; }
 
+    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
 private:
     Point center;
     double radius;

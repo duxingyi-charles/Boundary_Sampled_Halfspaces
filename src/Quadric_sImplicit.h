@@ -28,6 +28,8 @@ public:
     Eigen::Vector3d   gradient_at(const Point &p) const override;
     void flip() override { coef *= -1; }
 
+    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
 private:
     // 10 coefficients: 1, x, y, z, x^2, x*y, x*z, y^2, y*z, z^2
     Vector10d coef;

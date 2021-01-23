@@ -173,6 +173,8 @@ public:
     size_t get_num_patches() const { return P.size(); }
     size_t get_num_cells() const { return B_patch.size(); }
 
+    bool export_sampled_implicits(const std::string &output_dir) const;
+
 protected:
     // vertices
     std::vector<Point> V;

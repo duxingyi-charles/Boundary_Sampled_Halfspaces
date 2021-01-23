@@ -80,6 +80,8 @@ public:
     void get_apex_angle(double &a) const override { a = apex_angle; };
     void get_is_flipped(bool &flip) const override { flip = is_flipped; };
 
+    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
 private:
     // p: cone apex
     Point apex;
