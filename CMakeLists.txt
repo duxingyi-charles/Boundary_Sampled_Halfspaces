@@ -110,3 +110,6 @@ target_link_libraries(efficient_ransac_fitting PRIVATE CLI11::CLI11 igl::cgal)
 
 add_executable(mixed_fitting apps/mixed_fitting.cpp)
 target_link_libraries(mixed_fitting PRIVATE psi CLI11::CLI11 igl::cgal)
+
+add_executable(export_sampled_implicits apps/export_sampled_implicits.cpp)
+target_link_libraries(export_sampled_implicits PRIVATE psi CLI11::CLI11)
