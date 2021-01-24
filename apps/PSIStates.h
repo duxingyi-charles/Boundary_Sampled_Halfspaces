@@ -132,6 +132,7 @@ public:
     }
 
     Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
+    const Sampled_Implicit& get_implicit_function(size_t i) const { return *m_implicits[i]; }
 
     void update_implicit(size_t implicit_id)
     {
@@ -223,6 +224,55 @@ private:
     }
 
 public:
+    void save_all(const std::string& filename) const {
+        save_output(filename);
+        save_sample_points(filename);
+        save_implicit_meshes(filename);
+        save_implicits("psi_cache");
+    }
+
+    void save_sample_points(const std::string& filename) const
+    {
+        const auto pos = filename.rfind('.');
+        const auto basename = filename.substr(0, pos);
+        const auto ext = filename.substr(pos);
+
+        const double l = get_grid_diag();
+        const size_t num_implicits = get_num_implicits();
+        for (size_t i=0; i<num_implicits; i++) {
+            const auto& pts = get_implicit_function(i).get_sample_points();
+            std::vector<IGL_Mesh> point_meshes;
+            point_meshes.reserve(pts.size());
+            for (const auto& p : pts) {
+                point_meshes.push_back(Mesh_PSI::generate_unit_sphere(8, 16, false));
+                auto& mesh = point_meshes.back();
+                mesh.vertices = mesh.vertices.array() * (l / 100);
+                mesh.vertices.rowwise() += p.transpose();
+            }
+
+            IGL_Mesh point_mesh;
+            Eigen::VectorXi face_to_mesh;
+            Mesh_PSI::merge_meshes(point_meshes, point_mesh, face_to_mesh);
+
+            igl::write_triangle_mesh(basename + "_sample_points_" + std::to_string(i) + ext,
+                    point_mesh.vertices, point_mesh.faces);
+        }
+    }
+
+    void save_implicit_meshes(const std::string& filename) const
+    {
+        const auto pos = filename.rfind('.');
+        const auto basename = filename.substr(0, pos);
+        const auto ext = filename.substr(pos);
+        const size_t num_implicits = get_num_implicits();
+
+        for (size_t i=0; i<num_implicits; i++) {
+            const auto& mesh = get_implicit_meshes()[i+1];
+            igl::write_triangle_mesh(basename + "_implicit_" + std::to_string(i) + ext,
+                    mesh.vertices, mesh.faces);
+        }
+    }
+
     void save_output(const std::string& filename) const
     {
         const auto pos = filename.rfind('.');
