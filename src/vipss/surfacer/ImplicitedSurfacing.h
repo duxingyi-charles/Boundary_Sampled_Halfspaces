@@ -3,6 +3,7 @@
 
 #include "Polygonizer.h"
 #include "../readers.h"
+#include "../utility.h"
 
 
 class Surfacer{

@@ -10,6 +10,7 @@ include(cmake/nlohmann-json.cmake)
 include(cmake/fast_arrangement.cmake)
 include(cmake/nlopt.cmake)
 include(cmake/armadillo.cmake)
+include(cmake/dirent.cmake)
 
 option(LIBIGL_WITH_CGAL "Build CGAL support in libigl" On)
 option(LIBIGL_WITH_OPENGL_GLFW_IMGUI "Build with UI" On)
