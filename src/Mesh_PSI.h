@@ -60,9 +60,9 @@ private:
                            const Point& apex, const Eigen::Vector3d& axis_unit_vector,
                            double apex_angle, bool is_flipped);
 
-    static IGL_Mesh generate_unit_sphere(bool is_flipped);
+    static IGL_Mesh generate_unit_sphere(int n_latitude, int n_longitude, bool is_flipped);
 
-    IGL_Mesh generate_sphere(const GridSpec &grid,
+    IGL_Mesh generate_sphere(const GridSpec &grid, int n_latitude, int n_longitude,
                              const Point& center, double radius, bool is_flipped);
 
     IGL_Mesh generate_torus(const GridSpec &grid, int n_major, int n_minor,
