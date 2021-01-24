@@ -93,6 +93,70 @@
             ],
             "samples": "6_sample.xyz",
             "type": "plane"
+        },
+        {
+            "name": "7",
+            "normal": [
+                0.7071067811865476,
+                0.0,
+                0.7071067811865476
+            ],
+            "point": [
+                0.0,
+                0.0,
+                -2.3
+            ],
+            "samples": "7_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "8",
+            "normal": [
+                -0.7071067811865476,
+                0.0,
+                0.7071067811865476
+            ],
+            "point": [
+                0.0,
+                0.0,
+                -2.3
+            ],
+            "samples": "8_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "axis_point1": [
+                -1.0,
+                0.0,
+                0.0
+            ],
+            "axis_point2": [
+                -1.0,
+                1.0,
+                0.0
+            ],
+            "is_flipped": true,
+            "name": "9",
+            "radius": 1.1,
+            "samples": "9_sample.xyz",
+            "type": "cylinder"
+        },
+        {
+            "axis_point1": [
+                1.0,
+                0.0,
+                0.0
+            ],
+            "axis_point2": [
+                1.0,
+                1.0,
+                0.0
+            ],
+            "is_flipped": true,
+            "name": "10",
+            "radius": 1.1,
+            "samples": "10_sample.xyz",
+            "type": "cylinder"
         }
     ]
 }
