@@ -312,7 +312,7 @@ public:
                 local_count++;
             }
             face_counts[implicit_id] += local_count;
-            igl::write_triangle_mesh(basename + "_patch_" + std::to_string(i) + ext, m_vertices, patch_faces);
+            //igl::write_triangle_mesh(basename + "_patch_" + std::to_string(i) + ext, m_vertices, patch_faces);
         }
         visible_faces.conservativeResize(count, 3);
         igl::write_triangle_mesh(filename, m_vertices, visible_faces);
