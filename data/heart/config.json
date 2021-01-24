@@ -1,0 +1,38 @@
+{
+	"input":[
+		{
+			"type":"cylinder",
+			"axis_point1": [-1,0,0],
+			"axis_point2": [-1,1,0],
+			"radius": 1.2,
+			"is_flipped": false
+		},
+		{
+			"type":"cylinder",
+			"axis_point1": [1,0,0],
+			"axis_point2": [1,1,0],
+			"radius": 1.2,
+			"is_flipped": false
+		},
+		{
+			"type":"plane",
+			"point": [0,1,0],
+			"normal": [0,1,0]
+		},
+		{
+			"type":"plane",
+			"point": [0,-1,0],
+			"normal": [0,-1,0]
+		},
+		{
+			"type":"plane",
+			"point": [0,0,-2.5],
+			"normal": [-1,0,-1]
+		},
+		{
+			"type":"plane",
+			"point": [0,0,-2.5],
+			"normal": [1,0,-1]
+		}
+	]
+}
