@@ -631,9 +631,13 @@ private:
             };
 
             if (m_mouse_down) {
-                const bool is_active =
-                    m_active_state.active_implicit_id >= 0 && m_active_state.active_point_id >= 0;
-                if (is_active) {
+                const bool is_implicit_active = m_active_state.active_implicit_id >= 0;
+                const bool is_point_active = m_active_state.active_point_id >= 0;
+                if (is_implicit_active && !is_point_active) {
+                    if (m_pick_state.hit) {
+                        return true;
+                    }
+                } else if (is_implicit_active && is_point_active) {
                     update_active_point();
                     return true;
                 }
@@ -646,19 +650,40 @@ private:
 
     void initialize_mouse_up_behaviors(igl::opengl::glfw::Viewer& viewer)
     {
-        viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
+        viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
             if (!m_mouse_down) {
                 // Clicked on menu item will not trigger mouse down callback.
                 return false;
             }
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
-            std::cout << "Mouse up: " << x << ", " << y << std::endl;
+            std::cout << "Mouse up: " << x << ", " << y;
+            std::cout << " Key: " << key << ", " << modifier << std::endl;
             const bool mouse_moved = (x != m_down_x) || (y != m_down_y);
             const bool is_patch_active = m_active_state.active_implicit_id >= 0;
             const bool is_point_active = is_patch_active && m_active_state.active_point_id >= 0;
             const auto point_id = m_active_state.active_point_id;
             const auto implicit_id = m_active_state.active_implicit_id;
+
+            auto translate_implicit = [&]() {
+                auto& fn = m_states->get_implicit_function(m_active_state.active_implicit_id);
+                const auto& p = m_pick_state.hit_point;
+                Eigen::RowVector3d n(0, 0, 1);
+                n = (viewer.core().view.block(0, 0, 3, 3).template cast<double>().inverse() *
+                        n.transpose())
+                    .transpose();
+                Eigen::RowVector4d plane;
+                plane << n, -n.dot(p);
+
+                Eigen::RowVector3d q;
+                igl::unproject_on_plane(Eigen::Vector2f(x, y),
+                        viewer.core().proj * viewer.core().view,
+                        viewer.core().viewport,
+                        plane,
+                        q);
+
+                fn.translate(q-p);
+            };
 
             if (is_point_active && mouse_moved) {
                 // Active point dragged.
@@ -719,6 +744,16 @@ private:
                         m_states->refresh();
                         initialize_data(viewer);
                     }
+                }
+            } else if (is_patch_active && m_pick_state.hit && mouse_moved && modifier == 1) {
+                // Translated.
+                translate_implicit();
+                if (m_interactive) {
+                    m_states->refresh();
+                    initialize_data(viewer);
+                } else {
+                    m_states->update_implicit(implicit_id);
+                    initialize_data(viewer);
                 }
             } else if (!mouse_moved) {
                 // Nothing was active, or another patch is being activated.

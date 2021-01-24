@@ -95,6 +95,11 @@ public:
 
     bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
 
+    void translate(const Point& t) override {
+        Sampled_Implicit::translate(t);
+        axis_point += t;
+    }
+
 private:
     // p: point on cylinder axis
     Point axis_point;

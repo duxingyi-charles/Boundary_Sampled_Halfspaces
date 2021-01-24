@@ -77,6 +77,11 @@ class Sphere_sImplicit : public Sampled_Implicit {
 
     bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
 
+    void translate(const Point& t) override {
+        Sampled_Implicit::translate(t);
+        center += t;
+    }
+
 private:
     Point center;
     double radius;

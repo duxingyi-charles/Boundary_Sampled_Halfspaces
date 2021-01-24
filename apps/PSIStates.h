@@ -229,13 +229,20 @@ public:
         const auto basename = filename.substr(0, pos);
         const auto ext = filename.substr(pos);
         const size_t num_patches = get_num_patches();
+        const size_t num_implicits = get_num_implicits();
         const auto& patches = get_patches();
         auto visible = get_patch_labels();
         assert(num_patches == patches.size());
         assert(num_patches == visible.size());
 
-        FaceArray visible_faces(m_faces.rows(), 3);
-        FaceArray patch_faces(m_faces.rows(), 3);
+        const size_t num_faces = m_faces.rows();
+        FaceArray visible_faces(num_faces, 3);
+        FaceArray patch_faces(num_faces, 3);
+        std::vector<FaceArray> visible_implicit_faces(num_implicits);
+        std::vector<size_t> face_counts(num_implicits, 0);
+        for (size_t i=0; i<num_implicits; i++) {
+            visible_implicit_faces[i].resize(num_faces, 3);
+        }
 
         size_t count=0;
         for (size_t i=0; i<num_patches; i++) {
@@ -243,18 +250,28 @@ public:
 
             size_t local_count = 0;
             const auto& patch = patches[i];
+            const auto& implicit_id = get_implicit_from_patch(i);
             patch_faces.resize(patch.size(), 3);
             for (auto j : patch) {
                 visible_faces.row(count) = m_faces.row(j);
                 patch_faces.row(local_count) = m_faces.row(j);
+                visible_implicit_faces[implicit_id].row(face_counts[implicit_id] + local_count) =
+                    m_faces.row(j);
 
                 count++;
                 local_count++;
             }
-            igl::write_triangle_mesh(basename + std::to_string(i) + ext, m_vertices, patch_faces);
+            face_counts[implicit_id] += local_count;
+            igl::write_triangle_mesh(basename + "_patch_" + std::to_string(i) + ext, m_vertices, patch_faces);
         }
         visible_faces.conservativeResize(count, 3);
         igl::write_triangle_mesh(filename, m_vertices, visible_faces);
+
+        for (size_t i=0; i<num_implicits; i++) {
+            visible_implicit_faces[i].conservativeResize(face_counts[i], 3);
+            igl::write_triangle_mesh(basename + "_visible_implicit_" + std::to_string(i) + ext,
+                    m_vertices, visible_implicit_faces[i]);
+        }
     }
 
     void save_implicits(const std::string& output_dir) const {

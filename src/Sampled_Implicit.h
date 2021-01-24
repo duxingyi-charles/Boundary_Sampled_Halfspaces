@@ -53,6 +53,11 @@ public:
     virtual void get_major_radius(double&) const {}; //torus
     virtual void get_minor_radius(double&) const {}; //torus
 
+    virtual void translate(const Point& t) {
+        for (auto& p : sample_points) {
+            p += t;
+        }
+    }
 
 
 

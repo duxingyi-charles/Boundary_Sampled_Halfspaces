@@ -60,6 +60,11 @@ public:
 
     bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
 
+    void translate(const Point& t) override {
+        Sampled_Implicit::translate(t);
+        p += t;
+    }
+
 private:
     Point p;
     Eigen::Vector3d normal;
