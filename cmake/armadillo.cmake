@@ -11,6 +11,7 @@ FetchContent_Declare(
     GIT_TAG 6a312a98f6ca5450b6ab04361abd6d36ec0759f7
     GIT_SHALLOW TRUE
 )
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not use shared lib.")
 FetchContent_MakeAvailable(armadillo)
 
 add_library(armadillo::armadillo ALIAS armadillo)

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(PSI VERSION 0.1.0 LANGUAGES CXX C)
 
 SET(CMAKE_CXX_STANDARD 14)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not use shared lib.")
 
 include(FetchContent)
 include(cmake/Eigen3.cmake)
@@ -73,6 +74,7 @@ target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE
 target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core arrangement vipss)
 target_compile_options(psi PUBLIC "-Wall")
 target_compile_definitions(psi PUBLIC "-DLIBIGL_NUM_THREADS=2")
+target_compile_definitions(psi PUBLIC "-D_USE_MATH_DEFINES")
 
 add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
 target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
