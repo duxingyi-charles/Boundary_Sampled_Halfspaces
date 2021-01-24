@@ -8,6 +8,7 @@ include(cmake/Eigen3.cmake)
 include(cmake/cli11.cmake)
 include(cmake/nlohmann-json.cmake)
 include(cmake/fast_arrangement.cmake)
+include(cmake/nlopt.cmake)
 
 option(LIBIGL_WITH_CGAL "Build CGAL support in libigl" On)
 option(LIBIGL_WITH_OPENGL_GLFW_IMGUI "Build with UI" On)
@@ -42,26 +43,23 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
 #target_compile_options(psi PUBLIC "-Wall")
 
 # VIPSS
-find_package(nlopt REQUIRED)
-set(NLOPT_LIB_DIR "")
-set(NLOPT_LIB ${NLOPT_LIBRARIES})
 
 find_package(Armadillo REQUIRED)
 set(ARMADILLO_LIB_DIRS "")
 set(ARMADILLO_LIB ${ARMADILLO_LIBRARIES})
 
-include_directories(${NLOPT_INCLUDE_DIRS} ${ARMADILLO_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src/vipss/surfacer)
+include_directories(${ARMADILLO_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src/vipss/surfacer)
 #aux_source_directory(. MAIN)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/vipss VIPSS_SRC_LIST)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/vipss/surfacer VIPSS_SURFACER_LIST)
 
-LINK_DIRECTORIES(${ARMADILLO_LIB_DIRS} ${NLOPT_LIB_DIR})
+LINK_DIRECTORIES(${ARMADILLO_LIB_DIRS})
 #add_executable(${PROJECT_NAME} ${SRC_LIST} ${MAIN} ${SURFACER_LIST})
 
 add_library(vipss STATIC
         ${VIPSS_SRC_LIST}
         ${VIPSS_SURFACER_LIST})
-target_link_libraries(vipss PUBLIC ${ARMADILLO_LIB} ${NLOPT_LIB})
+target_link_libraries(vipss PUBLIC ${ARMADILLO_LIB} nlopt::nlopt)
 set_target_properties(vipss PROPERTIES LINKER_LANGUAGE CXX)
 
 
