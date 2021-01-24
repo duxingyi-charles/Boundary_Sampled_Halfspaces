@@ -560,7 +560,7 @@ private:
 
     void initialize_mouse_move_behaviors(igl::opengl::glfw::Viewer& viewer)
     {
-        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
+        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
 
@@ -633,7 +633,7 @@ private:
                 const bool is_implicit_active = m_active_state.active_implicit_id >= 0;
                 const bool is_point_active = m_active_state.active_point_id >= 0;
                 if (is_implicit_active && !is_point_active) {
-                    if (m_pick_state.hit) {
+                    if (modifier == 1 && m_pick_state.hit) {
                         return true;
                     }
                 } else if (is_implicit_active && is_point_active) {
