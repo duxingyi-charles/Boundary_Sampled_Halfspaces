@@ -1,38 +1,98 @@
 {
-	"input":[
-		{
-			"type":"cylinder",
-			"axis_point1": [-1,0,0],
-			"axis_point2": [-1,1,0],
-			"radius": 1.2,
-			"is_flipped": false
-		},
-		{
-			"type":"cylinder",
-			"axis_point1": [1,0,0],
-			"axis_point2": [1,1,0],
-			"radius": 1.2,
-			"is_flipped": false
-		},
-		{
-			"type":"plane",
-			"point": [0,1,0],
-			"normal": [0,1,0]
-		},
-		{
-			"type":"plane",
-			"point": [0,-1,0],
-			"normal": [0,-1,0]
-		},
-		{
-			"type":"plane",
-			"point": [0,0,-2.5],
-			"normal": [-1,0,-1]
-		},
-		{
-			"type":"plane",
-			"point": [0,0,-2.5],
-			"normal": [1,0,-1]
-		}
-	]
+    "input": [
+        {
+            "axis_point1": [
+                -1.0,
+                0.0,
+                0.0
+            ],
+            "axis_point2": [
+                -1.0,
+                1.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "name": "1",
+            "radius": 1.2,
+            "samples": "1_sample.xyz",
+            "type": "cylinder"
+        },
+        {
+            "axis_point1": [
+                1.0,
+                0.0,
+                0.0
+            ],
+            "axis_point2": [
+                1.0,
+                1.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "name": "2",
+            "radius": 1.2,
+            "samples": "2_sample.xyz",
+            "type": "cylinder"
+        },
+        {
+            "name": "3",
+            "normal": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "point": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "samples": "3_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "4",
+            "normal": [
+                0.0,
+                -1.0,
+                0.0
+            ],
+            "point": [
+                0.0,
+                -1.0,
+                0.0
+            ],
+            "samples": "4_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "5",
+            "normal": [
+                -0.7071067811865475,
+                0.0,
+                -0.7071067811865475
+            ],
+            "point": [
+                0.0,
+                0.0,
+                -2.5
+            ],
+            "samples": "5_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "6",
+            "normal": [
+                0.7071067811865475,
+                0.0,
+                -0.7071067811865475
+            ],
+            "point": [
+                0.0,
+                0.0,
+                -2.5
+            ],
+            "samples": "6_sample.xyz",
+            "type": "plane"
+        }
+    ]
 }
