@@ -10,6 +10,7 @@
 
 #include <limits>
 #include <map>
+#include <iomanip>
 
 #include <queue>
 #include <unordered_set>
@@ -35,6 +36,7 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
     compute_arrangement_for_graph_cut(grid, implicits);
     arrangement_ready = true;
     ready_for_graph_cut = true;
+    ready_for_connected_graph_cut = false;
     graph_cut();
 }
 

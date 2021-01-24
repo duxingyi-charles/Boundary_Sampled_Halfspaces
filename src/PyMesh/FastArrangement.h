@@ -15,7 +15,9 @@ public:
     {}
     ~FastArrangement() = default;
 
+#ifdef __clang__
     __attribute__((optnone))
+#endif
     void run() override;
 
 private:

@@ -16,7 +16,7 @@ class Cone_sImplicit : public Sampled_Implicit
 public:
     // standard cone
     Cone_sImplicit() : Sampled_Implicit(),
-    apex(0,0,0), axis_unit_vector(0,0,-1), apex_angle(M_PI_4), is_flipped(false)
+    apex(0,0,0), axis_unit_vector(0,0,-1), apex_angle(M_PI/4), is_flipped(false)
     {};
 
     Cone_sImplicit(const Point &p, const Eigen::Vector3d &v, double a, bool flip) : Sampled_Implicit(),
@@ -81,6 +81,11 @@ public:
     void get_is_flipped(bool &flip) const override { flip = is_flipped; };
 
     bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
+    void translate(const Point& t) override {
+        Sampled_Implicit::translate(t);
+        apex += t;
+    }
 
 private:
     // p: cone apex

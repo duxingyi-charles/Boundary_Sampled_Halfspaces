@@ -1,5 +1,6 @@
 
 #include "Solver.h"
+#include "utility.h"
 
 #include <ctime>
 #include <chrono>

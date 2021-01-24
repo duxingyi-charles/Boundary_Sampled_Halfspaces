@@ -146,20 +146,22 @@ private:
 
             ImGui::StyleColorsLight();
             const auto width = ImGui::GetContentRegionAvailWidth();
-            //ImGui::Checkbox("imgui demo", &imgui_demo);
+            // ImGui::Checkbox("imgui demo", &imgui_demo);
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
-                m_active_state.reset();
-                update_mode(viewer);
+                m_active_state.active_point_id = -1;
+                reset_patch_visibility(viewer);
             }
             if (ImGui::RadioButton("Control Points", &m_ui_mode, 1)) {
-                m_active_state.reset();
-                update_mode(viewer);
+                m_active_state.active_point_id = -1;
+                reset_patch_visibility(viewer);
             }
             if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
                 reset_patch_visibility(viewer);
             }
-            ImGui::Checkbox("Interactive", &m_interactive);
+            if (ImGui::Checkbox("Interactive", &m_interactive)) {
+                reset_patch_visibility(viewer);
+            }
             static int res = m_states->get_resolution();
             ImGui::SetNextItemWidth(-1);
             if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
@@ -180,7 +182,7 @@ private:
             if (ImGui::Button("Cylinder", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
-                m_states->add_cylinder(bbox.colwise().mean(), Point(0, 0, 1), l / 10);
+                m_states->add_cylinder(bbox.colwise().mean(), Point(0, 1, 0), l / 10);
                 post_update_geometry();
             }
             ImGui::SameLine();
@@ -189,11 +191,29 @@ private:
                 m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI / 4);
                 post_update_geometry();
             }
+            if (ImGui::Button("Torus", ImVec2(width / 2.1, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
+                m_states->add_torus(bbox.colwise().mean(), Point(0, 0, 1), l/3, l/20);
+                post_update_geometry();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Implicit", ImVec2(width / 2.1, 0.0f))) {
+                const auto& bbox = m_states->get_bbox();
+                const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
+                std::vector<Point> pts(3);
+                pts[0] = bbox.colwise().mean();
+                pts[1] = pts[0] + Point(l/20, 0, 0);
+                pts[2] = pts[0] + Point(0, l/20, 0);
+                m_states->add_vipss(pts, pts);
+                post_update_geometry();
+            }
             ImGui::PushItemWidth(width);
             if (ImGui::SliderInt("Implicit id",
                     &m_active_state.active_implicit_id,
                     -1,
-                    m_states->get_num_implicits(), "Implicit #%d")) {
+                    m_states->get_num_implicits() - 1,
+                    "Implicit #%d")) {
                 const int num_implicits = m_states->get_num_implicits();
                 m_active_state.active_implicit_id =
                     std::min(m_active_state.active_implicit_id, num_implicits - 1);
@@ -212,6 +232,9 @@ private:
             if (ImGui::Button("Update", ImVec2(width, 0.0f))) {
                 m_states->refresh();
                 post_update_geometry();
+            }
+            if (ImGui::Button("Save mesh", ImVec2(width, 0.0f))) {
+                m_states->save_all("psi_output.obj");
             }
         };
     }
@@ -417,53 +440,53 @@ private:
         int fid;
         Eigen::Vector3f bc;
 
-        if (m_active_state.active_implicit_id < 0) {
-            // Nothing is active, pick on visible patches.
-            for (size_t i = 0; i < num_patches; i++) {
-                if (!m_patch_visible[i]) continue;
-                const auto pid = m_data_ids[i];
-                const auto& V = viewer.data(pid).V;
-                const auto& F = viewer.data(pid).F;
-                if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
-                        viewer.core().view,
-                        viewer.core().proj,
-                        viewer.core().viewport,
-                        V,
-                        F,
-                        fid,
-                        bc)) {
-                    const int v0 = F(fid, 0);
-                    const int v1 = F(fid, 1);
-                    const int v2 = F(fid, 2);
-                    Eigen::RowVector3d p = V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
+        // Check if any visible patch is picked.
+        for (size_t i = 0; i < num_patches; i++) {
+            if (!m_patch_visible[i]) continue;
+            const auto pid = m_data_ids[i];
+            const auto& V = viewer.data(pid).V;
+            const auto& F = viewer.data(pid).F;
+            if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
+                    viewer.core().view,
+                    viewer.core().proj,
+                    viewer.core().viewport,
+                    V,
+                    F,
+                    fid,
+                    bc)) {
+                const int v0 = F(fid, 0);
+                const int v1 = F(fid, 1);
+                const int v2 = F(fid, 2);
+                Eigen::RowVector3d p = V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
 
-                    hits.push_back(p);
-                    hit_patches.push_back(i);
+                hits.push_back(p);
+                hit_patches.push_back(i);
+            }
+        }
+
+        if (hits.size() > 0) {
+            Eigen::RowVector3d best_hit;
+            double best_z = std::numeric_limits<double>::max();
+            int implicit_id;
+            for (size_t i = 0; i < hits.size(); i++) {
+                const auto& p = hits[i];
+                const auto patch_index = hit_patches[i];
+                Eigen::RowVector4d q;
+                q << p, 1;
+                double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
+                if (z < best_z) {
+                    best_hit = p;
+                    best_z = z;
+                    implicit_id = m_states->get_implicit_from_patch(patch_index);
                 }
             }
 
-            if (hits.size() > 0) {
-                Eigen::RowVector3d best_hit;
-                double best_z = std::numeric_limits<double>::max();
-                int implicit_id;
-                for (size_t i = 0; i < hits.size(); i++) {
-                    const auto& p = hits[i];
-                    const auto patch_index = hit_patches[i];
-                    Eigen::RowVector4d q;
-                    q << p, 1;
-                    double z = -(viewer.core().view.template cast<double>() * q.transpose())[2];
-                    if (z < best_z) {
-                        best_hit = p;
-                        best_z = z;
-                        implicit_id = m_states->get_implicit_from_patch(patch_index);
-                    }
-                }
-
-                m_pick_state.hit = true;
-                m_pick_state.hit_implicit_id = implicit_id;
-                m_pick_state.hit_point = best_hit;
-            }
-        } else {
+            m_pick_state.hit = true;
+            m_pick_state.hit_implicit_id = implicit_id;
+            m_pick_state.hit_point = best_hit;
+        } else if (m_active_state.active_implicit_id >= 0) {
+            // No visible patch is picked.
+            // Check if active impliciti surface it is picked.
             const auto pid = m_implicit_data_ids[m_active_state.active_implicit_id];
             const auto& V = viewer.data(pid).V;
             const auto& F = viewer.data(pid).F;
@@ -520,6 +543,7 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             m_down_x = x;
             m_down_y = y;
+            std::cout << "Mouse down: " << x << ", " << y << std::endl;
 
             auto hit_point_id = has_hit_point(x, y);
             if (hit_point_id >= 0) {
@@ -536,7 +560,7 @@ private:
 
     void initialize_mouse_move_behaviors(igl::opengl::glfw::Viewer& viewer)
     {
-        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
+        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
 
@@ -606,9 +630,13 @@ private:
             };
 
             if (m_mouse_down) {
-                const bool is_active =
-                    m_active_state.active_implicit_id >= 0 && m_active_state.active_point_id >= 0;
-                if (is_active) {
+                const bool is_implicit_active = m_active_state.active_implicit_id >= 0;
+                const bool is_point_active = m_active_state.active_point_id >= 0;
+                if (is_implicit_active && !is_point_active) {
+                    if (modifier == 1 && m_pick_state.hit) {
+                        return true;
+                    }
+                } else if (is_implicit_active && is_point_active) {
                     update_active_point();
                     return true;
                 }
@@ -621,14 +649,40 @@ private:
 
     void initialize_mouse_up_behaviors(igl::opengl::glfw::Viewer& viewer)
     {
-        viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
+        viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
+            if (!m_mouse_down) {
+                // Clicked on menu item will not trigger mouse down callback.
+                return false;
+            }
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
+            std::cout << "Mouse up: " << x << ", " << y;
+            std::cout << " Key: " << key << ", " << modifier << std::endl;
             const bool mouse_moved = (x != m_down_x) || (y != m_down_y);
             const bool is_patch_active = m_active_state.active_implicit_id >= 0;
             const bool is_point_active = is_patch_active && m_active_state.active_point_id >= 0;
             const auto point_id = m_active_state.active_point_id;
             const auto implicit_id = m_active_state.active_implicit_id;
+
+            auto translate_implicit = [&]() {
+                auto& fn = m_states->get_implicit_function(m_active_state.active_implicit_id);
+                const auto& p = m_pick_state.hit_point;
+                Eigen::RowVector3d n(0, 0, 1);
+                n = (viewer.core().view.block(0, 0, 3, 3).template cast<double>().inverse() *
+                        n.transpose())
+                    .transpose();
+                Eigen::RowVector4d plane;
+                plane << n, -n.dot(p);
+
+                Eigen::RowVector3d q;
+                igl::unproject_on_plane(Eigen::Vector2f(x, y),
+                        viewer.core().proj * viewer.core().view,
+                        viewer.core().viewport,
+                        plane,
+                        q);
+
+                fn.translate(q-p);
+            };
 
             if (is_point_active && mouse_moved) {
                 // Active point dragged.
@@ -689,6 +743,16 @@ private:
                         m_states->refresh();
                         initialize_data(viewer);
                     }
+                }
+            } else if (is_patch_active && m_pick_state.hit && mouse_moved && modifier == 1) {
+                // Translated.
+                translate_implicit();
+                if (m_interactive) {
+                    m_states->refresh();
+                    initialize_data(viewer);
+                } else {
+                    m_states->update_implicit(implicit_id);
+                    initialize_data(viewer);
                 }
             } else if (!mouse_moved) {
                 // Nothing was active, or another patch is being activated.

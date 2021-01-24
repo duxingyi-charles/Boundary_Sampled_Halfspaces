@@ -1,0 +1,76 @@
+{
+    "input": [
+        {
+            "axis_vector": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "center": [
+                1.0,
+                0.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "major_radius": 1.0,
+            "minor_radius": 0.2,
+            "name": "1",
+            "samples": "1_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_vector": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "center": [
+                -1.0,
+                0.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "major_radius": 1.0,
+            "minor_radius": 0.2,
+            "name": "2",
+            "samples": "2_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_vector": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "center": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "major_radius": 1.0,
+            "minor_radius": 0.2,
+            "name": "3",
+            "samples": "3_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_vector": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "center": [
+                0.0,
+                -1.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "major_radius": 1.0,
+            "minor_radius": 0.2,
+            "name": "4",
+            "samples": "4_sample.xyz",
+            "type": "torus"
+        }
+    ]
+}

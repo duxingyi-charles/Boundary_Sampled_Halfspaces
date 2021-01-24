@@ -40,7 +40,7 @@ public:
     const std::vector<Point>& get_control_points() const override {
         if (m_control_pts.empty()) {
             m_control_pts.push_back(center);
-            m_control_pts.push_back(center + axis_unit_vector);
+            m_control_pts.push_back(center + axis_unit_vector * major_radius);
             Point dir;
             if (std::abs(axis_unit_vector[1]) < 0.9) {
                 dir = Point(0, 1, 0).cross(axis_unit_vector).normalized();
@@ -63,7 +63,7 @@ public:
                 major_radius = (pts[2] - pts[0]).norm();
                 minor_radius  = (pts[3] - pts[2]).norm();
             } else {
-                axis_unit_vector = pts[1];
+                axis_unit_vector = dir;
             }
         } else {
             center = pts[0];
@@ -90,6 +90,11 @@ public:
     void get_is_flipped(bool &flip)  const override { flip = is_flipped; };
 
     bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+
+    void translate(const Point& t) override {
+        Sampled_Implicit::translate(t);
+        center += t;
+    }
 
 private:
     // p: center point of torus

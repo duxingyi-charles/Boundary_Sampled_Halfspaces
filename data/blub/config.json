@@ -1,0 +1,10 @@
+{
+	"input":[
+		{
+			"name":"blub",
+			"type":"rbf",
+			"points":"input_3.xyz",
+			"rbf_coeffs":"input_3_rbfCoeff"
+		}
+	]
+}

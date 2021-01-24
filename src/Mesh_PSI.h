@@ -28,6 +28,13 @@ public:
             const GridSpec &grid,
             const std::unique_ptr<Sampled_Implicit> &fn, size_t i) override;
 
+    static IGL_Mesh generate_unit_sphere(int n_latitude, int n_longitude, bool is_flipped);
+
+    static void merge_meshes(const std::vector<IGL_Mesh>& meshes,
+            // output
+            IGL_Mesh &merged_mesh,
+            Eigen::VectorXi &face_to_mesh);
+
 private:
     void compute_arrangement_for_graph_cut(
             const GridSpec &grid,
@@ -44,11 +51,6 @@ private:
 
     static IGL_Mesh marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec);
 
-    static void merge_meshes(const std::vector<IGL_Mesh>& meshes,
-            // output
-            IGL_Mesh &merged_mesh,
-            Eigen::VectorXi &face_to_mesh);
-
     IGL_Mesh generate_plane(const GridSpec &grid,
                             const Point &p, const Eigen::Vector3d &normal);
 
@@ -59,8 +61,6 @@ private:
     IGL_Mesh generate_cone(const GridSpec &grid, int n,
                            const Point& apex, const Eigen::Vector3d& axis_unit_vector,
                            double apex_angle, bool is_flipped);
-
-    static IGL_Mesh generate_unit_sphere(int n_latitude, int n_longitude, bool is_flipped);
 
     IGL_Mesh generate_sphere(const GridSpec &grid, int n_latitude, int n_longitude,
                              const Point& center, double radius, bool is_flipped);

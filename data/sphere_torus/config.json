@@ -1,0 +1,46 @@
+{
+    "input": [
+        {
+            "center": [
+                0.0,
+                0.0,
+                -1.5
+            ],
+            "is_flipped": false,
+            "name": "1",
+            "radius": 1.0,
+            "samples": "1_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                0.0,
+                0.0,
+                1.5
+            ],
+            "is_flipped": false,
+            "name": "2",
+            "radius": 1.0,
+            "samples": "2_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "axis_vector": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "center": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "is_flipped": true,
+            "major_radius": 1.3052447020128572,
+            "minor_radius": 1.2034802922684489,
+            "name": "3",
+            "samples": "3_sample.xyz",
+            "type": "torus"
+        }
+    ]
+}

@@ -1,12 +1,16 @@
 #pragma once
+#include <Cone_sImplicit.h>
+#include <Cylinder_sImplicit.h>
+#include <Hermite_RBF_sImplicit.h>
 #include <Mesh_PSI.h>
 #include <PSI.h>
-#include <Sphere_sImplicit.h>
-#include <Cylinder_sImplicit.h>
 #include <Plane_sImplicit.h>
-#include <Cone_sImplicit.h>
+#include <Sphere_sImplicit.h>
+#include <Torus_sImplicit.h>
 
 #include <Eigen/Core>
+
+#include <igl/write_triangle_mesh.h>
 
 #include <memory>
 #include <vector>
@@ -24,6 +28,14 @@ public:
         , m_implicits(implicits)
     {
         m_psi = std::make_unique<Mesh_PSI>();
+
+        PSI_Param params;
+        params.use_distance_weighted_area = false;
+        params.use_state_space_graph_cut = true;
+        params.topK = 1;
+        params.consider_adj_diff = true;
+        m_psi->set_parameters(params);
+
         m_psi->run(grid, implicits);
         initialize_states();
         initialize_colors();
@@ -50,12 +62,8 @@ public:
         return m_colors.row(implicit_id);
     }
 
-    void set_resolution(int res) {
-        m_grid.resolution << res, res, res;
-    }
-    int get_resolution() const {
-        return m_grid.resolution.maxCoeff();
-    }
+    void set_resolution(int res) { m_grid.resolution << res, res, res; }
+    int get_resolution() const { return m_grid.resolution.maxCoeff(); }
 
     void add_plane(const Point& p, const Point& n)
     {
@@ -101,9 +109,33 @@ public:
         initialize_colors();
     }
 
-    Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
+    void add_torus(const Point& center, const Point& axis, double R, double r)
+    {
+        m_implicits.push_back(std::make_unique<Torus_sImplicit>(center, axis, R, r, false));
+        auto& fn = m_implicits.back();
+        Point d = Point(0, 1, 0).cross(axis);
+        if (d.norm() < 1e-3) {
+            d = Point(0, 0, 1).cross(axis);
+        }
+        fn->set_sample_points({center + d * (R + r)});
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
 
-    void update_implicit(size_t implicit_id) {
+    void add_vipss(const std::vector<Point>& ctrl_pts, const std::vector<Point>& sample_pts)
+    {
+        m_implicits.push_back(std::make_unique<Hermite_RBF_sImplicit>(ctrl_pts, sample_pts));
+        m_psi->run(m_grid, m_implicits);
+        initialize_states();
+        initialize_colors();
+    }
+
+    Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
+    const Sampled_Implicit& get_implicit_function(size_t i) const { return *m_implicits[i]; }
+
+    void update_implicit(size_t implicit_id)
+    {
         m_psi->update_implicit(m_grid, m_implicits[implicit_id], implicit_id);
     }
 
@@ -163,18 +195,11 @@ private:
     {
         t = std::max<double>(std::min<double>(t, 1), 0);
         Eigen::Matrix<double, 8, 3> pallette;
-        //pallette << 0x8d, 0xd3, 0xc7, 0xff, 0xff, 0xb3, 0xbe, 0xba, 0xda, 0xfb, 0x80, 0x72, 0x80,
+        // pallette << 0x8d, 0xd3, 0xc7, 0xff, 0xff, 0xb3, 0xbe, 0xba, 0xda, 0xfb, 0x80, 0x72, 0x80,
         //    0xb1, 0xd3, 0xfd, 0xb4, 0x62, 0xb3, 0xde, 0x69, 0xfc, 0xcd, 0xe5;
 
-        pallette <<
-                0xe4, 0x1a, 0x1c,
-                0x37, 0x7e, 0xb8,
-                0x4d, 0xaf, 0x4a,
-                0x98, 0x4e, 0xa3,
-                0xff, 0x7f, 0x00,
-                0xff, 0xff, 0x33,
-                0xa6, 0x56, 0x28,
-                0xf7, 0x81, 0xbf;
+        pallette << 0xe4, 0x1a, 0x1c, 0x37, 0x7e, 0xb8, 0x4d, 0xaf, 0x4a, 0x98, 0x4e, 0xa3, 0xff,
+            0x7f, 0x00, 0xff, 0xff, 0x33, 0xa6, 0x56, 0x28, 0xf7, 0x81, 0xbf;
         size_t i0 = static_cast<size_t>(std::floor(t * 8));
         size_t i1 = static_cast<size_t>(std::ceil(t * 8));
         i0 = std::min<size_t>(i0, 7);
@@ -188,14 +213,119 @@ private:
     {
         const auto num_implicits = m_implicits.size();
         m_colors.resize(num_implicits, 4);
-        for (int i = 0; i < num_implicits; i++) {
-            double t = double(i) / double(num_implicits - 1);
-            m_colors.row(i) << map_color(t), 1;
+        if (num_implicits > 1) {
+            for (int i = 0; i < num_implicits; i++) {
+                double t = double(i) / double(num_implicits - 1);
+                m_colors.row(i) << map_color(t), 1;
+            }
+        } else if (num_implicits == 1) {
+            m_colors.row(0) << map_color(0.5), 1;
+        }
+    }
+
+public:
+    void save_all(const std::string& filename) const {
+        save_output(filename);
+        save_sample_points(filename);
+        save_implicit_meshes(filename);
+        save_implicits("psi_cache");
+    }
+
+    void save_sample_points(const std::string& filename) const
+    {
+        const auto pos = filename.rfind('.');
+        const auto basename = filename.substr(0, pos);
+        const auto ext = filename.substr(pos);
+
+        const double l = get_grid_diag();
+        const size_t num_implicits = get_num_implicits();
+        for (size_t i=0; i<num_implicits; i++) {
+            const auto& pts = get_implicit_function(i).get_sample_points();
+            std::vector<IGL_Mesh> point_meshes;
+            point_meshes.reserve(pts.size());
+            for (const auto& p : pts) {
+                point_meshes.push_back(Mesh_PSI::generate_unit_sphere(8, 16, false));
+                auto& mesh = point_meshes.back();
+                mesh.vertices = mesh.vertices.array() * (l / 100);
+                mesh.vertices.rowwise() += p.transpose();
+            }
+
+            IGL_Mesh point_mesh;
+            Eigen::VectorXi face_to_mesh;
+            Mesh_PSI::merge_meshes(point_meshes, point_mesh, face_to_mesh);
+
+            igl::write_triangle_mesh(basename + "_sample_points_" + std::to_string(i) + ext,
+                    point_mesh.vertices, point_mesh.faces);
+        }
+    }
+
+    void save_implicit_meshes(const std::string& filename) const
+    {
+        const auto pos = filename.rfind('.');
+        const auto basename = filename.substr(0, pos);
+        const auto ext = filename.substr(pos);
+        const size_t num_implicits = get_num_implicits();
+
+        for (size_t i=0; i<num_implicits; i++) {
+            const auto& mesh = get_implicit_meshes()[i+1];
+            igl::write_triangle_mesh(basename + "_implicit_" + std::to_string(i) + ext,
+                    mesh.vertices, mesh.faces);
+        }
+    }
+
+    void save_output(const std::string& filename) const
+    {
+        const auto pos = filename.rfind('.');
+        const auto basename = filename.substr(0, pos);
+        const auto ext = filename.substr(pos);
+        const size_t num_patches = get_num_patches();
+        const size_t num_implicits = get_num_implicits();
+        const auto& patches = get_patches();
+        auto visible = get_patch_labels();
+        assert(num_patches == patches.size());
+        assert(num_patches == visible.size());
+
+        const size_t num_faces = m_faces.rows();
+        FaceArray visible_faces(num_faces, 3);
+        FaceArray patch_faces(num_faces, 3);
+        std::vector<FaceArray> visible_implicit_faces(num_implicits);
+        std::vector<size_t> face_counts(num_implicits, 0);
+        for (size_t i=0; i<num_implicits; i++) {
+            visible_implicit_faces[i].resize(num_faces, 3);
         }
 
-        // m_colors.setRandom(num_implicits, 4);
-        // m_colors = m_colors.array() * 0.5 + 0.5;
-        // m_colors.col(3).setConstant(0.5);
+        size_t count=0;
+        for (size_t i=0; i<num_patches; i++) {
+            if (!visible[i]) continue;
+
+            size_t local_count = 0;
+            const auto& patch = patches[i];
+            const auto& implicit_id = get_implicit_from_patch(i);
+            patch_faces.resize(patch.size(), 3);
+            for (auto j : patch) {
+                visible_faces.row(count) = m_faces.row(j);
+                patch_faces.row(local_count) = m_faces.row(j);
+                visible_implicit_faces[implicit_id].row(face_counts[implicit_id] + local_count) =
+                    m_faces.row(j);
+
+                count++;
+                local_count++;
+            }
+            face_counts[implicit_id] += local_count;
+            //igl::write_triangle_mesh(basename + "_patch_" + std::to_string(i) + ext, m_vertices, patch_faces);
+        }
+        visible_faces.conservativeResize(count, 3);
+        igl::write_triangle_mesh(filename, m_vertices, visible_faces);
+
+        for (size_t i=0; i<num_implicits; i++) {
+            visible_implicit_faces[i].conservativeResize(face_counts[i], 3);
+            igl::write_triangle_mesh(basename + "_visible_implicit_" + std::to_string(i) + ext,
+                    m_vertices, visible_implicit_faces[i]);
+        }
+    }
+
+    void save_implicits(const std::string& output_dir) const {
+        m_psi->export_sampled_implicits(output_dir);
     }
 
 private:

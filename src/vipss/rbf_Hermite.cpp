@@ -198,7 +198,7 @@ void RBF_Core::Set_HermiteRBF(vector<double>&pts){
     //for(auto a:pts)cout<<a<<' ';cout<<endl;
     isHermite = true;
 
-    int dim = point_dimension;
+    const int dim = point_dimension;
 
     a.set_size(npt*(dim+1));
     M.set_size(npt*(dim+1),npt*(dim+1));
@@ -215,11 +215,12 @@ void RBF_Core::Set_HermiteRBF(vector<double>&pts){
 
     //M01
 //    double G[3];
-    double G[dim];
+    //double G[dim];
+    std::vector<double> G(dim);
     for(int i=0;i<npt;++i){
         for(int j=0;j<npt;++j){
 
-            Kernal_Gradient_Function_2p(p_pts+i*dim, p_pts+j*dim, G);
+            Kernal_Gradient_Function_2p(p_pts+i*dim, p_pts+j*dim, G.data());
 
 
             for(int k=0;k<dim;++k)M(i,npt+j+k*npt) = G[k];
@@ -230,11 +231,12 @@ void RBF_Core::Set_HermiteRBF(vector<double>&pts){
 
     //M11
 //    double H[9];
-    double H[dim*dim];
+    //double H[dim*dim];
+    std::vector<double> H(dim * dim);
     for(int i=0;i<npt;++i){
         for(int j=i;j<npt;++j){
 
-            Kernal_Hessian_Function_2p(p_pts+i*dim, p_pts+j*dim, H);
+            Kernal_Hessian_Function_2p(p_pts+i*dim, p_pts+j*dim, H.data());
 
 
             for(int k=0;k<dim;++k)

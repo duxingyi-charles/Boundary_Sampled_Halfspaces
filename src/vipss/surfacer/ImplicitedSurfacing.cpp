@@ -1,5 +1,8 @@
 #include "ImplicitedSurfacing.h"
 
+#include <algorithm>
+#include <chrono>
+
 
 typedef std::chrono::high_resolution_clock Clock;
 
@@ -33,8 +36,8 @@ void Surfacer::CalSurfacingPara(vector<double>&Vs, int nvoxels){
     for(int i=0;i<nv;++i){
         auto p_v = Vs.data()+i*3;
         for(int j=0;j<3;++j){
-            leftcorner[j] = min(leftcorner[j],p_v[j]);
-            rightcorner[j] = max(rightcorner[j],p_v[j]);
+            leftcorner[j] = std::min(leftcorner[j],p_v[j]);
+            rightcorner[j] = std::max(rightcorner[j],p_v[j]);
             //midpoint[j] += p_v[j];
         }
     }
@@ -45,7 +48,7 @@ void Surfacer::CalSurfacingPara(vector<double>&Vs, int nvoxels){
 
     //double width = MyUtility::_VerticesDistance(leftcorner.data(),rightcorner.data());
     double width = -1;
-    for(int j=0;j<3;++j)width = max(width, fabs(rightcorner[j]-leftcorner[j]));
+    for(int j=0;j<3;++j)width = std::max(width, fabs(rightcorner[j]-leftcorner[j]));
     //dSize = width * 0.02;
     dSize = width * (1./nvoxels);
 
