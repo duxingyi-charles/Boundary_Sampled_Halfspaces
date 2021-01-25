@@ -43,11 +43,21 @@ public:
             std::cerr << "Plane primitive expects 2 control points";
             return;
         }
+        Eigen::Transform<double, 3, Eigen::AffineCompact> transform;
+        transform.setIdentity();
         if ((p - pts[0]).norm() < 1e-6) {
             normal = (pts[1] - pts[0]).normalized();
         } else {
+            transform.translate(pts[0] - p);
             p = pts[0];
         }
+
+        for (auto &P : Sampled_Implicit::sample_points) {
+            P = transform * P;
+            P = P - (P - p).dot(normal) * normal;
+        }
+
+
         m_control_pts = pts;
         m_control_pts[1] = p + normal;
     }
