@@ -52,17 +52,32 @@ public:
             std::cerr << "Cone primitive expects 3 control points";
             return;
         }
+        Eigen::Transform<double, 3, Eigen::AffineCompact> transform;
+        transform.setIdentity();
         m_control_pts = pts;
         if ((pts[0] - apex).norm() < 1e-6) {
-            Point dir = pts[1] - pts[0];
+            Point dir = (pts[1] - pts[0]).normalized();
             if ((dir - axis_unit_vector).norm() < 1e-6) {
                 dir = pts[2] - pts[0];
                 apex_angle = std::atan2(dir.cross(axis_unit_vector).norm(), dir.dot(axis_unit_vector));
             } else {
+                Point axis = axis_unit_vector.cross(dir);
+                double theta = std::atan2(axis.norm(), axis_unit_vector.dot(dir));
+                transform.rotate(Eigen::AngleAxis<double>(theta, axis));
                 axis_unit_vector = dir;
             }
         } else {
+            transform.translate(pts[0] - apex);
             apex = pts[0];
+        }
+
+        // Reproject samples points
+        for (auto& p : Sampled_Implicit::sample_points) {
+            p = transform * p;
+            Point d = p - apex;
+            Point q = apex + d.dot(axis_unit_vector) * axis_unit_vector;
+            double r = (q - apex).norm() * std::tan(apex_angle);
+            p = q + (p - q).normalized() * r;
         }
 
         m_control_pts[1] = apex + axis_unit_vector;
