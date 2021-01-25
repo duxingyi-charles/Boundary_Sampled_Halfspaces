@@ -427,7 +427,7 @@ private:
      * Shoot a ray from camera through the screen point (x,y) and see which
      * patch it hits.  The result will be stored in m_pick_state.
      */
-    void pick(igl::opengl::glfw::Viewer& viewer, double x, double y)
+    void pick(igl::opengl::glfw::Viewer& viewer, double x, double y, bool visible_only = false, bool active_only=false)
     {
         m_pick_state.reset();
         const size_t num_patches = m_states->get_num_patches();
@@ -443,6 +443,9 @@ private:
         // Check if any visible patch is picked.
         for (size_t i = 0; i < num_patches; i++) {
             if (!m_patch_visible[i]) continue;
+            if (active_only &&
+                    m_states->get_implicit_from_patch(i) != m_active_state.active_implicit_id)
+                continue;
             const auto pid = m_data_ids[i];
             const auto& V = viewer.data(pid).V;
             const auto& F = viewer.data(pid).F;
@@ -554,7 +557,7 @@ private:
             } else {
                 // Pick to see if we hit an implicit surface.
                 m_active_state.active_point_id = -1;
-                pick(viewer, x, y);
+                pick(viewer, x, y, m_shift_down);
             }
             return false;
         };
@@ -598,25 +601,9 @@ private:
                 } else {
                     // Update sample point.  Keep sample point on the implicit
                     // surface.
-                    auto pid = m_implicit_data_ids[m_active_state.active_implicit_id];
-                    const auto& V = viewer.data(pid).V;
-                    const auto& F = viewer.data(pid).F;
-                    int fid;
-                    Eigen::Vector3f bc;
-                    if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
-                            viewer.core().view,
-                            viewer.core().proj,
-                            viewer.core().viewport,
-                            V,
-                            F,
-                            fid,
-                            bc)) {
-                        const int v0 = F(fid, 0);
-                        const int v1 = F(fid, 1);
-                        const int v2 = F(fid, 2);
-                        Eigen::RowVector3d p =
-                            V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
-
+                    pick(viewer, x, y, m_shift_down, true);
+                    if (m_pick_state.hit) {
+                        auto& p = m_pick_state.hit_point;
                         viewer.data(view_id).points.row(point_id).template segment<3>(0) = p;
                         const auto& fn =
                             m_states->get_implicit_function(m_active_state.active_implicit_id);
@@ -747,7 +734,7 @@ private:
                         initialize_data(viewer);
                     }
                 }
-            } else if (is_patch_active && m_pick_state.hit && mouse_moved && modifier == 1) {
+            } else if (is_patch_active && m_pick_state.hit && mouse_moved && m_shift_down) {
                 // Translated.
                 translate_implicit();
                 if (m_interactive) {
