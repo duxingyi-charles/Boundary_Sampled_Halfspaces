@@ -39,9 +39,7 @@ public:
         params.consider_adj_diff = true;
         m_psi->set_parameters(params);
 
-        m_psi->run(grid, implicits);
-        initialize_states();
-        initialize_colors();
+        refresh();
     }
 
     const VertexArray& get_vertices() const { return m_vertices; }
@@ -73,9 +71,7 @@ public:
         m_implicits.push_back(std::make_unique<Plane_sImplicit>(p, n));
         auto& fn = m_implicits.back();
         fn->set_sample_points({p});
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
+        refresh();
     }
 
     void add_sphere(const Point& center, double radius)
@@ -83,9 +79,7 @@ public:
         m_implicits.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
         auto& fn = m_implicits.back();
         fn->set_sample_points({Point(center + Point(radius, 0, 0))});
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
+        refresh();
     }
 
     void add_cylinder(const Point& center, const Point& axis, double radius)
@@ -97,9 +91,7 @@ public:
             d = Point(0, 0, 1).cross(axis);
         }
         fn->set_sample_points({Point(center + d * radius)});
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
+        refresh();
     }
 
     void add_cone(const Point& center, const Point& axis, double angle)
@@ -107,9 +99,7 @@ public:
         m_implicits.push_back(std::make_unique<Cone_sImplicit>(center, axis, angle, false));
         auto& fn = m_implicits.back();
         fn->set_sample_points({center});
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
+        refresh();
     }
 
     void add_torus(const Point& center, const Point& axis, double R, double r)
@@ -121,17 +111,13 @@ public:
             d = Point(0, 0, 1).cross(axis);
         }
         fn->set_sample_points({center + d * (R + r)});
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
+        refresh();
     }
 
     void add_vipss(const std::vector<Point>& ctrl_pts, const std::vector<Point>& sample_pts)
     {
         m_implicits.push_back(std::make_unique<Hermite_RBF_sImplicit>(ctrl_pts, sample_pts));
-        m_psi->run(m_grid, m_implicits);
-        initialize_states();
-        initialize_colors();
+        refresh();
     }
 
     void remove_implicit(size_t i) {
@@ -162,6 +148,7 @@ public:
     {
         m_psi->run(m_grid, m_implicits);
         initialize_states();
+        initialize_reference_length();
         initialize_colors();
     }
 
@@ -195,6 +182,15 @@ private:
             m_faces(i, 0) = F[i][0];
             m_faces(i, 1) = F[i][1];
             m_faces(i, 2) = F[i][2];
+        }
+    }
+
+    void initialize_reference_length()
+    {
+        // TODO: reference length is for UI only.  Should not live inside the
+        // implicit classes.
+        for (auto& fn : m_implicits) {
+            fn->set_reference_length(get_grid_diag() / 10);
         }
     }
 

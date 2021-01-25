@@ -32,7 +32,7 @@ public:
     {
         if (m_control_pts.empty()) {
             m_control_pts.push_back(p);
-            m_control_pts.push_back(p + normal);
+            m_control_pts.push_back(p + m_reference_length * normal);
         }
         return m_control_pts;
     }

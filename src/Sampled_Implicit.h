@@ -59,11 +59,14 @@ public:
         }
     }
 
+    void set_reference_length(double l) {
+        m_reference_length = l;
+    }
 
 protected:
 
 	std::vector<Point> sample_points;
-
+    double m_reference_length = 1;
 };
 
 #endif

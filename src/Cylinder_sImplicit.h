@@ -47,7 +47,7 @@ public:
     {
         if (m_control_pts.empty()) {
             m_control_pts.push_back(axis_point);
-            m_control_pts.push_back(axis_point + axis_unit_vector);
+            m_control_pts.push_back(axis_point + radius * axis_unit_vector);
             if (std::abs(axis_unit_vector[1]) < 0.9) {
                 Point dir = Point(0, 1, 0).cross(axis_unit_vector);
                 m_control_pts.push_back(axis_point + radius * dir);
