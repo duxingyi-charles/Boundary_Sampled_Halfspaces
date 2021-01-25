@@ -60,8 +60,13 @@ public:
         if ((center - pts[0]).norm() < 1e-6) {
             Point dir = (pts[1] - pts[0]).normalized();
             if ((dir - axis_unit_vector).norm() < 1e-6) {
-                major_radius = (pts[2] - pts[0]).norm();
-                minor_radius  = (pts[3] - pts[2]).norm();
+                auto R = (pts[2] - pts[0]).norm();
+                auto r= (pts[3] - pts[2]).norm();
+                if (std::abs(R - major_radius) < 1e-6) {
+                    minor_radius = r;
+                } else {
+                    major_radius = R;
+                }
             } else {
                 axis_unit_vector = dir;
             }
