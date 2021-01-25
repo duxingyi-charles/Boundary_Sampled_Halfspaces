@@ -60,7 +60,6 @@ public:
     }
 
 
-
 protected:
 
 	std::vector<Point> sample_points;
