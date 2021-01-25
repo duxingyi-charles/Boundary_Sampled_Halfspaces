@@ -62,6 +62,8 @@ protected:
             const std::vector<std::vector<int>> &F,
             const std::vector<std::vector<int>> &P,
             const std::vector<int> &P_Impl,
+            const std::vector<bool> &P_touch_bbox,
+            const double &bbox_area,
             const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr,
             bool  use_distance_weighted_area,
             //output
@@ -176,6 +178,9 @@ public:
     bool export_sampled_implicits(const std::string &output_dir) const;
 
 protected:
+    // bounding box
+    double bbox_area;
+
     // vertices
     std::vector<Point> V;
     // faces
@@ -207,6 +212,8 @@ protected:
     std::vector<std::vector<int>> P_block;
     // sign of implicit on blocks incident to each patch
     std::vector<std::vector<int>> P_sign;
+    // flag: whether the patch touches the bounding box
+    std::vector<bool> P_touch_bbox;
 
     // --- parameters for connected state search ---
     // flag: use state-space graph-cut or not

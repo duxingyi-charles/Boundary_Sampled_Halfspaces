@@ -31,3 +31,13 @@ GridSpec GridSpec::parse_grid_spec(const std::string& grid_spec) {
     return spec;
 }
 
+
+double GridSpec::get_bbox_area() const {
+    double dx = fabs(bbox_max.x() - bbox_min.x());
+    double dy = fabs(bbox_max.y() - bbox_min.y());
+    double dz = fabs(bbox_max.z() - bbox_min.z());
+
+    return 2 * (dx*dy + dx*dz + dy*dz);
+
+}
+

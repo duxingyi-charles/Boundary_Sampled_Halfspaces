@@ -27,6 +27,8 @@ public:
     Eigen::Vector3d bbox_max;
 
     static GridSpec parse_grid_spec(const std::string& grid_spec);
+
+    double get_bbox_area() const;
 };
 
 

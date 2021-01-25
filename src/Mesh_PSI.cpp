@@ -864,12 +864,46 @@ void Mesh_PSI::compute_arrangement(
     std::vector<int> patch_impl(num_patch, -1);
     auto face_to_patch = engine->get_patches();
 
+    std::vector<bool> vertex_on_bbox(V.size(), false);
+    double eps_x = (bbox_max.x()-bbox_min.x()) / 1000;
+    double eps_y = (bbox_max.y()-bbox_min.y()) / 1000;
+    double eps_z = (bbox_max.z()-bbox_min.z()) / 1000;
+    for (int i = 0; i < V.size(); ++i) {
+        double x = V[i].x();
+        double y = V[i].y();
+        double z = V[i].z();
+        if (fabs(x - bbox_min.x())< eps_x || fabs(x - bbox_max.x()) < eps_x
+            || fabs(y - bbox_min.y())< eps_y || fabs(y - bbox_max.y()) < eps_y
+            || fabs(z - bbox_min.z())< eps_z || fabs(z - bbox_max.z()) < eps_z){
+            vertex_on_bbox[i] = true;
+        }
+    }
+
+
     for (int i=0; i<F.size(); i++) {
         int implicit_id = result_face_to_implicit(i);
         // the current face (belongs to OR resides outside) grid cube
-        if (implicit_id == -1 || F_outside[i]) continue;
+//        if (implicit_id == -1 || F_outside[i]) continue;
+        if (implicit_id == -1) {
+            for (auto vi : F[i]) {
+                vertex_on_bbox[vi] = true;
+            }
+            continue;
+        }
+        if (F_outside[i]) continue;
         int patch_id = face_to_patch(i);
         patch_impl[patch_id] = implicit_id;
+    }
+
+    // label faces that touch the bounding box
+    std::vector<bool> face_touch_bbox(F.size(), false);
+    for (int i = 0; i < F.size(); ++i) {
+        for (auto vi : F[i]) {
+            if (vertex_on_bbox[vi]) {
+                face_touch_bbox[i] = true;
+                break;
+            }
+        }
     }
 
     //blocks incident to each patch
@@ -926,6 +960,8 @@ void Mesh_PSI::compute_arrangement(
     // collect faces belonging to each patches
     P.clear();
     P.resize(num_patch);
+    P_touch_bbox.clear();
+    P_touch_bbox.resize(num_patch, false);
     F_Impl.clear();
     F_Impl.resize(F.size(), -1);  // -1 for faces on/outside grid cube
     for (int i=0; i<F.size(); ++i) {
@@ -933,6 +969,9 @@ void Mesh_PSI::compute_arrangement(
         if (patch_id != -1) {  // current patch not deleted
             P[patch_id].push_back(i);
             F_Impl[i] = P_Impl[patch_id];
+            if (face_touch_bbox[i]) {
+                P_touch_bbox[patch_id] = true;
+            }
         }
     }
 
