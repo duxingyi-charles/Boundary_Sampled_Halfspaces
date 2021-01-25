@@ -28,6 +28,9 @@ public:
         , m_implicits(implicits)
     {
         m_psi = std::make_unique<Mesh_PSI>();
+        m_bbox.resize(2, 3);
+        m_bbox.row(0) = grid.bbox_min;
+        m_bbox.row(1) = grid.bbox_max;
 
         PSI_Param params;
         params.use_distance_weighted_area = false;
@@ -171,8 +174,8 @@ private:
         for (size_t i = 0; i < num_vertices; i++) {
             m_vertices.row(i) = V[i];
         }
-        m_bbox.row(0) = m_vertices.colwise().minCoeff();
-        m_bbox.row(1) = m_vertices.colwise().maxCoeff();
+        //m_bbox.row(0) = m_vertices.colwise().minCoeff();
+        //m_bbox.row(1) = m_vertices.colwise().maxCoeff();
 
         size_t num_triangles = 0;
         for (size_t i = 0; i < num_faces; i++) {
