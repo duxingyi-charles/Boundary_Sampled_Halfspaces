@@ -84,7 +84,7 @@ public:
             center = pts[0];
         }
         m_control_pts = pts;
-        m_control_pts[1] = center + axis_unit_vector;
+        m_control_pts[1] = center + axis_unit_vector * major_radius;
 
         // Reproject sample points.
         for (auto &p : Sampled_Implicit::sample_points) {

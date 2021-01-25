@@ -169,7 +169,7 @@ private:
             }
             if (ImGui::Button("Plane", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
-                m_states->add_plane(bbox.colwise().mean(), Point(0, 0, 1));
+                m_states->add_plane(bbox.colwise().mean(), Point(0, 1, 0));
                 post_update_geometry();
             }
             ImGui::SameLine();
@@ -188,13 +188,13 @@ private:
             ImGui::SameLine();
             if (ImGui::Button("Cone", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
-                m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI / 4);
+                m_states->add_cone(bbox.colwise().mean(), Point(0, -1, 0), M_PI / 4);
                 post_update_geometry();
             }
             if (ImGui::Button("Torus", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
-                m_states->add_torus(bbox.colwise().mean(), Point(0, 0, 1), l/3, l/20);
+                m_states->add_torus(bbox.colwise().mean(), Point(0, 1, 0), l/3, l/20);
                 post_update_geometry();
             }
             ImGui::SameLine();
