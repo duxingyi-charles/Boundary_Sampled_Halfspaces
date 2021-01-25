@@ -134,6 +134,10 @@ public:
         initialize_colors();
     }
 
+    void remove_implicit(size_t i) {
+        m_implicits.erase(m_implicits.begin() + i);
+    }
+
     Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
     const Sampled_Implicit& get_implicit_function(size_t i) const { return *m_implicits[i]; }
 

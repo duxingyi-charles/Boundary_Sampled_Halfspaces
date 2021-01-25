@@ -788,11 +788,22 @@ private:
                 m_show_wire_frame = !m_show_wire_frame;
                 reset_patch_visibility(viewer);
                 return true;
-            }
-            if (key == 259 || key == 88) {
-                remove_active_point(viewer);
+            } else if (key == 257) {
+                m_states->refresh();
+                initialize_data(viewer);
+                m_active_state.reset();
                 reset_patch_visibility(viewer);
                 return true;
+            } else if (key == 259 || key == 88) {
+                if (m_active_state.active_implicit_id >= 0) {
+                    if (m_active_state.active_point_id >= 0) {
+                        remove_active_point(viewer);
+                    } else {
+                        remove_active_implicit(viewer);
+                    }
+                    reset_patch_visibility(viewer);
+                    return true;
+                }
             }
             return false;
         };
@@ -842,6 +853,15 @@ private:
             }
             m_active_state.active_point_id = -1;
         }
+    }
+
+    void remove_active_implicit(igl::opengl::glfw::Viewer& viewer)
+    {
+        if (m_active_state.active_implicit_id < 0) return;
+        m_states->remove_implicit(m_active_state.active_implicit_id);
+        m_states->refresh();
+        initialize_data(viewer);
+        m_active_state.reset();
     }
 
     Eigen::RowVector3d get_control_pt_color(int implicit_id) const
