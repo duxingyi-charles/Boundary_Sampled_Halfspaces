@@ -535,7 +535,7 @@ private:
             return -1;
         };
 
-        viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
+        viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
             m_mouse_down = true;
             m_pick_state.reset();
 
@@ -543,7 +543,9 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             m_down_x = x;
             m_down_y = y;
-            std::cout << "Mouse down: " << x << ", " << y << std::endl;
+            std::cout << "Mouse down: " << x << ", " << y;
+            std::cout << " Key: " << key << ", " << modifier << std::endl;
+            m_shift_down = modifier == 1;
 
             auto hit_point_id = has_hit_point(x, y);
             if (hit_point_id >= 0) {
@@ -560,7 +562,7 @@ private:
 
     void initialize_mouse_move_behaviors(igl::opengl::glfw::Viewer& viewer)
     {
-        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
+        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
 
@@ -633,7 +635,7 @@ private:
                 const bool is_implicit_active = m_active_state.active_implicit_id >= 0;
                 const bool is_point_active = m_active_state.active_point_id >= 0;
                 if (is_implicit_active && !is_point_active) {
-                    if (modifier == 1 && m_pick_state.hit) {
+                    if (m_shift_down && m_pick_state.hit) {
                         return true;
                     }
                 } else if (is_implicit_active && is_point_active) {
@@ -658,6 +660,7 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             std::cout << "Mouse up: " << x << ", " << y;
             std::cout << " Key: " << key << ", " << modifier << std::endl;
+            m_shift_down = modifier == 1;
             const bool mouse_moved = (x != m_down_x) || (y != m_down_y);
             const bool is_patch_active = m_active_state.active_implicit_id >= 0;
             const bool is_point_active = is_patch_active && m_active_state.active_point_id >= 0;
@@ -888,6 +891,7 @@ private:
     bool m_interactive = true;
 
     bool m_mouse_down = false;
+    bool m_shift_down = false;
     PickState m_pick_state;
     ActiveState m_active_state;
 };
