@@ -33,6 +33,8 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
     // make a pointer to the input implicits
     Impl_ptr = &implicits;
 
+    bbox_area = grid.get_bbox_area();
+
     compute_arrangement_for_graph_cut(grid, implicits);
     arrangement_ready = true;
     ready_for_graph_cut = true;
@@ -43,7 +45,7 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
 void PSI::process_samples() {
     ScopedTimer<> timer("process samples");
     if (arrangement_ready) {
-        process_samples(V,F,P,P_Impl,Impl_ptr,use_distance_weighted_area,P_samples,P_dist);
+        process_samples(V,F,P,P_Impl,P_touch_bbox,bbox_area,Impl_ptr,use_distance_weighted_area,P_samples,P_dist);
         ready_for_graph_cut = true;
     } else {
         std::cout << "Error: you should compute arrangement before handling samples." << std::endl;
@@ -57,6 +59,8 @@ void PSI::process_samples(
         const std::vector<std::vector<int>> &F,
         const std::vector<std::vector<int>> &P,
         const std::vector<int> &P_Impl,
+        const std::vector<bool> &P_touch_bbox,
+        const double &bbox_area,
         const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr,
         bool use_distance_weighted_area,
         //output
@@ -178,9 +182,20 @@ void PSI::process_samples(
             P_dist[i] += weighted_area;
         }
     }
-    for (auto &d : P_dist) {
-        if (!isfinite((d))) d = infinity;
+//    for (auto &d : P_dist) {
+//        if (!isfinite((d))) d = infinity;
+//    }
+    for (int i = 0; i < P_dist.size(); ++i) {
+        if (isfinite(P_dist[i])) {
+            if (P_touch_bbox[i]) {
+                P_dist[i] += 2 * bbox_area;
+            }
+        } else {
+            P_dist[i] = infinity;
+        }
     }
+
+
 
     // extract sample points on patches
     P_samples.clear();
@@ -917,7 +932,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
     if (Impl_ptr_sparse == nullptr) {
         P_samples_sparse.resize(num_patch);  // no samples at all
     } else {
-        process_samples(V,F,P,P_Impl,Impl_ptr_sparse,use_distance_weighted_area,P_samples_sparse,P_dist_sparse);
+        process_samples(V,F,P,P_Impl,P_touch_bbox,bbox_area,Impl_ptr_sparse,use_distance_weighted_area,P_samples_sparse,P_dist_sparse);
         //To ensure sparse samples are subset of dense samples,
         //replace sparse samples by the their closest points in the dense samples
         for (int pi = 0; pi < P_samples_sparse.size(); ++pi) {
