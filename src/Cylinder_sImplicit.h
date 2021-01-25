@@ -7,8 +7,8 @@
 
 #include "Sampled_Implicit.h"
 
-#include <iostream>
 #include <Eigen/Dense>
+#include <iostream>
 
 class Cylinder_sImplicit : public Sampled_Implicit
 {
@@ -64,16 +64,30 @@ public:
             std::cerr << "Cylinder primitive expects 3 control points";
             return;
         }
+        Eigen::Transform<double, 3, Eigen::AffineCompact> transform;
+        transform.setIdentity();
         m_control_pts = pts;
         if ((axis_point - pts[0]).norm() < 1e-6) {
             const Point dir = (pts[1] - pts[0]).normalized();
             if ((dir - axis_unit_vector).norm() < 1e-6) {
                 radius = (pts[2] - pts[0]).norm();
             } else {
+                Point axis = axis_unit_vector.cross(dir);
+                double theta = std::atan2(axis.norm(), axis_unit_vector.dot(dir));
+                transform.rotate(Eigen::AngleAxis<double>(theta, axis));
                 axis_unit_vector = dir;
             }
         } else {
+            transform.translate(pts[0] - axis_point);
             axis_point = pts[0];
+        }
+
+        // Reproject sample points
+        for (auto &p : Sampled_Implicit::sample_points) {
+            p = transform * p;
+            Point d = p - axis_point;
+            Point q = axis_point + d.dot(axis_unit_vector) * axis_unit_vector;
+            p = q + (p - q).normalized() * radius;
         }
 
         m_control_pts[1] = axis_point + axis_unit_vector;
@@ -93,9 +107,11 @@ public:
     void get_radius(double &r) const override { r = radius; };
     void get_is_flipped(bool &flip) const override { flip = is_flipped; };
 
-    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+    bool save(
+        const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
 
-    void translate(const Point& t) override {
+    void translate(const Point &t) override
+    {
         Sampled_Implicit::translate(t);
         axis_point += t;
     }
