@@ -1,0 +1,7 @@
+{
+	"use_distance_weighted_area":false,
+	"state_space_search":{
+		"topK":1,
+		"consider_adj_diff":true
+	}
+}
