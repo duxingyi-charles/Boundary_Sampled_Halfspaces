@@ -1,0 +1,94 @@
+{
+    "input": [
+        {
+            "axis_vector": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "center": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "is_flipped": false,
+            "major_radius": 1.0,
+            "minor_radius": 0.11882868712970164,
+            "name": "1",
+            "samples": "1_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "center": [
+                -0.9483771363264867,
+                0.29726132924229015,
+                0.042652827084388126
+            ],
+            "is_flipped": false,
+            "name": "2",
+            "radius": 0.3313708499480782,
+            "samples": "2_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                0.7507620819136142,
+                0.6938077581894825,
+                -6.237040046979378e-17
+            ],
+            "is_flipped": false,
+            "name": "3",
+            "radius": 0.2899957192175061,
+            "samples": "3_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                -0.36260237965980363,
+                0.9317544654947851,
+                0.0574380768078565
+            ],
+            "is_flipped": false,
+            "name": "4",
+            "radius": 0.3313708499480782,
+            "samples": "4_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                -0.6663502808471217,
+                -0.681841430277404,
+                0.022549790645225054
+            ],
+            "is_flipped": false,
+            "name": "5",
+            "radius": 0.3019074197833592,
+            "samples": "5_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                0.1543423657861289,
+                -0.9632557002279379,
+                0.00951558299297335
+            ],
+            "is_flipped": false,
+            "name": "6",
+            "radius": 0.29263309765162226,
+            "samples": "6_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                1.0304499163138727,
+                -0.10658858677373513,
+                -0.020466697016537635
+            ],
+            "is_flipped": false,
+            "name": "7",
+            "radius": 0.2818127475204743,
+            "samples": "7_sample.xyz",
+            "type": "sphere"
+        }
+    ]
+}
