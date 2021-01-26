@@ -93,13 +93,15 @@ public:
             p = q + (p - q).normalized() * r;
         }
 
-        m_control_pts[1] = apex + axis_unit_vector;
+        m_control_pts[1] = apex + m_reference_length * axis_unit_vector;
         if (std::abs(axis_unit_vector[1]) < 0.9) {
             Point dir = (Eigen::Vector3d(0, 1, 0).cross(axis_unit_vector.transpose())).transpose();
-            m_control_pts[2] = apex + axis_unit_vector + dir * std::sin(apex_angle);
+            m_control_pts[2] =
+                apex + m_reference_length * (axis_unit_vector + dir * std::sin(apex_angle));
         } else {
             Point dir = (Eigen::Vector3d(0, 0, 1).cross(axis_unit_vector.transpose())).transpose();
-            m_control_pts[2] = apex + axis_unit_vector + dir * std::sin(apex_angle);
+            m_control_pts[2] =
+                apex + m_reference_length * (axis_unit_vector + dir * std::sin(apex_angle));
         }
     }
 

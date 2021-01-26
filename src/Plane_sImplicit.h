@@ -59,7 +59,7 @@ public:
 
 
         m_control_pts = pts;
-        m_control_pts[1] = p + normal;
+        m_control_pts[1] = p + m_reference_length * normal;
     }
 
     // getter
