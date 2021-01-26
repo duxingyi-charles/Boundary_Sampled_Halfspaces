@@ -1,0 +1,94 @@
+{
+    "input": [
+        {
+            "center": [
+                73.2938,
+                -53.9443,
+                -26.6887
+            ],
+            "is_flipped": false,
+            "name": "1",
+            "radius": 24.2416,
+            "samples": "1_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                22.1625,
+                -56.4808,
+                -68.679
+            ],
+            "is_flipped": false,
+            "name": "2",
+            "radius": 24.7782,
+            "samples": "2_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "name": "3",
+            "points": "3.xyz",
+            "rbf_coeffs": "3_rbfCoeff",
+            "samples": "3_sample.xyz",
+            "type": "rbf"
+        },
+        {
+            "center": [
+                26.9631,
+                -44.9035,
+                29.2031
+            ],
+            "is_flipped": false,
+            "name": "4",
+            "radius": 24.5445,
+            "samples": "4_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "center": [
+                -25.1439,
+                -49.4676,
+                -11.7943
+            ],
+            "is_flipped": false,
+            "name": "5",
+            "radius": 24.7194,
+            "samples": "5_sample.xyz",
+            "type": "sphere"
+        },
+        {
+            "axis_vector": [
+                0.6327012018820509,
+                -0.009765500532308284,
+                -0.7743344394616334
+            ],
+            "center": [
+                78.24106456350661,
+                -41.00762710537585,
+                -88.14967155514566
+            ],
+            "is_flipped": false,
+            "major_radius": 9.210790737015905,
+            "minor_radius": 2.129730560260423,
+            "name": "6",
+            "samples": "6_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "apex": [
+                99.03001020218937,
+                8.752470284950714,
+                -114.66196043296078
+            ],
+            "apex_angle": 0.3301815110522764,
+            "axis_vector": [
+                -0.5917741832790603,
+                -0.3977236827989719,
+                0.7011556090806261
+            ],
+            "is_flipped": false,
+            "name": "7",
+            "samples": "7_sample.xyz",
+            "type": "cone"
+        }
+    ]
+}
