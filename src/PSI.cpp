@@ -185,10 +185,11 @@ void PSI::process_samples(
 //    for (auto &d : P_dist) {
 //        if (!isfinite((d))) d = infinity;
 //    }
+    double touching_bbox_penalty_rate = 2;
     for (int i = 0; i < P_dist.size(); ++i) {
         if (isfinite(P_dist[i])) {
             if (P_touch_bbox[i]) {
-                P_dist[i] += 2 * bbox_area;
+                P_dist[i] += touching_bbox_penalty_rate * bbox_area;
             }
         } else {
             P_dist[i] = infinity;
