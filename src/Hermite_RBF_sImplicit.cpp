@@ -315,6 +315,20 @@ void Hermite_RBF_sImplicit::consistent_update_RBF_coeff(const std::vector<Point>
     }
 }
 
+void Hermite_RBF_sImplicit::reproject_samples() {
+    for (auto& p : Sampled_Implicit::sample_points) {
+        double v = function_at(p);
+        auto g = gradient_at(p);
+        size_t count = 0;
+        while (std::abs(v) > 1e-2 && count < 100) {
+            p = p - v / g.norm() * g;
+            v = function_at(p);
+            g = gradient_at(p);
+            count++;
+        }
+    }
+}
+
 void Hermite_RBF_sImplicit::print_coeff() const {
     // coef_a
     std::cout << "coef_a: " << std::endl;

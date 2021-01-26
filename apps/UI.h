@@ -139,6 +139,9 @@ private:
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {
             auto post_update_geometry = [&]() {
+                if (m_interactive) {
+                    m_states->refresh();
+                }
                 initialize_data(viewer);
                 m_active_state.reset();
                 reset_patch_visibility(viewer);
@@ -169,7 +172,7 @@ private:
             }
             if (ImGui::Button("Plane", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
-                m_states->add_plane(bbox.colwise().mean(), Point(0, 0, 1));
+                m_states->add_plane(bbox.colwise().mean(), Point(0, 1, 0));
                 post_update_geometry();
             }
             ImGui::SameLine();
@@ -188,13 +191,13 @@ private:
             ImGui::SameLine();
             if (ImGui::Button("Cone", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
-                m_states->add_cone(bbox.colwise().mean(), Point(0, 0, -1), M_PI / 4);
+                m_states->add_cone(bbox.colwise().mean(), Point(0, -1, 0), M_PI / 4);
                 post_update_geometry();
             }
             if (ImGui::Button("Torus", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
-                m_states->add_torus(bbox.colwise().mean(), Point(0, 0, 1), l/3, l/20);
+                m_states->add_torus(bbox.colwise().mean(), Point(0, 1, 0), l/3, l/20);
                 post_update_geometry();
             }
             ImGui::SameLine();
@@ -204,7 +207,7 @@ private:
                 std::vector<Point> pts(3);
                 pts[0] = bbox.colwise().mean();
                 pts[1] = pts[0] + Point(l/20, 0, 0);
-                pts[2] = pts[0] + Point(0, l/20, 0);
+                pts[2] = pts[0] + Point(0, 0, l/20);
                 m_states->add_vipss(pts, pts);
                 post_update_geometry();
             }
@@ -291,9 +294,9 @@ private:
             // Change the color intensity for different patches within the same
             // implicit.
             Eigen::RowVector4d color = m_states->get_implicit_color(implicit_id);
-            color.template segment<3>(0) +=
-                (Eigen::RowVector3d::Ones() - color.template segment<3>(0)) * (double)(i) /
-                (double)(num_patches * 2 + 1);
+            //color.template segment<3>(0) +=
+            //    (Eigen::RowVector3d::Ones() - color.template segment<3>(0)) * (double)(i) /
+            //    (double)(num_patches * 2 + 1);
 
             viewer.data(id).set_mesh(vertices, patch_faces);
             viewer.data(id).set_colors(color);
@@ -427,7 +430,7 @@ private:
      * Shoot a ray from camera through the screen point (x,y) and see which
      * patch it hits.  The result will be stored in m_pick_state.
      */
-    void pick(igl::opengl::glfw::Viewer& viewer, double x, double y)
+    void pick(igl::opengl::glfw::Viewer& viewer, double x, double y, bool visible_only = false, bool active_only=false)
     {
         m_pick_state.reset();
         const size_t num_patches = m_states->get_num_patches();
@@ -443,6 +446,9 @@ private:
         // Check if any visible patch is picked.
         for (size_t i = 0; i < num_patches; i++) {
             if (!m_patch_visible[i]) continue;
+            if (active_only &&
+                    m_states->get_implicit_from_patch(i) != m_active_state.active_implicit_id)
+                continue;
             const auto pid = m_data_ids[i];
             const auto& V = viewer.data(pid).V;
             const auto& F = viewer.data(pid).F;
@@ -535,7 +541,7 @@ private:
             return -1;
         };
 
-        viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
+        viewer.callback_mouse_down = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
             m_mouse_down = true;
             m_pick_state.reset();
 
@@ -543,7 +549,9 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             m_down_x = x;
             m_down_y = y;
-            std::cout << "Mouse down: " << x << ", " << y << std::endl;
+            std::cout << "Mouse down: " << x << ", " << y;
+            std::cout << " Key: " << key << ", " << modifier << std::endl;
+            m_shift_down = modifier == 1;
 
             auto hit_point_id = has_hit_point(x, y);
             if (hit_point_id >= 0) {
@@ -552,7 +560,7 @@ private:
             } else {
                 // Pick to see if we hit an implicit surface.
                 m_active_state.active_point_id = -1;
-                pick(viewer, x, y);
+                pick(viewer, x, y, m_shift_down);
             }
             return false;
         };
@@ -560,7 +568,7 @@ private:
 
     void initialize_mouse_move_behaviors(igl::opengl::glfw::Viewer& viewer)
     {
-        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int key, int modifier) -> bool {
+        viewer.callback_mouse_move = [&](igl::opengl::glfw::Viewer& viewer, int, int) -> bool {
             double x = viewer.current_mouse_x;
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
 
@@ -596,25 +604,9 @@ private:
                 } else {
                     // Update sample point.  Keep sample point on the implicit
                     // surface.
-                    auto pid = m_implicit_data_ids[m_active_state.active_implicit_id];
-                    const auto& V = viewer.data(pid).V;
-                    const auto& F = viewer.data(pid).F;
-                    int fid;
-                    Eigen::Vector3f bc;
-                    if (igl::unproject_onto_mesh(Eigen::Vector2f(x, y),
-                            viewer.core().view,
-                            viewer.core().proj,
-                            viewer.core().viewport,
-                            V,
-                            F,
-                            fid,
-                            bc)) {
-                        const int v0 = F(fid, 0);
-                        const int v1 = F(fid, 1);
-                        const int v2 = F(fid, 2);
-                        Eigen::RowVector3d p =
-                            V.row(v0) * bc[0] + V.row(v1) * bc[1] + V.row(v2) * bc[2];
-
+                    pick(viewer, x, y, m_shift_down, true);
+                    if (m_pick_state.hit) {
+                        auto& p = m_pick_state.hit_point;
                         viewer.data(view_id).points.row(point_id).template segment<3>(0) = p;
                         const auto& fn =
                             m_states->get_implicit_function(m_active_state.active_implicit_id);
@@ -633,7 +625,7 @@ private:
                 const bool is_implicit_active = m_active_state.active_implicit_id >= 0;
                 const bool is_point_active = m_active_state.active_point_id >= 0;
                 if (is_implicit_active && !is_point_active) {
-                    if (modifier == 1 && m_pick_state.hit) {
+                    if (m_shift_down && m_pick_state.hit) {
                         return true;
                     }
                 } else if (is_implicit_active && is_point_active) {
@@ -658,6 +650,7 @@ private:
             double y = viewer.core().viewport(3) - viewer.current_mouse_y;
             std::cout << "Mouse up: " << x << ", " << y;
             std::cout << " Key: " << key << ", " << modifier << std::endl;
+            m_shift_down = modifier == 1;
             const bool mouse_moved = (x != m_down_x) || (y != m_down_y);
             const bool is_patch_active = m_active_state.active_implicit_id >= 0;
             const bool is_point_active = is_patch_active && m_active_state.active_point_id >= 0;
@@ -744,7 +737,7 @@ private:
                         initialize_data(viewer);
                     }
                 }
-            } else if (is_patch_active && m_pick_state.hit && mouse_moved && modifier == 1) {
+            } else if (is_patch_active && m_pick_state.hit && mouse_moved && m_shift_down) {
                 // Translated.
                 translate_implicit();
                 if (m_interactive) {
@@ -798,11 +791,22 @@ private:
                 m_show_wire_frame = !m_show_wire_frame;
                 reset_patch_visibility(viewer);
                 return true;
-            }
-            if (key == 259 || key == 88) {
-                remove_active_point(viewer);
+            } else if (key == 257) {
+                m_states->refresh();
+                initialize_data(viewer);
+                m_active_state.reset();
                 reset_patch_visibility(viewer);
                 return true;
+            } else if (key == 259 || key == 88) {
+                if (m_active_state.active_implicit_id >= 0) {
+                    if (m_active_state.active_point_id >= 0) {
+                        remove_active_point(viewer);
+                    } else {
+                        remove_active_implicit(viewer);
+                    }
+                    reset_patch_visibility(viewer);
+                    return true;
+                }
             }
             return false;
         };
@@ -854,6 +858,15 @@ private:
         }
     }
 
+    void remove_active_implicit(igl::opengl::glfw::Viewer& viewer)
+    {
+        if (m_active_state.active_implicit_id < 0) return;
+        m_states->remove_implicit(m_active_state.active_implicit_id);
+        m_states->refresh();
+        initialize_data(viewer);
+        m_active_state.reset();
+    }
+
     Eigen::RowVector3d get_control_pt_color(int implicit_id) const
     {
         Eigen::RowVector4d implicit_color = m_states->get_implicit_color(implicit_id);
@@ -888,6 +901,7 @@ private:
     bool m_interactive = true;
 
     bool m_mouse_down = false;
+    bool m_shift_down = false;
     PickState m_pick_state;
     ActiveState m_active_state;
 };

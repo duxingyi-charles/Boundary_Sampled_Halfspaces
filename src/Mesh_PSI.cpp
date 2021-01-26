@@ -113,6 +113,11 @@ void Mesh_PSI::merge_meshes(const std::vector<IGL_Mesh>& meshes,
 
 }
 
+void Mesh_PSI::add_implicit(const GridSpec &grid, const std::unique_ptr<Sampled_Implicit>& fn) {
+    m_implicit_meshes.emplace_back();
+    update_implicit(grid, fn, m_implicit_meshes.size()-2);
+}
+
 void Mesh_PSI::update_implicit(
         const GridSpec &grid,
         const std::unique_ptr<Sampled_Implicit>& fn, size_t i) {

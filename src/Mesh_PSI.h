@@ -24,6 +24,8 @@ public:
         return m_implicit_meshes;
     }
 
+    void add_implicit(const GridSpec &grid, const std::unique_ptr<Sampled_Implicit> &fn);
+
     void update_implicit(
             const GridSpec &grid,
             const std::unique_ptr<Sampled_Implicit> &fn, size_t i) override;

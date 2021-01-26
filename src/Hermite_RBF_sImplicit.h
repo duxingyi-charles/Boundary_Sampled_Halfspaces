@@ -48,6 +48,7 @@ public:
     }
 
     void consistent_update_RBF_coeff(const std::vector<Point> &points);
+    void reproject_samples();
 
     void flip_sign() {
         coeff_a *= -1;
@@ -56,7 +57,10 @@ public:
 
     bool has_control_points() const override { return true; }
     const std::vector<Point> &get_control_points() const override { return control_points; }
-    void set_control_points(const std::vector<Point> &pts) override { consistent_update_RBF_coeff(pts); }
+    void set_control_points(const std::vector<Point> &pts) override {
+        consistent_update_RBF_coeff(pts);
+        reproject_samples();
+    }
 
     Eigen::VectorXd get_coeff_a() const { return coeff_a; };
     Eigen::Vector4d get_ceoff_b() const { return coeff_b; };

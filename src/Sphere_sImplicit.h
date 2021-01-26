@@ -8,6 +8,7 @@
 #include "Sampled_Implicit.h"
 
 #include <iostream>
+#include <Eigen/Geometry>
 
 class Sphere_sImplicit : public Sampled_Implicit {
    public:
@@ -52,15 +53,24 @@ class Sphere_sImplicit : public Sampled_Implicit {
             std::cerr << "Sphere primitive expects at least 1 control points";
             return;
         }
+        Eigen::Transform<double, 3, Eigen::AffineCompact> transform;
+        transform.setIdentity();
         m_control_pts = pts;
         if ((center - pts[0]).squaredNorm() < 1e-12) {
             // Update radius
             radius = (pts[1] - pts[0]).norm();
         } else {
             // Update center;
+            transform.translate(pts[0] - center);
             center = pts[0];
         }
         m_control_pts[1] = center + Point(radius, 0, 0);
+
+        // Reproject sample points.
+        for (auto &p : Sampled_Implicit::sample_points) {
+            p = transform * p;
+            p = center + (p - center).normalized() * radius;
+        }
     }
 
     std::string get_type() const override { return "sphere"; }

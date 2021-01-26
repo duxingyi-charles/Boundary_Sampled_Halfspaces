@@ -7,21 +7,27 @@
 
 #include "Sampled_Implicit.h"
 
-#include <iostream>
 #include <Eigen/Dense>
+#include <iostream>
 
 
 class Cone_sImplicit : public Sampled_Implicit
 {
 public:
     // standard cone
-    Cone_sImplicit() : Sampled_Implicit(),
-    apex(0,0,0), axis_unit_vector(0,0,-1), apex_angle(M_PI/4), is_flipped(false)
-    {};
+    Cone_sImplicit()
+        : Sampled_Implicit()
+        , apex(0, 0, 0)
+        , axis_unit_vector(0, 0, -1)
+        , apex_angle(M_PI / 4)
+        , is_flipped(false){};
 
-    Cone_sImplicit(const Point &p, const Eigen::Vector3d &v, double a, bool flip) : Sampled_Implicit(),
-    apex(p), axis_unit_vector(v.normalized()), apex_angle(fmod(a,M_PI)), is_flipped(flip)
-    {};
+    Cone_sImplicit(const Point &p, const Eigen::Vector3d &v, double a, bool flip)
+        : Sampled_Implicit()
+        , apex(p)
+        , axis_unit_vector(v.normalized())
+        , apex_angle(fmod(a, M_PI))
+        , is_flipped(flip){};
 
     ~Cone_sImplicit() override = default;
 
@@ -29,49 +35,73 @@ public:
 
 
     double function_at(const Point &x) const override;
-    Eigen::Vector3d   gradient_at(const Point &x) const override;
+    Eigen::Vector3d gradient_at(const Point &x) const override;
     void flip() override { is_flipped = !is_flipped; }
 
     bool has_control_points() const override { return true; }
-    const std::vector<Point>& get_control_points() const override {
+    const std::vector<Point> &get_control_points() const override
+    {
         if (m_control_pts.empty()) {
             m_control_pts.push_back(apex);
-            m_control_pts.push_back(apex + axis_unit_vector);
+            m_control_pts.push_back(apex + m_reference_length * axis_unit_vector);
             if (std::abs(axis_unit_vector[1]) < 0.9) {
-                Point dir = (Eigen::Vector3d(0, 1, 0).cross(axis_unit_vector.transpose())).transpose();
-                m_control_pts.push_back(apex + axis_unit_vector + dir * std::sin(apex_angle));
+                Point dir =
+                    (Eigen::Vector3d(0, 1, 0).cross(axis_unit_vector.transpose())).transpose();
+                m_control_pts.push_back(
+                    apex + m_reference_length * (axis_unit_vector + dir * std::sin(apex_angle)));
             } else {
-                Point dir = (Eigen::Vector3d(0, 0, 1).cross(axis_unit_vector.transpose())).transpose();
-                m_control_pts.push_back(apex + axis_unit_vector + dir * std::sin(apex_angle));
+                Point dir =
+                    (Eigen::Vector3d(0, 0, 1).cross(axis_unit_vector.transpose())).transpose();
+                m_control_pts.push_back(
+                    apex + m_reference_length * (axis_unit_vector + dir * std::sin(apex_angle)));
             }
         }
         return m_control_pts;
     }
-    void set_control_points(const std::vector<Point>& pts) override {
+    void set_control_points(const std::vector<Point> &pts) override
+    {
         if (pts.size() != 3) {
             std::cerr << "Cone primitive expects 3 control points";
             return;
         }
+        Eigen::Transform<double, 3, Eigen::AffineCompact> transform;
+        transform.setIdentity();
         m_control_pts = pts;
         if ((pts[0] - apex).norm() < 1e-6) {
-            Point dir = pts[1] - pts[0];
+            Point dir = (pts[1] - pts[0]).normalized();
             if ((dir - axis_unit_vector).norm() < 1e-6) {
                 dir = pts[2] - pts[0];
-                apex_angle = std::atan2(dir.cross(axis_unit_vector).norm(), dir.dot(axis_unit_vector));
+                apex_angle =
+                    std::atan2(dir.cross(axis_unit_vector).norm(), dir.dot(axis_unit_vector));
             } else {
+                Point axis = axis_unit_vector.cross(dir);
+                double theta = std::atan2(axis.norm(), axis_unit_vector.dot(dir));
+                transform.rotate(Eigen::AngleAxis<double>(theta, axis));
                 axis_unit_vector = dir;
             }
         } else {
+            transform.translate(pts[0] - apex);
             apex = pts[0];
         }
 
-        m_control_pts[1] = apex + axis_unit_vector;
+        // Reproject samples points
+        for (auto &p : Sampled_Implicit::sample_points) {
+            p = transform * p;
+            Point d = p - apex;
+            Point q = apex + d.dot(axis_unit_vector) * axis_unit_vector;
+            double r = (q - apex).norm() * std::tan(apex_angle);
+            p = q + (p - q).normalized() * r;
+        }
+
+        m_control_pts[1] = apex + m_reference_length * axis_unit_vector;
         if (std::abs(axis_unit_vector[1]) < 0.9) {
             Point dir = (Eigen::Vector3d(0, 1, 0).cross(axis_unit_vector.transpose())).transpose();
-            m_control_pts[2] = apex + axis_unit_vector + dir * std::sin(apex_angle);
+            m_control_pts[2] =
+                apex + m_reference_length * (axis_unit_vector + dir * std::sin(apex_angle));
         } else {
             Point dir = (Eigen::Vector3d(0, 0, 1).cross(axis_unit_vector.transpose())).transpose();
-            m_control_pts[2] = apex + axis_unit_vector + dir * std::sin(apex_angle);
+            m_control_pts[2] =
+                apex + m_reference_length * (axis_unit_vector + dir * std::sin(apex_angle));
         }
     }
 
@@ -80,9 +110,11 @@ public:
     void get_apex_angle(double &a) const override { a = apex_angle; };
     void get_is_flipped(bool &flip) const override { flip = is_flipped; };
 
-    bool save(const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
+    bool save(
+        const std::string &dir, const std::string &name, nlohmann::json &json_obj) const override;
 
-    void translate(const Point& t) override {
+    void translate(const Point &t) override
+    {
         Sampled_Implicit::translate(t);
         apex += t;
     }
@@ -101,4 +133,4 @@ private:
     mutable std::vector<Point> m_control_pts;
 };
 
-#endif //PSI_CONE_SIMPLICIT_H
+#endif // PSI_CONE_SIMPLICIT_H
