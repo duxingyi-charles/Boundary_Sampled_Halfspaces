@@ -207,7 +207,7 @@ private:
                 std::vector<Point> pts(3);
                 pts[0] = bbox.colwise().mean();
                 pts[1] = pts[0] + Point(l/20, 0, 0);
-                pts[2] = pts[0] + Point(0, l/20, 0);
+                pts[2] = pts[0] + Point(0, 0, l/20);
                 m_states->add_vipss(pts, pts);
                 post_update_geometry();
             }
