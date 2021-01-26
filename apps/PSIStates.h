@@ -60,7 +60,7 @@ public:
     const int get_implicit_from_patch(int patch_id) const { return get_patch_implicit()[patch_id]; }
     const Eigen::RowVector4d get_implicit_color(int implicit_id) const
     {
-        return m_colors.row(implicit_id);
+        return m_colors[implicit_id];
     }
 
     void set_resolution(int res) { m_grid.resolution << res, res, res; }
@@ -71,7 +71,9 @@ public:
         m_implicits.push_back(std::make_unique<Plane_sImplicit>(p, n));
         auto& fn = m_implicits.back();
         fn->set_sample_points({p});
-        refresh();
+        fn->set_reference_length(get_grid_diag() / 10);
+        m_psi->add_implicit(m_grid, fn);
+        add_color();
     }
 
     void add_sphere(const Point& center, double radius)
@@ -79,7 +81,9 @@ public:
         m_implicits.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
         auto& fn = m_implicits.back();
         fn->set_sample_points({Point(center + Point(radius, 0, 0))});
-        refresh();
+        fn->set_reference_length(get_grid_diag() / 10);
+        m_psi->add_implicit(m_grid, fn);
+        add_color();
     }
 
     void add_cylinder(const Point& center, const Point& axis, double radius)
@@ -91,7 +95,9 @@ public:
             d = Point(0, 0, 1).cross(axis);
         }
         fn->set_sample_points({Point(center + d * radius)});
-        refresh();
+        fn->set_reference_length(get_grid_diag() / 10);
+        m_psi->add_implicit(m_grid, fn);
+        add_color();
     }
 
     void add_cone(const Point& center, const Point& axis, double angle)
@@ -99,7 +105,9 @@ public:
         m_implicits.push_back(std::make_unique<Cone_sImplicit>(center, axis, angle, false));
         auto& fn = m_implicits.back();
         fn->set_sample_points({center});
-        refresh();
+        fn->set_reference_length(get_grid_diag() / 10);
+        m_psi->add_implicit(m_grid, fn);
+        add_color();
     }
 
     void add_torus(const Point& center, const Point& axis, double R, double r)
@@ -111,13 +119,18 @@ public:
             d = Point(0, 0, 1).cross(axis);
         }
         fn->set_sample_points({center + d * (R + r)});
-        refresh();
+        fn->set_reference_length(get_grid_diag() / 10);
+        m_psi->add_implicit(m_grid, fn);
+        add_color();
     }
 
     void add_vipss(const std::vector<Point>& ctrl_pts, const std::vector<Point>& sample_pts)
     {
         m_implicits.push_back(std::make_unique<Hermite_RBF_sImplicit>(ctrl_pts, sample_pts));
-        refresh();
+        auto& fn = m_implicits.back();
+        fn->set_reference_length(get_grid_diag() / 10);
+        m_psi->add_implicit(m_grid, fn);
+        add_color();
     }
 
     void remove_implicit(size_t i) {
@@ -215,15 +228,23 @@ private:
     void initialize_colors()
     {
         const auto num_implicits = m_implicits.size();
-        m_colors.resize(num_implicits, 4);
+        m_colors.resize(num_implicits);
         if (num_implicits > 1) {
             for (int i = 0; i < num_implicits; i++) {
                 double t = double(i) / double(num_implicits - 1);
-                m_colors.row(i) << map_color(t), 1;
+                m_colors[i] << map_color(t), 1;
             }
         } else if (num_implicits == 1) {
-            m_colors.row(0) << map_color(0.5), 1;
+            m_colors[0] << map_color(0.5), 1;
         }
+    }
+
+    void add_color()
+    {
+        Eigen::Matrix<double, 1, 4> color;
+        color << map_color(double(m_colors.size() % 10) / 10.0), 1;
+        m_colors.push_back(color);
+        assert(m_colors.size() == m_implicits.size());
     }
 
 public:
@@ -341,6 +362,6 @@ private:
     VertexArray m_vertices;
     FaceArray m_faces;
     Eigen::Matrix<double, 2, 3> m_bbox;
-    Eigen::Matrix<double, Eigen::Dynamic, 4> m_colors;
+    std::vector<Eigen::Matrix<double, 1, 4>> m_colors;
 };
 

@@ -139,6 +139,9 @@ private:
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {
             auto post_update_geometry = [&]() {
+                if (m_interactive) {
+                    m_states->refresh();
+                }
                 initialize_data(viewer);
                 m_active_state.reset();
                 reset_patch_visibility(viewer);
