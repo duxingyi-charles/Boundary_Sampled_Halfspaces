@@ -294,9 +294,9 @@ private:
             // Change the color intensity for different patches within the same
             // implicit.
             Eigen::RowVector4d color = m_states->get_implicit_color(implicit_id);
-            color.template segment<3>(0) +=
-                (Eigen::RowVector3d::Ones() - color.template segment<3>(0)) * (double)(i) /
-                (double)(num_patches * 2 + 1);
+            //color.template segment<3>(0) +=
+            //    (Eigen::RowVector3d::Ones() - color.template segment<3>(0)) * (double)(i) /
+            //    (double)(num_patches * 2 + 1);
 
             viewer.data(id).set_mesh(vertices, patch_faces);
             viewer.data(id).set_colors(color);
