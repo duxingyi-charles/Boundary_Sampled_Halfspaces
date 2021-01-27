@@ -808,6 +808,11 @@ private:
                     reset_patch_visibility(viewer);
                     return true;
                 }
+            } else if (key == 96) {
+                if (m_ui_mode == 0) m_ui_mode = 1;
+                else m_ui_mode = 0;
+                m_active_state.active_point_id = -1;
+                reset_patch_visibility(viewer);
             }
             return false;
         };
