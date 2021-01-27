@@ -143,7 +143,8 @@ private:
                     m_states->refresh();
                 }
                 initialize_data(viewer);
-                m_active_state.reset();
+                m_active_state.active_point_id = -1;
+                m_active_state.active_implicit_id = m_states->get_num_implicits() - 1;
                 reset_patch_visibility(viewer);
             };
 
@@ -179,7 +180,7 @@ private:
             if (ImGui::Button("Sphere", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 const auto l = (bbox.row(1) - bbox.row(0)).minCoeff();
-                m_states->add_sphere(bbox.colwise().mean(), l / 3);
+                m_states->add_sphere(bbox.colwise().mean(), 0.3);
                 post_update_geometry();
             }
             if (ImGui::Button("Cylinder", ImVec2(width / 2.1, 0.0f))) {
