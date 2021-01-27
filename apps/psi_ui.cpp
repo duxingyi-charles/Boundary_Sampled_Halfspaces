@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     ui.set_states(&states);
     ui.initialize(viewer);
 
-    viewer.launch_init(true, false, "Implicit Modeling");
+    viewer.launch_init(true, false, "BSH Modeling");
     auto bbox = states.get_bbox();
     viewer.core().align_camera_center(bbox);
     viewer.launch_rendering(true);
