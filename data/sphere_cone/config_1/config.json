@@ -10,7 +10,8 @@
             "name": "1",
             "radius": 0.7,
             "samples": "1_sample.xyz",
-            "type": "sphere"
+            "type": "sphere",
+            "color": [0.324106, 0.6089696666666666, 0.7083413333333334, 1]
         },
         {
             "apex": [
@@ -27,7 +28,8 @@
             "is_flipped": false,
             "name": "2",
             "samples": "2_sample.xyz",
-            "type": "cone"
+            "type": "cone",
+            "color": [0.764712, 0.7283023333333333, 0.27360833333333334, 1]
         },
         {
             "name": "3",

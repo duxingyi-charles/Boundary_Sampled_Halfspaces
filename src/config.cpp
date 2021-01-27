@@ -277,6 +277,15 @@ initialize_sampled_implicit_functions(const std::string& config_file) {
             throw std::runtime_error(
                 type+":Unsupported implicit function type detected");
         }
+
+        if (entry.contains("color")) {
+            auto& c = entry["color"];
+            implicit_functions.back()->set_color({
+                    c[0].get<double>(),
+                    c[1].get<double>(),
+                    c[2].get<double>(),
+                    c[3].get<double>()});
+        }
     }
 
     return implicit_functions;

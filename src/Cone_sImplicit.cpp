@@ -26,6 +26,12 @@ bool Cone_sImplicit::save(const std::string &dir, const std::string &name, nlohm
     json_obj["apex_angle"] = apex_angle;
     json_obj["is_flipped"] = is_flipped;
     json_obj["name"] = name;
+    json_obj["color"] = {
+        Sampled_Implicit::m_color[0],
+        Sampled_Implicit::m_color[1],
+        Sampled_Implicit::m_color[2],
+        Sampled_Implicit::m_color[3]
+    };
 
     std::string sample_filename = name + "_sample.xyz";
     json_obj["samples"] = sample_filename;

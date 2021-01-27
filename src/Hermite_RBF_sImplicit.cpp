@@ -436,6 +436,13 @@ bool Hermite_RBF_sImplicit::save(const std::string &dir, const std::string &name
     json_obj["type"] = "rbf";
     json_obj["name"] = name;
 
+    json_obj["color"] = {
+        Sampled_Implicit::m_color[0],
+        Sampled_Implicit::m_color[1],
+        Sampled_Implicit::m_color[2],
+        Sampled_Implicit::m_color[3]
+    };
+
     // control points
     std::string point_filename = name + ".xyz";
     json_obj["points"] = point_filename;

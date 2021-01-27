@@ -16,6 +16,12 @@ bool Plane_sImplicit::save(const std::string &dir, const std::string &name, nloh
     json_obj["point"] = {p.x(), p.y(), p.z()};
     json_obj["normal"] = {normal.x(), normal.y(), normal.z()};
     json_obj["name"] = name;
+    json_obj["color"] = {
+        Sampled_Implicit::m_color[0],
+        Sampled_Implicit::m_color[1],
+        Sampled_Implicit::m_color[2],
+        Sampled_Implicit::m_color[3]
+    };
 
     std::string sample_filename = name + "_sample.xyz";
     json_obj["samples"] = sample_filename;
