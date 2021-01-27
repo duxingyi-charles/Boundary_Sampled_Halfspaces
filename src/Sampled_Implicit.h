@@ -63,10 +63,21 @@ public:
         m_reference_length = l;
     }
 
+    const Eigen::RowVector4d& get_color() const {
+        return m_color;
+    }
+    Eigen::RowVector4d& get_color() {
+        return m_color;
+    }
+    void set_color(const Eigen::RowVector4d& c) {
+        m_color = c;
+    }
+
 protected:
 
 	std::vector<Point> sample_points;
     double m_reference_length = 1;
+    Eigen::RowVector4d m_color {0, 0, 0, 1};
 };
 
 #endif

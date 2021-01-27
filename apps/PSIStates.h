@@ -61,7 +61,7 @@ public:
     const int get_implicit_from_patch(int patch_id) const { return get_patch_implicit()[patch_id]; }
     const Eigen::RowVector4d get_implicit_color(int implicit_id) const
     {
-        return m_colors[implicit_id];
+        return m_implicits[implicit_id]->get_color();
     }
 
     void set_resolution(int res) { m_grid.resolution << res, res, res; }
@@ -73,8 +73,8 @@ public:
         auto& fn = m_implicits.back();
         fn->set_sample_points({p});
         fn->set_reference_length(get_grid_diag() / 10);
+        fn->set_color(get_new_color());
         m_psi->add_implicit(m_grid, fn);
-        add_color();
     }
 
     void add_sphere(const Point& center, double radius)
@@ -83,8 +83,8 @@ public:
         auto& fn = m_implicits.back();
         fn->set_sample_points({Point(center + Point(radius, 0, 0))});
         fn->set_reference_length(get_grid_diag() / 10);
+        fn->set_color(get_new_color());
         m_psi->add_implicit(m_grid, fn);
-        add_color();
     }
 
     void add_cylinder(const Point& center, const Point& axis, double radius)
@@ -97,8 +97,8 @@ public:
         }
         fn->set_sample_points({Point(center + d * radius)});
         fn->set_reference_length(get_grid_diag() / 10);
+        fn->set_color(get_new_color());
         m_psi->add_implicit(m_grid, fn);
-        add_color();
     }
 
     void add_cone(const Point& center, const Point& axis, double angle)
@@ -107,8 +107,8 @@ public:
         auto& fn = m_implicits.back();
         fn->set_sample_points({center});
         fn->set_reference_length(get_grid_diag() / 10);
+        fn->set_color(get_new_color());
         m_psi->add_implicit(m_grid, fn);
-        add_color();
     }
 
     void add_torus(const Point& center, const Point& axis, double R, double r)
@@ -121,8 +121,8 @@ public:
         }
         fn->set_sample_points({center + d * (R + r)});
         fn->set_reference_length(get_grid_diag() / 10);
+        fn->set_color(get_new_color());
         m_psi->add_implicit(m_grid, fn);
-        add_color();
     }
 
     void add_vipss(const std::vector<Point>& ctrl_pts, const std::vector<Point>& sample_pts)
@@ -130,15 +130,11 @@ public:
         m_implicits.push_back(std::make_unique<Hermite_RBF_sImplicit>(ctrl_pts, sample_pts));
         auto& fn = m_implicits.back();
         fn->set_reference_length(get_grid_diag() / 10);
+        fn->set_color(get_new_color());
         m_psi->add_implicit(m_grid, fn);
-        add_color();
     }
 
-    void remove_implicit(size_t i) {
-        m_implicits.erase(m_implicits.begin() + i);
-        m_colors.erase(m_colors.begin() + i);
-        assert(m_implicits.size() == m_colors.size());
-    }
+    void remove_implicit(size_t i) { m_implicits.erase(m_implicits.begin() + i); }
 
     Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
     const Sampled_Implicit& get_implicit_function(size_t i) const { return *m_implicits[i]; }
@@ -180,8 +176,8 @@ private:
         for (size_t i = 0; i < num_vertices; i++) {
             m_vertices.row(i) = V[i];
         }
-        //m_bbox.row(0) = m_vertices.colwise().minCoeff();
-        //m_bbox.row(1) = m_vertices.colwise().maxCoeff();
+        // m_bbox.row(0) = m_vertices.colwise().minCoeff();
+        // m_bbox.row(1) = m_vertices.colwise().maxCoeff();
 
         size_t num_triangles = 0;
         for (size_t i = 0; i < num_faces; i++) {
@@ -209,7 +205,8 @@ private:
         }
     }
 
-    Eigen::Matrix<double, Eigen::Dynamic, 3> get_old_pallette() const {
+    Eigen::Matrix<double, Eigen::Dynamic, 3> get_old_pallette() const
+    {
         Eigen::Matrix<double, 8, 3> pallette;
         // pallette << 0x8d, 0xd3, 0xc7, 0xff, 0xff, 0xb3, 0xbe, 0xba, 0xda, 0xfb, 0x80, 0x72, 0x80,
         //    0xb1, 0xd3, 0xfd, 0xb4, 0x62, 0xb3, 0xde, 0x69, 0xfc, 0xcd, 0xe5;
@@ -219,32 +216,23 @@ private:
         return pallette;
     }
 
-    Eigen::Matrix<double, Eigen::Dynamic, 3> get_rainbow_pallette() const {
+    Eigen::Matrix<double, Eigen::Dynamic, 3> get_rainbow_pallette() const
+    {
         Eigen::Matrix<double, Eigen::Dynamic, 3> pallette(11, 3);
-        pallette <<
-            126, 41, 135,
-            82, 70, 156,
-            71, 98, 173,
-            45, 149, 196,
-            69, 174, 153,
-            113, 189, 103,
-            164, 192,60,
-            210, 183, 43,
-            239, 151, 33,
-            241, 91, 34,
-            237, 28, 36;
+        pallette << 126, 41, 135, 82, 70, 156, 71, 98, 173, 45, 149, 196, 69, 174, 153, 113, 189,
+            103, 164, 192, 60, 210, 183, 43, 239, 151, 33, 241, 91, 34, 237, 28, 36;
         return pallette;
     }
 
-    Eigen::Matrix<double, 1, 3> map_color(double t)
+    Eigen::Matrix<double, 1, 3> map_color(double t) const
     {
         auto pallette = get_rainbow_pallette();
         const auto n = pallette.rows();
         t = std::max<double>(std::min<double>(t, 1), 0);
         size_t i0 = static_cast<size_t>(std::floor(t * n));
         size_t i1 = static_cast<size_t>(std::ceil(t * n));
-        i0 = std::min<size_t>(i0, n-1);
-        i1 = std::min<size_t>(i1, n-1);
+        i0 = std::min<size_t>(i0, n - 1);
+        i1 = std::min<size_t>(i1, n - 1);
 
         const double d = t * n - i0;
         return (pallette.row(i0) * (1 - d) + pallette.row(i1) * d) / 255.0;
@@ -253,27 +241,38 @@ private:
     void initialize_colors()
     {
         const auto num_implicits = m_implicits.size();
-        m_colors.resize(num_implicits);
-        if (num_implicits > 1) {
-            for (int i = 0; i < num_implicits; i++) {
-                double t = double(i+1) / double(num_implicits + 1);
-                m_colors[i] << map_color(t), 1;
+        for (size_t i = 0; i < num_implicits; i++) {
+            auto& color = m_implicits[i]->get_color();
+            if (color.template segment<3>(0).norm() == 0) {
+                color = get_new_color(i);
             }
-        } else if (num_implicits == 1) {
-            m_colors[0] << map_color(0.5), 1;
         }
     }
 
-    void add_color()
+    Eigen::RowVector4d get_new_color() const {
+        return get_new_color(m_implicits.size() - 1);
+    }
+
+    Eigen::RowVector4d get_new_color(size_t i) const
     {
+        auto halton_sequence = [](int i, int b) -> double {
+            double f = 1;
+            double r = 0;
+            while (i > 0) {
+                f = f / b;
+                r = r + f * (i % b);
+                i = i / b;
+            }
+            return r;
+        };
         Eigen::Matrix<double, 1, 4> color;
-        color << map_color(double(m_colors.size() % 11) / 10.0), 1;
-        m_colors.push_back(color);
-        assert(m_colors.size() == m_implicits.size());
+        color << map_color(halton_sequence(i, 3)), 1;
+        return color;
     }
 
 public:
-    void save_all(const std::string& filename) const {
+    void save_all(const std::string& filename) const
+    {
         save_output(filename);
         save_sample_points(filename);
         save_implicit_meshes(filename);
@@ -288,7 +287,7 @@ public:
 
         const double l = get_grid_diag();
         const size_t num_implicits = get_num_implicits();
-        for (size_t i=0; i<num_implicits; i++) {
+        for (size_t i = 0; i < num_implicits; i++) {
             const auto& pts = get_implicit_function(i).get_sample_points();
             std::vector<IGL_Mesh> point_meshes;
             point_meshes.reserve(pts.size());
@@ -304,7 +303,8 @@ public:
             Mesh_PSI::merge_meshes(point_meshes, point_mesh, face_to_mesh);
 
             igl::write_triangle_mesh(basename + "_sample_points_" + std::to_string(i) + ext,
-                    point_mesh.vertices, point_mesh.faces);
+                point_mesh.vertices,
+                point_mesh.faces);
         }
     }
 
@@ -315,10 +315,10 @@ public:
         const auto ext = filename.substr(pos);
         const size_t num_implicits = get_num_implicits();
 
-        for (size_t i=0; i<num_implicits; i++) {
-            const auto& mesh = get_implicit_meshes()[i+1];
-            igl::write_triangle_mesh(basename + "_implicit_" + std::to_string(i) + ext,
-                    mesh.vertices, mesh.faces);
+        for (size_t i = 0; i < num_implicits; i++) {
+            const auto& mesh = get_implicit_meshes()[i + 1];
+            igl::write_triangle_mesh(
+                basename + "_implicit_" + std::to_string(i) + ext, mesh.vertices, mesh.faces);
         }
     }
 
@@ -339,12 +339,12 @@ public:
         FaceArray patch_faces(num_faces, 3);
         std::vector<FaceArray> visible_implicit_faces(num_implicits);
         std::vector<size_t> face_counts(num_implicits, 0);
-        for (size_t i=0; i<num_implicits; i++) {
+        for (size_t i = 0; i < num_implicits; i++) {
             visible_implicit_faces[i].resize(num_faces, 3);
         }
 
-        size_t count=0;
-        for (size_t i=0; i<num_patches; i++) {
+        size_t count = 0;
+        for (size_t i = 0; i < num_patches; i++) {
             if (!visible[i]) continue;
 
             size_t local_count = 0;
@@ -361,19 +361,22 @@ public:
                 local_count++;
             }
             face_counts[implicit_id] += local_count;
-            //igl::write_triangle_mesh(basename + "_patch_" + std::to_string(i) + ext, m_vertices, patch_faces);
+            // igl::write_triangle_mesh(basename + "_patch_" + std::to_string(i) + ext, m_vertices,
+            // patch_faces);
         }
         visible_faces.conservativeResize(count, 3);
         igl::write_triangle_mesh(filename, m_vertices, visible_faces);
 
-        for (size_t i=0; i<num_implicits; i++) {
+        for (size_t i = 0; i < num_implicits; i++) {
             visible_implicit_faces[i].conservativeResize(face_counts[i], 3);
             igl::write_triangle_mesh(basename + "_visible_implicit_" + std::to_string(i) + ext,
-                    m_vertices, visible_implicit_faces[i]);
+                m_vertices,
+                visible_implicit_faces[i]);
         }
     }
 
-    void save_implicits(const std::string& output_dir) const {
+    void save_implicits(const std::string& output_dir) const
+    {
         m_psi->export_sampled_implicits(output_dir);
     }
 
@@ -387,6 +390,5 @@ private:
     VertexArray m_vertices;
     FaceArray m_faces;
     Eigen::Matrix<double, 2, 3> m_bbox;
-    std::vector<Eigen::Matrix<double, 1, 4>> m_colors;
 };
 
