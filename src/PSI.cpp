@@ -1088,31 +1088,30 @@ void PSI::compute_patch_adjacency(
         std::vector<std::vector<int>> &P_Adj_same,   // adjacent patches on same implicit function
         std::vector<std::vector<int>> &P_Adj_diff    // adjacent patches on different implicit function
 ) {
-    // find patches incident to each vertex
-    std::vector<std::unordered_set<int>> V_patch(V.size());
+    // find patches incident to each edge
+    typedef std::pair<int,int> Edge;
+    std::map<Edge,std::vector<int>> E_patch;
 
     for (int pi = 0; pi < P.size(); ++pi) {
         for (auto fi : P[pi]) {
-            for (auto vi : F[fi]) {
-                V_patch[vi].insert(pi);
-            }
+            int v1 = F[fi][0];
+            int v2 = F[fi][1];
+            int v3 = F[fi][2];
+            E_patch[Edge(std::min(v1,v2),std::max(v1,v2))].push_back(pi);
+            E_patch[Edge(std::min(v1,v3),std::max(v1,v3))].push_back(pi);
+            E_patch[Edge(std::min(v3,v2),std::max(v3,v2))].push_back(pi);
         }
     }
 
-    // convert to vectors
-    std::vector<std::vector<int>> V_patch_vec;
-    V_patch_vec.reserve(V.size());
-    for (auto &patches : V_patch) {
-        V_patch_vec.emplace_back(patches.begin(), patches.end());
-    }
 
     // compute patch adjacency
     std::vector<std::unordered_set<int>> patch_adj_same(P.size());
     std::vector<std::unordered_set<int>> patch_adj_diff(P.size());
-    for (auto &patches: V_patch_vec) {
-        if (patches.size() > 1) {
-            for (int i = 0; i < patches.size(); ++i) {
-                for (int j = i+1; j < patches.size(); ++j) {
+    for (auto it = E_patch.begin(); it != E_patch.end(); ++it) {
+        const auto & patches = it->second;
+        for (int i = 0; i < patches.size(); ++i) {
+            for (int j = i+1; j < patches.size(); ++j) {
+                if (patches[i] != patches[j]) {
                     if (P_Impl[patches[i]] == P_Impl[patches[j]]) {
                         patch_adj_same[patches[i]].insert(patches[j]);
                         patch_adj_same[patches[j]].insert(patches[i]);
@@ -1121,8 +1120,10 @@ void PSI::compute_patch_adjacency(
                         patch_adj_diff[patches[j]].insert(patches[i]);
                     }
                 }
+
             }
         }
+
     }
 
     // copy unordered_sets to vectors
