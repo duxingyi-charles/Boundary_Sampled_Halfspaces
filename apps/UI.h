@@ -166,6 +166,9 @@ private:
             if (ImGui::Checkbox("Interactive", &m_interactive)) {
                 reset_patch_visibility(viewer);
             }
+            if (ImGui::Checkbox("Depth check", &m_depth_check)) {
+                update_depth_check(viewer);
+            }
             static int res = m_states->get_resolution();
             ImGui::SetNextItemWidth(-1);
             if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
@@ -380,7 +383,7 @@ private:
             }
 
             // add_secondary_implicit_data(viewer, id, fn);
-            viewer.data(id).show_overlay_depth = 0;
+            viewer.data(id).show_overlay_depth = m_depth_check;
         }
 
         m_sample_view_ids.reserve(num_implicits);
@@ -398,7 +401,7 @@ private:
                     (p + n.normalized() * l / 20).transpose(),
                     Eigen::RowVector3d(0, 0, 0));
             }
-            //viewer.data(id).show_overlay_depth = 0;
+            viewer.data(id).show_overlay_depth = m_depth_check;
             viewer.data(id).show_lines = true;
         }
     }
@@ -789,16 +792,19 @@ private:
             [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifier) -> bool {
             std::cout << "Key up   -- Key: " << key << " Modifier: " << modifier << std::endl;
             if (key == 32) {
+                // Space to toggle wireframe view.
                 m_show_wire_frame = !m_show_wire_frame;
                 reset_patch_visibility(viewer);
                 return true;
             } else if (key == 257) {
+                // Enter to rerun the arrangement pipeline and update scene.
                 m_states->refresh();
                 initialize_data(viewer);
                 m_active_state.reset();
                 reset_patch_visibility(viewer);
                 return true;
             } else if (key == 259 || key == 88) {
+                // delete key or x to remove point or implicit surface.
                 if (m_active_state.active_implicit_id >= 0) {
                     if (m_active_state.active_point_id >= 0) {
                         remove_active_point(viewer);
@@ -809,10 +815,15 @@ private:
                     return true;
                 }
             } else if (key == 96) {
+                // '`' to toggle sample/control view mode.
                 if (m_ui_mode == 0) m_ui_mode = 1;
                 else m_ui_mode = 0;
                 m_active_state.active_point_id = -1;
                 reset_patch_visibility(viewer);
+            } else if (key == 68) {
+                // 'd' to toggle depth check.
+                m_depth_check = !m_depth_check;
+                update_depth_check(viewer);
             }
             return false;
         };
@@ -891,6 +902,16 @@ private:
         return pt_color;
     }
 
+    void update_depth_check(igl::opengl::glfw::Viewer& viewer) {
+        for (auto pid : m_control_view_ids) {
+            viewer.data(pid).show_overlay_depth = m_depth_check;
+        }
+        for (auto pid : m_sample_view_ids) {
+            viewer.data(pid).show_overlay_depth = m_depth_check;
+        }
+    }
+
+
 private:
     std::vector<int> m_data_ids; // data per patch.
     std::vector<int> m_implicit_data_ids; // data per implicit surface.
@@ -905,6 +926,7 @@ private:
     int m_ui_mode = 0;
     bool m_show_wire_frame = false;
     bool m_interactive = true;
+    bool m_depth_check = true;
 
     bool m_mouse_down = false;
     bool m_shift_down = false;
