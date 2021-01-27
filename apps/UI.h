@@ -126,7 +126,7 @@ private:
             viewer.data(control_id).set_visible(m_ui_mode == 1 && is_active);
 
             const int sample_id = m_sample_view_ids[i];
-            viewer.data(sample_id).set_visible(m_ui_mode == 0 && is_active);
+            viewer.data(sample_id).set_visible(m_ui_mode == 0 /*&& is_active*/);
         }
         m_pick_state.reset();
     }
@@ -398,7 +398,7 @@ private:
                     (p + n.normalized() * l / 20).transpose(),
                     Eigen::RowVector3d(0, 0, 0));
             }
-            viewer.data(id).show_overlay_depth = 0;
+            //viewer.data(id).show_overlay_depth = 0;
             viewer.data(id).show_lines = true;
         }
     }
