@@ -1,0 +1,279 @@
+{
+    "input": [
+        {
+            "name": "1",
+            "normal": [
+                -1.0,
+                0.0,
+                0.0
+            ],
+            "point": [
+                -1.13652,
+                0.0,
+                0.0
+            ],
+            "samples": "1_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "2",
+            "normal": [
+                0.0,
+                -1.0,
+                0.0
+            ],
+            "point": [
+                0.0,
+                -1.13753,
+                0.0
+            ],
+            "samples": "2_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "3",
+            "normal": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "point": [
+                0.0,
+                0.0,
+                4.54606
+            ],
+            "samples": "3_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "4",
+            "normal": [
+                0.0,
+                0.0,
+                -1.0
+            ],
+            "point": [
+                0.0,
+                0.0,
+                -4.54606
+            ],
+            "samples": "4_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "axis_vector": [
+                -0.009629985070645717,
+                -0.005509991457866865,
+                0.9999384497966229
+            ],
+            "center": [
+                -1.14524,
+                -1.13926,
+                -0.8881
+            ],
+            "is_flipped": false,
+            "major_radius": 2.69141,
+            "minor_radius": 0.45609,
+            "name": "5",
+            "samples": "5_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "name": "6",
+            "normal": [
+                1.0,
+                0.0,
+                0.0
+            ],
+            "point": [
+                0.011805177969647588,
+                -0.043268197095259524,
+                0.03205256328003614
+            ],
+            "samples": "6_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "7",
+            "normal": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "point": [
+                0.017810146301043675,
+                -0.20272852378505538,
+                0.051834926655265914
+            ],
+            "samples": "7_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "8",
+            "normal": [
+                0.0,
+                0.0,
+                -1.0
+            ],
+            "point": [
+                0.03369896325499382,
+                -0.020942769400977085,
+                -0.008380322465702333
+            ],
+            "samples": "8_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "9",
+            "normal": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "point": [
+                0.0,
+                0.0,
+                -0.90921
+            ],
+            "samples": "9_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "10",
+            "normal": [
+                0.0,
+                0.0,
+                -1.0
+            ],
+            "point": [
+                0.0,
+                0.0,
+                -2.72764
+            ],
+            "samples": "10_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "name": "11",
+            "normal": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "point": [
+                0.17656151213642385,
+                -0.035851494761558904,
+                0.9735863712116193
+            ],
+            "samples": "11_sample.xyz",
+            "type": "plane"
+        },
+        {
+            "axis_vector": [
+                -0.0003000007279076493,
+                0.007420018003582525,
+                0.9999724262860401
+            ],
+            "center": [
+                -1.16938,
+                -1.15532,
+                0.92072
+            ],
+            "is_flipped": false,
+            "major_radius": 2.69057,
+            "minor_radius": 0.44469,
+            "name": "12",
+            "samples": "12_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_vector": [
+                0.01761008569704905,
+                -0.0003600017518987881,
+                0.9998448656069007
+            ],
+            "center": [
+                -1.12502,
+                -1.06128,
+                -2.72239
+            ],
+            "is_flipped": false,
+            "major_radius": 2.80245,
+            "minor_radius": 0.4646,
+            "name": "13",
+            "samples": "13_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_vector": [
+                0.005260010008756568,
+                -0.002920005556191859,
+                0.999981902767375
+            ],
+            "center": [
+                -1.19333,
+                -1.12083,
+                4.55743
+            ],
+            "is_flipped": false,
+            "major_radius": 2.73819,
+            "minor_radius": 0.44996,
+            "name": "14",
+            "samples": "14_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_vector": [
+                0.001290000961438075,
+                -0.006070004523976058,
+                0.9999807452859273
+            ],
+            "center": [
+                -1.17217,
+                -1.20945,
+                2.70871
+            ],
+            "is_flipped": false,
+            "major_radius": 2.70236,
+            "minor_radius": 0.46503,
+            "name": "15",
+            "samples": "15_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_vector": [
+                0.00245000788242304,
+                -0.005250016890906515,
+                0.9999832172511803
+            ],
+            "center": [
+                -1.08898,
+                -1.14181,
+                -4.52699
+            ],
+            "is_flipped": false,
+            "major_radius": 2.68455,
+            "minor_radius": 0.45874,
+            "name": "16",
+            "samples": "16_sample.xyz",
+            "type": "torus"
+        },
+        {
+            "axis_point1": [
+                -1.0731,
+                -1.07529,
+                -1e-05
+            ],
+            "axis_point2": [
+                -1.0731,
+                -1.07529,
+                0.99999
+            ],
+            "is_flipped": false,
+            "name": "17",
+            "radius": 5.37126,
+            "samples": "17_sample.xyz",
+            "type": "cylinder"
+        }
+    ]
+}
