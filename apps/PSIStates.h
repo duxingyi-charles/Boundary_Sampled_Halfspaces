@@ -40,6 +40,7 @@ public:
         m_psi->set_parameters(params);
 
         refresh();
+        initialize_colors();
     }
 
     const VertexArray& get_vertices() const { return m_vertices; }
@@ -135,6 +136,8 @@ public:
 
     void remove_implicit(size_t i) {
         m_implicits.erase(m_implicits.begin() + i);
+        m_colors.erase(m_colors.begin() + i);
+        assert(m_implicits.size() == m_colors.size());
     }
 
     Sampled_Implicit& get_implicit_function(size_t i) { return *m_implicits[i]; }
@@ -162,7 +165,6 @@ public:
         m_psi->run(m_grid, m_implicits);
         initialize_states();
         initialize_reference_length();
-        initialize_colors();
     }
 
 private:
@@ -207,21 +209,44 @@ private:
         }
     }
 
-    Eigen::Matrix<double, 1, 3> map_color(double t)
-    {
-        t = std::max<double>(std::min<double>(t, 1), 0);
+    Eigen::Matrix<double, Eigen::Dynamic, 3> get_old_pallette() const {
         Eigen::Matrix<double, 8, 3> pallette;
         // pallette << 0x8d, 0xd3, 0xc7, 0xff, 0xff, 0xb3, 0xbe, 0xba, 0xda, 0xfb, 0x80, 0x72, 0x80,
         //    0xb1, 0xd3, 0xfd, 0xb4, 0x62, 0xb3, 0xde, 0x69, 0xfc, 0xcd, 0xe5;
 
         pallette << 0xe4, 0x1a, 0x1c, 0x37, 0x7e, 0xb8, 0x4d, 0xaf, 0x4a, 0x98, 0x4e, 0xa3, 0xff,
             0x7f, 0x00, 0xff, 0xff, 0x33, 0xa6, 0x56, 0x28, 0xf7, 0x81, 0xbf;
-        size_t i0 = static_cast<size_t>(std::floor(t * 8));
-        size_t i1 = static_cast<size_t>(std::ceil(t * 8));
-        i0 = std::min<size_t>(i0, 7);
-        i1 = std::min<size_t>(i1, 7);
+        return pallette;
+    }
 
-        const double d = t * 8 - i0;
+    Eigen::Matrix<double, Eigen::Dynamic, 3> get_rainbow_pallette() const {
+        Eigen::Matrix<double, Eigen::Dynamic, 3> pallette(11, 3);
+        pallette <<
+            126, 41, 135,
+            82, 70, 156,
+            71, 98, 173,
+            45, 149, 196,
+            69, 174, 153,
+            113, 189, 103,
+            164, 192,60,
+            210, 183, 43,
+            239, 151, 33,
+            241, 91, 34,
+            237, 28, 36;
+        return pallette;
+    }
+
+    Eigen::Matrix<double, 1, 3> map_color(double t)
+    {
+        auto pallette = get_rainbow_pallette();
+        const auto n = pallette.rows();
+        t = std::max<double>(std::min<double>(t, 1), 0);
+        size_t i0 = static_cast<size_t>(std::floor(t * n));
+        size_t i1 = static_cast<size_t>(std::ceil(t * n));
+        i0 = std::min<size_t>(i0, n-1);
+        i1 = std::min<size_t>(i1, n-1);
+
+        const double d = t * n - i0;
         return (pallette.row(i0) * (1 - d) + pallette.row(i1) * d) / 255.0;
     }
 
@@ -231,7 +256,7 @@ private:
         m_colors.resize(num_implicits);
         if (num_implicits > 1) {
             for (int i = 0; i < num_implicits; i++) {
-                double t = double(i) / double(num_implicits - 1);
+                double t = double(i+1) / double(num_implicits + 1);
                 m_colors[i] << map_color(t), 1;
             }
         } else if (num_implicits == 1) {
@@ -242,7 +267,7 @@ private:
     void add_color()
     {
         Eigen::Matrix<double, 1, 4> color;
-        color << map_color(double(m_colors.size() % 10) / 10.0), 1;
+        color << map_color(double(m_colors.size() % 11) / 10.0), 1;
         m_colors.push_back(color);
         assert(m_colors.size() == m_implicits.size());
     }
