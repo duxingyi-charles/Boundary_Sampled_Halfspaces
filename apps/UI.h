@@ -172,6 +172,7 @@ private:
             }
             if (ImGui::RadioButton("Control Points", &m_ui_mode, 1)) {
                 m_active_state.active_point_id = -1;
+                m_overlay = true;
                 reset_patch_visibility(viewer);
             }
             if (ImGui::Checkbox("Wire frame", &m_show_wire_frame)) {
@@ -180,7 +181,7 @@ private:
             if (ImGui::Checkbox("Interactive", &m_interactive)) {
                 reset_patch_visibility(viewer);
             }
-            if (ImGui::Checkbox("Depth check", &m_depth_check)) {
+            if (ImGui::Checkbox("Overlay annotation", &m_overlay)) {
                 update_depth_check(viewer);
             }
             static int res = m_states->get_resolution();
@@ -397,7 +398,7 @@ private:
             }
 
             // add_secondary_implicit_data(viewer, id, fn);
-            viewer.data(id).show_overlay_depth = m_depth_check;
+            viewer.data(id).show_overlay_depth = !m_overlay;
         }
 
         m_sample_view_ids.reserve(num_implicits);
@@ -415,7 +416,7 @@ private:
                     (p + n.normalized() * l / 20).transpose(),
                     Eigen::RowVector3d(0, 0, 0));
             }
-            viewer.data(id).show_overlay_depth = m_depth_check;
+            viewer.data(id).show_overlay_depth = !m_overlay;
             viewer.data(id).show_lines = true;
         }
     }
@@ -833,11 +834,14 @@ private:
                 if (m_ui_mode == 0) m_ui_mode = 1;
                 else m_ui_mode = 0;
                 m_active_state.active_point_id = -1;
+                if (m_ui_mode == 1) m_overlay = true;
                 reset_patch_visibility(viewer);
             } else if (key == 68) {
                 // 'd' to toggle depth check.
-                m_depth_check = !m_depth_check;
+                m_overlay = !m_overlay;
                 update_depth_check(viewer);
+            } else if (key == 73) {
+                m_interactive = !m_interactive;
             }
             return false;
         };
@@ -918,10 +922,10 @@ private:
 
     void update_depth_check(igl::opengl::glfw::Viewer& viewer) {
         for (auto pid : m_control_view_ids) {
-            viewer.data(pid).show_overlay_depth = m_depth_check;
+            viewer.data(pid).show_overlay_depth = !m_overlay;
         }
         for (auto pid : m_sample_view_ids) {
-            viewer.data(pid).show_overlay_depth = m_depth_check;
+            viewer.data(pid).show_overlay_depth = !m_overlay;
         }
     }
 
@@ -940,7 +944,7 @@ private:
     int m_ui_mode = 0;
     bool m_show_wire_frame = false;
     bool m_interactive = true;
-    bool m_depth_check = true;
+    bool m_overlay = true;
 
     bool m_mouse_down = false;
     bool m_shift_down = false;
