@@ -138,13 +138,27 @@ private:
         static bool imgui_demo = false;
         viewer.plugins.push_back(&m_menu);
         m_menu.callback_draw_viewer_menu = [&]() {
-            auto post_update_geometry = [&]() {
+            enum ActivationMode{
+                LAST_PATCH,
+                NO_CHANGE,
+                RESET
+            };
+            auto post_update_geometry = [&](ActivationMode mode = LAST_PATCH) {
                 if (m_interactive) {
                     m_states->refresh();
                 }
                 initialize_data(viewer);
                 m_active_state.active_point_id = -1;
-                m_active_state.active_implicit_id = m_states->get_num_implicits() - 1;
+                switch (mode) {
+                    case LAST_PATCH:
+                        m_active_state.active_implicit_id = m_states->get_num_implicits() - 1;
+                        break;
+                    case NO_CHANGE:
+                        assert(m_active_state.active_implicit_id < m_states->get_num_implicits());
+                        break;
+                    case RESET:
+                        m_active_state.active_implicit_id = -1;
+                }
                 reset_patch_visibility(viewer);
             };
 
@@ -233,12 +247,12 @@ private:
                     auto& fn = m_states->get_implicit_function(m_active_state.active_implicit_id);
                     fn.flip();
                     m_states->refresh();
-                    post_update_geometry();
+                    post_update_geometry(NO_CHANGE);
                 }
             }
             if (ImGui::Button("Update", ImVec2(width, 0.0f))) {
                 m_states->refresh();
-                post_update_geometry();
+                post_update_geometry(RESET);
             }
             if (ImGui::Button("Save mesh", ImVec2(width, 0.0f))) {
                 m_states->save_all("psi_output.obj");
