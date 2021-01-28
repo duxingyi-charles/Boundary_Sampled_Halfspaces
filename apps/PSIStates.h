@@ -244,13 +244,14 @@ private:
         for (size_t i = 0; i < num_implicits; i++) {
             auto& color = m_implicits[i]->get_color();
             if (color.template segment<3>(0).norm() == 0) {
-                color = get_new_color(i);
+                color = get_new_color(m_color_count);
+                m_color_count++;
             }
         }
     }
 
     Eigen::RowVector4d get_new_color() const {
-        return get_new_color(m_implicits.size() - 1);
+        return get_new_color(m_color_count++);
     }
 
     Eigen::RowVector4d get_new_color(size_t i) const
@@ -385,6 +386,7 @@ private:
     GridSpec m_grid;
     std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
     std::unique_ptr<Mesh_PSI> m_psi;
+    mutable int m_color_count = 0;
 
     // Derived states.
     VertexArray m_vertices;
