@@ -296,7 +296,7 @@ void PSI::connected_graph_cut() {
             ready_for_connected_graph_cut = true;
         }
         connected_graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
-                            B_label,P_label);
+                            B_label,P_label,P_prohibited);
         graph_cut_finished = true;
     } else {
         graph_cut_finished = false;
@@ -316,7 +316,8 @@ void PSI::connected_graph_cut(
         int topK, bool consider_adj_diff,
         //output
         std::vector<bool> &B_label,
-        std::vector<bool> &P_label
+        std::vector<bool> &P_label,
+        std::vector<int>  &P_prohibited
 ) {
     std::cout << "topK = " << topK << std::endl;
     std::cout << "explore adjacent patches: " << consider_adj_diff << std::endl;
@@ -401,6 +402,7 @@ void PSI::connected_graph_cut(
     // store result
     P_label = s.P_label;
     B_label = s.B_label;
+    P_prohibited = s.prohibited_patches;
 }
 
 
@@ -967,6 +969,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
 
     std::vector<bool> B_label_sparse;
     std::vector<bool> P_label_sparse;
+    std::vector<int>  P_prohibited_sparse;
 
     if (use_state_space_graph_cut) {
         if (!ready_for_connected_graph_cut) {
@@ -977,7 +980,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
 
     if (use_state_space_graph_cut) {
         connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
-                            B_label_sparse,P_label_sparse);
+                            B_label_sparse,P_label_sparse,P_prohibited_sparse);
     } else {
         double cut_cost;
         simple_graph_cut(P_dist, P_samples_sparse, P_block, P_sign, B_patch, B_label_sparse, P_label_sparse, cut_cost);
@@ -1040,7 +1043,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
         // re-compute graph-cut
         if (use_state_space_graph_cut) {
             connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
-                                B_label_sparse,P_label_sparse);
+                                B_label_sparse,P_label_sparse,P_prohibited_sparse);
         } else {
             double cut_cost;
             simple_graph_cut(P_dist, P_samples_sparse, P_block, P_sign, B_patch, B_label_sparse, P_label_sparse, cut_cost);

@@ -126,7 +126,8 @@ protected:
             int topK, bool consider_adj_diff,
             //output
             std::vector<bool> &B_label,
-            std::vector<bool> &P_label
+            std::vector<bool> &P_label,
+            std::vector<int>  &P_prohibited
             );
 
     // export intermediate state for state-space search
@@ -234,7 +235,8 @@ protected:
     // patch labels: surface -> true, not surface -> false
     std::vector<bool> P_label;
 
-
+    // prohibited patches: list of indices of patches prohibited in the last connected_graph_cut()
+    std::vector<int> P_prohibited;
 };
 
 
