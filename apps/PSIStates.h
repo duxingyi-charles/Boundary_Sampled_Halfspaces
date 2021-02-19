@@ -32,12 +32,11 @@ public:
         m_bbox.row(0) = grid.bbox_min;
         m_bbox.row(1) = grid.bbox_max;
 
-        PSI_Param params;
-        params.use_distance_weighted_area = false;
-        params.use_state_space_graph_cut = true;
-        params.topK = 1;
-        params.consider_adj_diff = true;
-        m_psi->set_parameters(params);
+        m_params.use_distance_weighted_area = false;
+        m_params.use_state_space_graph_cut = true;
+        m_params.topK = 1;
+        m_params.consider_adj_diff = true;
+        m_psi->set_parameters(m_params);
 
         refresh();
         initialize_colors();
@@ -66,6 +65,8 @@ public:
 
     void set_resolution(int res) { m_grid.resolution << res, res, res; }
     int get_resolution() const { return m_grid.resolution.maxCoeff(); }
+    int get_k() const { return m_params.topK; }
+    void set_k(int k) { m_params.topK = k; }
 
     void add_plane(const Point& p, const Point& n)
     {
@@ -158,6 +159,7 @@ public:
 
     void refresh()
     {
+        m_psi->set_parameters(m_params);
         m_psi->run(m_grid, m_implicits);
         initialize_states();
         initialize_reference_length();
@@ -250,9 +252,7 @@ private:
         }
     }
 
-    Eigen::RowVector4d get_new_color() const {
-        return get_new_color(m_color_count++);
-    }
+    Eigen::RowVector4d get_new_color() const { return get_new_color(m_color_count++); }
 
     Eigen::RowVector4d get_new_color(size_t i) const
     {
@@ -384,6 +384,7 @@ public:
 private:
     // Input states.
     GridSpec m_grid;
+    PSI_Param m_params;
     std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
     std::unique_ptr<Mesh_PSI> m_psi;
     mutable int m_color_count = 0;

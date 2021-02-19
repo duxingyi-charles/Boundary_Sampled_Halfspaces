@@ -186,9 +186,15 @@ private:
             }
             static int res = m_states->get_resolution();
             ImGui::SetNextItemWidth(-1);
-            if (ImGui::SliderInt("", &res, 16, 128, "grid: %d")) {
+            if (ImGui::SliderInt("##res", &res, 16, 128, "grid: %d")) {
                 m_states->set_resolution(res);
             }
+            static int k = m_states->get_k();
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::SliderInt("##k", &k, 1, 8, "K: %d")) {
+                m_states->set_k(k);
+            }
+
             if (ImGui::Button("Plane", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 m_states->add_plane(bbox.colwise().mean(), Point(0, 1, 0));
