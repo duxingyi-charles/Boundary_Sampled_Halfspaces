@@ -295,7 +295,7 @@ void PSI::connected_graph_cut() {
             compute_patch_adjacency();
             ready_for_connected_graph_cut = true;
         }
-        connected_graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
+        connected_graph_cut(P_dist,P_samples,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,max_search_count,
                             B_label,P_label,P_prohibited);
         graph_cut_finished = true;
     } else {
@@ -313,7 +313,7 @@ void PSI::connected_graph_cut(
         const std::vector<std::vector<int>> &B_patch,
         const std::vector<std::vector<int>> &P_Adj_same,
         const std::vector<std::vector<int>> &P_Adj_diff,
-        int topK, bool consider_adj_diff,
+        int topK, bool consider_adj_diff, int max_search_count,
         //output
         std::vector<bool> &B_label,
         std::vector<bool> &P_label,
@@ -339,7 +339,7 @@ void PSI::connected_graph_cut(
 
     int search_count = 0;
     PSI_Search_State s;
-    while (! Q.empty()) {
+    while (! Q.empty() && search_count < max_search_count) {
         s = Q.top();
         Q.pop();
         ++search_count;
@@ -650,6 +650,7 @@ void PSI::set_parameters(const PSI_Param &param_spec) {
     if (use_state_space_graph_cut) {
         topK = param_spec.topK;
         consider_adj_diff = param_spec.consider_adj_diff;
+        max_search_count = param_spec.max_search_count;
     }
 }
 
@@ -979,7 +980,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
     }
 
     if (use_state_space_graph_cut) {
-        connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
+        connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,max_search_count,
                             B_label_sparse,P_label_sparse,P_prohibited_sparse);
     } else {
         double cut_cost;
@@ -1042,7 +1043,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
 
         // re-compute graph-cut
         if (use_state_space_graph_cut) {
-            connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,
+            connected_graph_cut(P_dist,P_samples_sparse,P_block,P_sign,B_patch,P_Adj_same,P_Adj_diff,topK,consider_adj_diff,max_search_count,
                                 B_label_sparse,P_label_sparse,P_prohibited_sparse);
         } else {
             double cut_cost;

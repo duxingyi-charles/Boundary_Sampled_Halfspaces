@@ -67,6 +67,21 @@ public:
     int get_resolution() const { return m_grid.resolution.maxCoeff(); }
     int get_k() const { return m_params.topK; }
     void set_k(int k) { m_params.topK = k; }
+    int get_max_search_count() const {
+        constexpr int MAX_INT = std::numeric_limits<int>::max();
+        if (m_params.max_search_count > 0 && m_params.max_search_count < MAX_INT) {
+            return m_params.max_search_count;
+        } else {
+            return 0;
+        }
+    }
+    void set_max_search_count(int c) {
+        if (c <= 0) {
+            m_params.max_search_count = std::numeric_limits<int>::max();
+        } else {
+            m_params.max_search_count = c;
+        }
+    }
 
     void add_plane(const Point& p, const Point& n)
     {

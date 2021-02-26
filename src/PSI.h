@@ -123,7 +123,7 @@ protected:
             const std::vector<std::vector<int>> &B_patch,
             const std::vector<std::vector<int>> &P_Adj_same,
             const std::vector<std::vector<int>> &P_Adj_diff,
-            int topK, bool consider_adj_diff,
+            int topK, bool consider_adj_diff, int max_search_count,
             //output
             std::vector<bool> &B_label,
             std::vector<bool> &P_label,
@@ -222,6 +222,7 @@ protected:
     // in state space search, expand a state into k children states with least graph-cut cost.
     // if topK=0, explore all children states.
     int topK;
+    int max_search_count;
     // consider adjacent patches from other implicits or not
     bool consider_adj_diff;
     // adjacency list of patches from the same implicit

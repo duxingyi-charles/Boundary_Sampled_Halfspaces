@@ -195,6 +195,12 @@ private:
                 m_states->set_k(k);
             }
 
+            static int max_search_count = m_states->get_max_search_count();
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::SliderInt("##max_search_count", &max_search_count, 0, 256, "max search count: %d")) {
+                m_states->set_max_search_count(max_search_count);
+            }
+
             if (ImGui::Button("Plane", ImVec2(width / 2.1, 0.0f))) {
                 const auto& bbox = m_states->get_bbox();
                 m_states->add_plane(bbox.colwise().mean(), Point(0, 1, 0));
