@@ -115,6 +115,7 @@ private:
         }
 
         update_mode(viewer);
+        update_depth_check(viewer);
     }
 
     void update_mode(igl::opengl::glfw::Viewer& viewer)
@@ -168,6 +169,7 @@ private:
             if (imgui_demo) ImGui::ShowDemoWindow(&imgui_demo);
             if (ImGui::RadioButton("Sample Points", &m_ui_mode, 0)) {
                 m_active_state.active_point_id = -1;
+                m_overlay = false;
                 reset_patch_visibility(viewer);
             }
             if (ImGui::RadioButton("Control Points", &m_ui_mode, 1)) {
@@ -847,6 +849,7 @@ private:
                 else m_ui_mode = 0;
                 m_active_state.active_point_id = -1;
                 if (m_ui_mode == 1) m_overlay = true;
+                else m_overlay = false;
                 reset_patch_visibility(viewer);
             } else if (key == 68) {
                 // 'd' to toggle depth check.
@@ -956,7 +959,7 @@ private:
     int m_ui_mode = 0;
     bool m_show_wire_frame = false;
     bool m_interactive = true;
-    bool m_overlay = true;
+    bool m_overlay = false;
 
     bool m_mouse_down = false;
     bool m_shift_down = false;
