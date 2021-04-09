@@ -159,7 +159,8 @@ void Mesh_PSI::update_implicit(
         fn->get_axis_unit_vector(axis_unit_vector);
         fn->get_apex_angle(apex_angle);
         fn->get_is_flipped(is_flipped);
-        int n = (2 * (grid_diag*abs(tan(apex_angle))) < error_bound) ? 15 : (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(tan(apex_angle))))));
+//        int n = (2 * (grid_diag*abs(tan(apex_angle))) < error_bound) ? 15 : (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(tan(apex_angle))))));
+        int n = (2 * (grid_diag*abs(sin(apex_angle))) < error_bound) ? 15 : (int)round(M_PI/abs(asin(0.5*error_bound/(grid_diag*abs(sin(apex_angle))))));
 //            std::cout << "cone n: " << n << std::endl;
         n = (n < 15) ? 15 : n;
         meshes[i+1] = generate_cone(grid,n,apex,axis_unit_vector,apex_angle,is_flipped);
@@ -554,9 +555,11 @@ IGL_Mesh Mesh_PSI::generate_cone(const GridSpec &grid, int n,
 
     Point base_center(0,0,0);
     if (cos(apex_angle) > 0) {
-        base_center = apex + max_dist * axis_unit_vector;
+//        base_center = apex + max_dist * axis_unit_vector;
+        base_center = apex + max_dist * cos(apex_angle) * axis_unit_vector;
     } else {
-        base_center = apex - max_dist * axis_unit_vector;
+//        base_center = apex - max_dist * axis_unit_vector;
+        base_center = apex - max_dist * cos(apex_angle) * axis_unit_vector;
     }
 
     //
@@ -567,7 +570,8 @@ IGL_Mesh Mesh_PSI::generate_cone(const GridSpec &grid, int n,
     axis1.normalize();
     Eigen::Vector3d axis2 = axis_unit_vector.cross(axis1);
 
-    double radius = fabs(max_dist * tan(apex_angle));
+//    double radius = fabs(max_dist * tan(apex_angle));
+    double radius = fabs(max_dist * sin(apex_angle));
 
     IGL_Mesh cone;
     cone.vertices.resize(n+1, 3);
