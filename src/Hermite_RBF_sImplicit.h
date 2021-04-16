@@ -75,6 +75,8 @@ public:
         for (auto& p : control_points) {
             p += t;
         }
+        consistent_update_RBF_coeff(control_points);
+        reproject_samples();
     }
 
 private:

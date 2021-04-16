@@ -7,6 +7,7 @@
 
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <limits>
 
 class PSI_Param {
 
@@ -18,6 +19,7 @@ public:
     bool use_state_space_graph_cut;
     int topK;
     bool consider_adj_diff;
+    int max_search_count = std::numeric_limits<int>::max();
 
     static PSI_Param parse_psi_param(const std::string& param_spec);
 

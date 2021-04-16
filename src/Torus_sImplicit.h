@@ -89,10 +89,10 @@ public:
         // Reproject sample points.
         for (auto &p : Sampled_Implicit::sample_points) {
             p = transform * p;
-            auto d = p - center;
-            auto h = d.dot(axis_unit_vector);
-            auto d2 = d - axis_unit_vector * h;
-            auto q = center + d2.normalized() * major_radius;
+            Point d = p - center;
+            double h = d.dot(axis_unit_vector);
+            Point d2 = d - axis_unit_vector * h;
+            Point q = center + d2.normalized() * major_radius;
             p = q + (p-q).normalized() * minor_radius;
         }
 
