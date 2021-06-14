@@ -38,14 +38,14 @@ Usage:
     ./BSH_CLI [OPTIONS] config_file output_grid_file
 
 Positionals:
-- config_file (REQUIRED): configuration file
-- output_grid_file (REQUIRED): Output grid file
+- config_file (REQUIRED): configuration file, specifying input halfspaces and samples. See `/example/xxx/input/config.json` for examples.
+- output_grid_file (REQUIRED): Output grid file, containing the extracted BSH boundary and other related information. See `/example/xxx/output/result.grid` for examples.
 
 Options:
 - -h,--help : Print help message and exit
 - -G,--grid-file (REQUIRED): Grid spec file, specifying bounding box and grid resolution for marching cube.
 - -P,--param-file (REQUIRED): Parameter spec file. See `param.json` files under `/example` for examples.
-- -A,--arr-algo (REQUIRED): Arrangement algorithm. Current, only `mesh` is supported.
+- -A,--arr-algo (REQUIRED): Arrangement algorithm. Currently, only `mesh` is supported.
 
 Example:
 
@@ -54,4 +54,4 @@ Example:
 
 ## Examples
 
-Data under `/example` directory are used to generate the corresponding figures in the BSH paper.
+`/example` directory contains input data and output results used to generate the corresponding figures in the BSH paper.
