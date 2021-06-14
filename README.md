@@ -22,152 +22,36 @@ The programs have been tested on macOS 11.4.
 
 ### Mac
 
-We use [NLopt](https://nlopt.readthedocs.io/en/latest/) (version 2.6.1)'s L-BFGS quasi-Newton implementation.
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    make
 
-The easiest way to build on Mac is to run the script, which installs NLopt using [homebrew](https://brew.sh/) and compiles the program.
+The program `BSH_CLI`and `BSH_GUI` will be generated in the `build` subdirectory.
 
-    ./build_mac.sh
+## Usage
 
-The program `findInjective` will be generated in the `build` subdirectory.
+### BSH_CLI
 
+Usage: 
 
+    ./BSH_CLI [OPTIONS] config_file output_grid_file
 
-## How to use
+Positionals:
+- config_file (REQUIRED): configuration file
+- output_grid_file (REQUIRED): Output grid file
 
-The executable `findInjective` asks for 3 arguments: path to an input data file, path to a solver options file, and path to the file to store the result.
+Options:
+- -h,--help : Print help message and exit
+- -G,--grid-file (REQUIRED): Grid spec file, specifying bounding box and grid resolution for marching cube.
+- -P,--param-file (REQUIRED): Parameter spec file. See `param.json` files under `/example` for examples.
+- -A,--arr-algo (REQUIRED): Arrangement algorithm. Current, only `mesh` is supported.
 
-    ./findInjective [input_file] [solver_options_file] [result_file]
+Example:
 
-An example is provided in the `example` subdirectory. Test it by:
-
-    ./findInjective example/input example/solver_options example/my_result
-
-The result will be written to `example/my_result`.
-
-In the 3 arguments, `input_file` is mandatory, while the rest two are optional. If `solver_options_file` is not specified, `findInjective` will look for a file named `solver_options` in the same directory as the binary. If that file is not found, the program will fall back to default options. If `result_file` is not given, results will be written to a file named `result` in the directory of the binary.
-
-
-## File format
-
-### input_file
-
-_Input file_ contains vertices and faces(triangles/tetrahedrons) information about the source mesh and initial embedding, as well as the indices of constrained vertices (called handles, usually are just boundary vertices). Vertices are indexed from 0.
-
-
-    [num_sourceVert] [dimension_sourceVert]
-    ... (num_sourceVert * dimension_sourceVert) Matrix ...
-    [num_initVert]   [dimension_initVert]
-    ... (num_initVert * dimension_initVert) Matrix ...
-    [num_simplex]    [simplex_size]
-    ... (num_simplex * simplex_size) Matrix ...
-    [num_handles]
-    ... (num_handles * 1) Matrix ...
-
-See `example/input` for a concrete example.
-
-:bell:  **Important**: Since TLC aims at constrained embedding problem, the user should at least provide the indices of boundary vertices as handles in the `input_file`, or provide them in a `handleFile` as described below.
-To make this easier, we provide a script to generate a `handleFile` containing boundary vertex indices for a given input mesh. See below for usage.
-
-
-:tada: **It's possible to use your own mesh formats.** We provide two python scripts in directory `IO` to convert common mesh formats to our `input_file` format.
-
-To use the two scripts, make sure to install [meshio](https://github.com/nschloe/meshio) with
-
-     pip install meshio
-
-To convert triangle meshes to our input format, run
-
-    ./convert_input_2D.py [inputObjFile] [handleFile] [outFile]
-
-Currently, we only support OBJ file with initial mesh as uv coordinates. Check out our [dataset](https://github.com/duxingyi-charles/Locally-Injective-Mappings-Benchmark) for some concrete OBJ and handle files.
-The generated `outFile` will have the format of our `input_file`.
-
-For your convenience, we also provide a script in directory `IO` to generate a `handleFile` containing all the boundary vertex indices for a given input mesh. The script works for both triangle/tetrahedron mesh.
-
-     ./extract_boundary_vert.py [inputMeshFile] [outputHandleFile] 
-
-To convert tetrahedron rest(source) and initial meshes to our input format, run
-
-    ./convert_input_3D.py [restFile] [initFile] [handleFile] [outFile]
-
-All tet-mesh formats supported by `meshio` should be handled by this script. We have tested the VTK format. For more examples in VTK format, please check out our [dataset](https://github.com/duxingyi-charles/Locally-Injective-Mappings-Benchmark).
-
-
-### solver_options_file
-
-_Solver options file_ contains parameters for TLC energy, options for NLopt solver, and a list of intermediate status to record during optimization.
-
-
-    form
-    [harmonic OR Tutte]
-    alphaRatio
-    [val]
-    alpha
-    [val]
-    ftol_abs
-    [val]
-    ftol_rel
-    [val]
-    xtol_abs
-    [val]
-    xtol_rel
-    [val]
-    algorithm
-    [LBFGS]
-    maxeval
-    [val]
-    stopCode
-    [none OR all_good]
-    record
-    vert    [0 OR 1]
-    energy  [0 OR 1]
-    minArea [0 OR 1]
-
-The following table explains each option in details.
-We **recommend** using the default values (especially "form", "alphaRatio" and "alpha") as they are most successful in our experiments.
-
-See `example\solver_options` for a concrete example.
-
-|                | possible values  | default value | explanation                                                                                                                    |
-|----------------|------------------|---------------|--------------------------------------------------------------------------------------------------------------------------------|
-| form           | harmonic, Tutte  | Tutte         | two forms of TLC energy (see paper for details)                                                                                |
-| alphaRatio     | [0, inf)         | 1e-6          | Specify the ratio of content (area or volume) between rest mesh and target domain. Default value 1e-6 is recommended.          |
-| alpha          | (-inf, inf)      | -1            | If negative, alpha will be computed from alphaRatio. If non-negative, alpha will overwrite the value computed from alphaRatio. |
-| ftol_abs       | (-inf, inf)      | 1e-8          | Absolute energy change stop threshold. Negative value means disabled.                                                          |
-| ftol_rel       | (-inf, inf)      | 1e-8          | Relative energy change stop threshold. Negative value means disabled.                                                          |
-| xtol_abs       | (-inf, inf)      | 1e-8          | Absolute variable change stop threshold. Negative value means disabled.                                                        |
-| xtol_rel       | (-inf, inf)      | 1e-8          | Relative variable change stop threshold. Negative value means disabled.                                                        |
-| algorithm      | LBFGS            | LBFGS         | Quasi-Newton method.                                                                                                           |
-| maxeval        | positive integer | 10000         | max number of iterations stop threshold.                                                                                        |
-| stopCode       | none, all_good   | all_good      | Custom stop criteria. "all_good": optimization will stop when there are no inverted elements.                                   |
-| record:vert    | 0, 1             | 0             | 1: record target mesh vertices at each iteration.                                                                              |
-| record:energy  | 0, 1             | 0             | 1: record TLC energy at each iteration.                                                                                        |
-| record:minArea | 0, 1             | 0             | 1: record smallest simplex signed content (area or volume) at each iteration.                                                  |
-
-
-
-### result_file
-
-_Result file_ stores the vertices of result mesh, and also intermediate records as specified in solver options file.
-
-
-    name dims
-    data
-    ...
-
-See `example\result` for a concrete example.
-
-We provide a script to convert a `result_file` to a mesh file in directory `IO`.
-
-Usage
-
-    ./get_result_mesh.py [inputFile] [resultFile] [outFile]
-
-For example,
-
-    ./get_result_mesh.py example/input example/result result.vtk
+    ./BSH_CLI ../examples/figure16/tori/input/grid_64.json -P ../examples/figure16/tori/input/param.json -A mesh ../examples/figure16/tori/input/config.json  ../examples/figure16/tori/output/result.grid
 
 
 ## Examples
 
-Examples under /example directory are used to generate the corresponding figures in the BSH paper.
+Data under `/example` directory are used to generate the corresponding figures in the BSH paper.
