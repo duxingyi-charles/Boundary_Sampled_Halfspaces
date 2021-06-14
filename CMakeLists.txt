@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(PSI VERSION 0.1.0 LANGUAGES CXX C)
+project(BSH VERSION 0.1.0 LANGUAGES CXX C)
 
 SET(CMAKE_CXX_STANDARD 14)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not use shared lib.")
@@ -37,22 +37,12 @@ if(NOT TARGET Boost::graph)
 endif()
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
-#add_library(psi STATIC ${SRC_LIST})
-#target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src)
-#
-#target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/apps)
-
-#target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph)
-#target_compile_options(psi PUBLIC "-Wall")
 
 # VIPSS
 
 include_directories(${PROJECT_SOURCE_DIR}/src/vipss/surfacer)
-#aux_source_directory(. MAIN)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/vipss VIPSS_SRC_LIST)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/vipss/surfacer VIPSS_SURFACER_LIST)
-
-#add_executable(${PROJECT_NAME} ${SRC_LIST} ${MAIN} ${SURFACER_LIST})
 
 add_library(vipss STATIC
         ${VIPSS_SRC_LIST}
@@ -67,37 +57,45 @@ add_library(arrangement STATIC
     ${PROJECT_SOURCE_DIR}/src/PyMesh/MeshArrangement.cpp)
 target_link_libraries(arrangement PUBLIC igl::core igl::cgal
     fast_arrangement::fast_arrangement)
-#target_compile_options(arrangement PUBLIC -O0)
 
-add_library(psi STATIC ${SRC_LIST})
-target_include_directories(psi PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
-target_link_libraries(psi PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core arrangement vipss)
-target_compile_options(psi PUBLIC "-Wall")
-target_compile_definitions(psi PUBLIC "-DLIBIGL_NUM_THREADS=2")
-target_compile_definitions(psi PUBLIC "-D_USE_MATH_DEFINES")
+
+add_library(bsh STATIC ${SRC_LIST})
+target_include_directories(bsh PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps)
+target_link_libraries(bsh PUBLIC Eigen3::Eigen Boost::graph nlohmann::json igl::core arrangement vipss)
+target_compile_options(bsh PUBLIC "-Wall")
+target_compile_definitions(bsh PUBLIC "-DLIBIGL_NUM_THREADS=2")
+target_compile_definitions(bsh PUBLIC "-D_USE_MATH_DEFINES")
 
 add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
-target_link_libraries(mesh_arrangement psi CLI11::CLI11 nlohmann::json igl::core
+target_link_libraries(mesh_arrangement bsh CLI11::CLI11 nlohmann::json igl::core
     arrangement)
 
-add_executable(psi_cli apps/psi_cli.cpp)
-target_link_libraries(psi_cli PRIVATE psi CLI11::CLI11)
+# Main programs
 
-add_executable(psi_cli_add_new_implicit apps/psi_cli_add_new_implicit.cpp)
-target_link_libraries(psi_cli_add_new_implicit PRIVATE psi CLI11::CLI11)
+add_executable(BSH_CLI apps/bsh_cli.cpp)
+target_link_libraries(BSH_CLI PRIVATE bsh CLI11::CLI11)
 
-add_executable(psi_cli_sample_reduction apps/psi_cli_sample_reduction.cpp)
-target_link_libraries(psi_cli_sample_reduction PRIVATE psi CLI11::CLI11)
+add_executable(BSH_GUI apps/bsh_ui.cpp apps/UI.h)
+target_link_libraries(BSH_GUI bsh CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
+        arrangement)
 
-#add_executable(psi_cli_connect apps/psi_cli_search_for_connected.cpp)
-#target_link_libraries(psi_cli_connect PRIVATE psi CLI11::CLI11)
 
-add_executable(psi_ui apps/psi_ui.cpp apps/UI.h)
-target_link_libraries(psi_ui psi CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
-    arrangement)
+# unit tests
+add_executable(bsh_cli_add_new_implicit apps/bsh_cli_add_new_implicit.cpp)
+target_link_libraries(bsh_cli_add_new_implicit PRIVATE bsh CLI11::CLI11)
+
+add_executable(export_sampled_implicits apps/export_sampled_implicits.cpp)
+target_link_libraries(export_sampled_implicits PRIVATE bsh CLI11::CLI11)
+
+add_executable(bsh_cli_connect apps/bsh_cli_search_for_connected.cpp)
+target_link_libraries(bsh_cli_connect PRIVATE bsh CLI11::CLI11)
+
+# reverse engineering
+add_executable(bsh_cli_sample_reduction apps/bsh_cli_sample_reduction.cpp)
+target_link_libraries(bsh_cli_sample_reduction PRIVATE bsh CLI11::CLI11)
 
 add_executable(vipss_fitting apps/vipss_fitting.cpp)
-target_link_libraries(vipss_fitting PRIVATE psi CLI11::CLI11)
+target_link_libraries(vipss_fitting PRIVATE bsh CLI11::CLI11)
 
 add_executable(efficient_ransac_test apps/efficient_ransac_test.cpp)
 target_link_libraries(efficient_ransac_test PRIVATE CLI11::CLI11 igl::cgal)
@@ -106,7 +104,5 @@ add_executable(efficient_ransac_fitting apps/efficient_ransac_fitting.cpp)
 target_link_libraries(efficient_ransac_fitting PRIVATE CLI11::CLI11 igl::cgal)
 
 add_executable(mixed_fitting apps/mixed_fitting.cpp)
-target_link_libraries(mixed_fitting PRIVATE psi CLI11::CLI11 igl::cgal)
+target_link_libraries(mixed_fitting PRIVATE bsh CLI11::CLI11 igl::cgal)
 
-add_executable(export_sampled_implicits apps/export_sampled_implicits.cpp)
-target_link_libraries(export_sampled_implicits PRIVATE psi CLI11::CLI11)
