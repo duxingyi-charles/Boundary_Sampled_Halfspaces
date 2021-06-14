@@ -1,4 +1,4 @@
-# piecewise_sampled_implicits
+# Boundary-Sampled Halfspaces
 
 ![](figure/featured.jpeg)
 
@@ -13,12 +13,10 @@ We present a novel representation of solid models for shape design. Like Constru
 
 ## Code
 
-We release 
-
 - BSH_CLI, a command line program that extracts the boundary of the BSH shape defined by a set of halfspaces and sample points. 
 - BSH_GUI, a GUI program for interactively solid modeling using our BSH representation.
 
-This program has been tested on macOS 11.4.
+The programs have been tested on macOS 11.4.
 
 ## Build
 
