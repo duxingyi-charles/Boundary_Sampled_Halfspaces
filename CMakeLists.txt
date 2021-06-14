@@ -66,9 +66,6 @@ target_compile_options(bsh PUBLIC "-Wall")
 target_compile_definitions(bsh PUBLIC "-DLIBIGL_NUM_THREADS=2")
 target_compile_definitions(bsh PUBLIC "-D_USE_MATH_DEFINES")
 
-add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
-target_link_libraries(mesh_arrangement bsh CLI11::CLI11 nlohmann::json igl::core
-    arrangement)
 
 # Main programs
 
@@ -81,28 +78,32 @@ target_link_libraries(BSH_GUI bsh CLI11::CLI11 nlohmann::json igl::core igl_open
 
 
 # unit tests
-add_executable(bsh_cli_add_new_implicit apps/bsh_cli_add_new_implicit.cpp)
-target_link_libraries(bsh_cli_add_new_implicit PRIVATE bsh CLI11::CLI11)
-
-add_executable(export_sampled_implicits apps/export_sampled_implicits.cpp)
-target_link_libraries(export_sampled_implicits PRIVATE bsh CLI11::CLI11)
-
-add_executable(bsh_cli_connect apps/bsh_cli_search_for_connected.cpp)
-target_link_libraries(bsh_cli_connect PRIVATE bsh CLI11::CLI11)
+#add_executable(mesh_arrangement apps/mesh_arrangement.cpp)
+#target_link_libraries(mesh_arrangement bsh CLI11::CLI11 nlohmann::json igl::core
+#        arrangement)
+#
+#add_executable(bsh_cli_add_new_implicit apps/bsh_cli_add_new_implicit.cpp)
+#target_link_libraries(bsh_cli_add_new_implicit PRIVATE bsh CLI11::CLI11)
+#
+#add_executable(export_sampled_implicits apps/export_sampled_implicits.cpp)
+#target_link_libraries(export_sampled_implicits PRIVATE bsh CLI11::CLI11)
+#
+#add_executable(bsh_cli_connect apps/bsh_cli_search_for_connected.cpp)
+#target_link_libraries(bsh_cli_connect PRIVATE bsh CLI11::CLI11)
 
 # reverse engineering
-add_executable(bsh_cli_sample_reduction apps/bsh_cli_sample_reduction.cpp)
-target_link_libraries(bsh_cli_sample_reduction PRIVATE bsh CLI11::CLI11)
-
-add_executable(vipss_fitting apps/vipss_fitting.cpp)
-target_link_libraries(vipss_fitting PRIVATE bsh CLI11::CLI11)
-
-add_executable(efficient_ransac_test apps/efficient_ransac_test.cpp)
-target_link_libraries(efficient_ransac_test PRIVATE CLI11::CLI11 igl::cgal)
-
-add_executable(efficient_ransac_fitting apps/efficient_ransac_fitting.cpp)
-target_link_libraries(efficient_ransac_fitting PRIVATE CLI11::CLI11 igl::cgal)
-
-add_executable(mixed_fitting apps/mixed_fitting.cpp)
-target_link_libraries(mixed_fitting PRIVATE bsh CLI11::CLI11 igl::cgal)
+#add_executable(bsh_cli_sample_reduction apps/bsh_cli_sample_reduction.cpp)
+#target_link_libraries(bsh_cli_sample_reduction PRIVATE bsh CLI11::CLI11)
+#
+#add_executable(vipss_fitting apps/vipss_fitting.cpp)
+#target_link_libraries(vipss_fitting PRIVATE bsh CLI11::CLI11)
+#
+#add_executable(efficient_ransac_test apps/efficient_ransac_test.cpp)
+#target_link_libraries(efficient_ransac_test PRIVATE CLI11::CLI11 igl::cgal)
+#
+#add_executable(efficient_ransac_fitting apps/efficient_ransac_fitting.cpp)
+#target_link_libraries(efficient_ransac_fitting PRIVATE CLI11::CLI11 igl::cgal)
+#
+#add_executable(mixed_fitting apps/mixed_fitting.cpp)
+#target_link_libraries(mixed_fitting PRIVATE bsh CLI11::CLI11 igl::cgal)
 
