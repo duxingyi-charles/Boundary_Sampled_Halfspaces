@@ -2,8 +2,8 @@
 #include <Cone_sImplicit.h>
 #include <Cylinder_sImplicit.h>
 #include <Hermite_RBF_sImplicit.h>
-#include <Mesh_PSI.h>
-#include <PSI.h>
+#include <Mesh_BSH.h>
+#include <BSH.h>
 #include <Plane_sImplicit.h>
 #include <Sphere_sImplicit.h>
 #include <Torus_sImplicit.h>
@@ -15,7 +15,7 @@
 #include <memory>
 #include <vector>
 
-class PSIStates
+class BSHStates
 {
 public:
     using VertexArray = Eigen::Matrix<double, Eigen::Dynamic, 3>;
@@ -23,11 +23,11 @@ public:
     using MapArray = Eigen::Matrix<int, Eigen::Dynamic, 1>;
 
 public:
-    PSIStates(const GridSpec& grid, std::vector<std::unique_ptr<Sampled_Implicit>>& implicits)
+    BSHStates(const GridSpec& grid, std::vector<std::unique_ptr<Sampled_Implicit>>& implicits)
         : m_grid(grid)
         , m_implicits(implicits)
     {
-        m_psi = std::make_unique<Mesh_PSI>();
+        m_bsh = std::make_unique<Mesh_BSH>();
         m_bbox.resize(2, 3);
         m_bbox.row(0) = grid.bbox_min;
         m_bbox.row(1) = grid.bbox_max;
@@ -36,7 +36,7 @@ public:
         m_params.use_state_space_graph_cut = true;
         m_params.topK = 1;
         m_params.consider_adj_diff = true;
-        m_psi->set_parameters(m_params);
+        m_bsh->set_parameters(m_params);
 
         refresh();
         initialize_colors();
@@ -44,18 +44,18 @@ public:
 
     const VertexArray& get_vertices() const { return m_vertices; }
     const FaceArray& get_faces() const { return m_faces; }
-    const auto& get_patches() const { return m_psi->get_patches(); }
-    const auto& get_cells() const { return m_psi->get_cells(); }
-    const auto& get_cell_labels() const { return m_psi->get_cell_labels(); }
-    const auto& get_patch_labels() const { return m_psi->get_patch_labels(); }
-    const auto& get_patch_implicit() const { return m_psi->get_patch_implicit(); }
-    const auto& get_cell_patch_adjacency() const { return m_psi->get_cell_patch_adjacency(); }
-    const size_t get_num_implicits() const { return m_psi->get_num_implicits(); }
-    const size_t get_num_patches() const { return m_psi->get_num_patches(); }
-    const size_t get_num_cells() const { return m_psi->get_num_cells(); }
+    const auto& get_patches() const { return m_bsh->get_patches(); }
+    const auto& get_cells() const { return m_bsh->get_cells(); }
+    const auto& get_cell_labels() const { return m_bsh->get_cell_labels(); }
+    const auto& get_patch_labels() const { return m_bsh->get_patch_labels(); }
+    const auto& get_patch_implicit() const { return m_bsh->get_patch_implicit(); }
+    const auto& get_cell_patch_adjacency() const { return m_bsh->get_cell_patch_adjacency(); }
+    const size_t get_num_implicits() const { return m_bsh->get_num_implicits(); }
+    const size_t get_num_patches() const { return m_bsh->get_num_patches(); }
+    const size_t get_num_cells() const { return m_bsh->get_num_cells(); }
     const auto& get_bbox() const { return m_bbox; }
     const auto get_grid_diag() const { return (m_grid.bbox_max - m_grid.bbox_min).norm(); }
-    const auto& get_implicit_meshes() const { return m_psi->get_input_meshes(); }
+    const auto& get_implicit_meshes() const { return m_bsh->get_input_meshes(); }
 
     const int get_implicit_from_patch(int patch_id) const { return get_patch_implicit()[patch_id]; }
     const Eigen::RowVector4d get_implicit_color(int implicit_id) const
@@ -90,7 +90,7 @@ public:
         fn->set_sample_points({p});
         fn->set_reference_length(get_grid_diag() / 10);
         fn->set_color(get_new_color());
-        m_psi->add_implicit(m_grid, fn);
+        m_bsh->add_implicit(m_grid, fn);
     }
 
     void add_sphere(const Point& center, double radius)
@@ -100,7 +100,7 @@ public:
         fn->set_sample_points({Point(center + Point(radius, 0, 0))});
         fn->set_reference_length(get_grid_diag() / 10);
         fn->set_color(get_new_color());
-        m_psi->add_implicit(m_grid, fn);
+        m_bsh->add_implicit(m_grid, fn);
     }
 
     void add_cylinder(const Point& center, const Point& axis, double radius)
@@ -114,7 +114,7 @@ public:
         fn->set_sample_points({Point(center + d * radius)});
         fn->set_reference_length(get_grid_diag() / 10);
         fn->set_color(get_new_color());
-        m_psi->add_implicit(m_grid, fn);
+        m_bsh->add_implicit(m_grid, fn);
     }
 
     void add_cone(const Point& center, const Point& axis, double angle)
@@ -124,7 +124,7 @@ public:
         fn->set_sample_points({center});
         fn->set_reference_length(get_grid_diag() / 10);
         fn->set_color(get_new_color());
-        m_psi->add_implicit(m_grid, fn);
+        m_bsh->add_implicit(m_grid, fn);
     }
 
     void add_torus(const Point& center, const Point& axis, double R, double r)
@@ -138,7 +138,7 @@ public:
         fn->set_sample_points({center + d * (R + r)});
         fn->set_reference_length(get_grid_diag() / 10);
         fn->set_color(get_new_color());
-        m_psi->add_implicit(m_grid, fn);
+        m_bsh->add_implicit(m_grid, fn);
     }
 
     void add_vipss(const std::vector<Point>& ctrl_pts, const std::vector<Point>& sample_pts)
@@ -147,7 +147,7 @@ public:
         auto& fn = m_implicits.back();
         fn->set_reference_length(get_grid_diag() / 10);
         fn->set_color(get_new_color());
-        m_psi->add_implicit(m_grid, fn);
+        m_bsh->add_implicit(m_grid, fn);
     }
 
     void remove_implicit(size_t i) { m_implicits.erase(m_implicits.begin() + i); }
@@ -157,7 +157,7 @@ public:
 
     void update_implicit(size_t implicit_id)
     {
-        m_psi->update_implicit(m_grid, m_implicits[implicit_id], implicit_id);
+        m_bsh->update_implicit(m_grid, m_implicits[implicit_id], implicit_id);
     }
 
     void update_control_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
@@ -168,14 +168,14 @@ public:
     void update_sample_points(size_t implicit_id, const std::vector<Eigen::Vector3d>& pts)
     {
         m_implicits[implicit_id]->set_sample_points(pts);
-        m_psi->process_samples();
-        m_psi->graph_cut();
+        m_bsh->process_samples();
+        m_bsh->graph_cut();
     }
 
     void refresh()
     {
-        m_psi->set_parameters(m_params);
-        m_psi->run(m_grid, m_implicits);
+        m_bsh->set_parameters(m_params);
+        m_bsh->run(m_grid, m_implicits);
         initialize_states();
         initialize_reference_length();
     }
@@ -183,8 +183,8 @@ public:
 private:
     void initialize_states()
     {
-        const auto& V = m_psi->get_vertices();
-        const auto& F = m_psi->get_faces();
+        const auto& V = m_bsh->get_vertices();
+        const auto& F = m_bsh->get_faces();
 
         const size_t num_vertices = V.size();
         const size_t num_faces = F.size();
@@ -308,7 +308,7 @@ public:
             std::vector<IGL_Mesh> point_meshes;
             point_meshes.reserve(pts.size());
             for (const auto& p : pts) {
-                point_meshes.push_back(Mesh_PSI::generate_unit_sphere(8, 16, false));
+                point_meshes.push_back(Mesh_BSH::generate_unit_sphere(8, 16, false));
                 auto& mesh = point_meshes.back();
                 mesh.vertices = mesh.vertices.array() * (l / 100);
                 mesh.vertices.rowwise() += p.transpose();
@@ -316,7 +316,7 @@ public:
 
             IGL_Mesh point_mesh;
             Eigen::VectorXi face_to_mesh;
-            Mesh_PSI::merge_meshes(point_meshes, point_mesh, face_to_mesh);
+            Mesh_BSH::merge_meshes(point_meshes, point_mesh, face_to_mesh);
 
             igl::write_triangle_mesh(basename + "_sample_points_" + std::to_string(i) + ext,
                 point_mesh.vertices,
@@ -393,15 +393,15 @@ public:
 
     void save_implicits(const std::string& output_dir) const
     {
-        m_psi->export_sampled_implicits(output_dir);
+        m_bsh->export_sampled_implicits(output_dir);
     }
 
 private:
     // Input states.
     GridSpec m_grid;
-    PSI_Param m_params;
+    BSH_Param m_params;
     std::vector<std::unique_ptr<Sampled_Implicit>>& m_implicits;
-    std::unique_ptr<Mesh_PSI> m_psi;
+    std::unique_ptr<Mesh_BSH> m_bsh;
     mutable int m_color_count = 0;
 
     // Derived states.

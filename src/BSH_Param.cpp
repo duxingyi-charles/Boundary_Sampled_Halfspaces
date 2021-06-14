@@ -2,9 +2,9 @@
 // Created by Charles Du on 12/28/20.
 //
 
-#include "PSI_Param.h"
+#include "BSH_Param.h"
 
-PSI_Param PSI_Param::parse_psi_param(const std::string &param_spec) {
+BSH_Param BSH_Param::parse_bsh_param(const std::string &param_spec) {
     using json = nlohmann::json;
     std::ifstream fin(param_spec.c_str());
     if (!fin) {
@@ -13,7 +13,7 @@ PSI_Param PSI_Param::parse_psi_param(const std::string &param_spec) {
     json config;
     fin >> config;
 
-    PSI_Param spec;
+    BSH_Param spec;
 
     assert(config.contains("use_distance_weighted_area"));
     spec.use_distance_weighted_area = config["use_distance_weighted_area"].get<bool>();

@@ -2,7 +2,7 @@
 // Created by Charles Du on 11/5/20.
 //
 
-#include "Mesh_PSI.h"
+#include "Mesh_BSH.h"
 
 #include <igl/copyleft/marching_cubes.h>
 
@@ -15,7 +15,7 @@
 
 #include <Eigen/Geometry> //cross product
 
-IGL_Mesh Mesh_PSI::generate_cube(const GridSpec& grid_spec) {
+IGL_Mesh Mesh_BSH::generate_cube(const GridSpec& grid_spec) {
     ScopedTimer<> timer("Generate cube");
     constexpr double eps = 0;
     auto bbox_min = grid_spec.bbox_min.array() + eps;
@@ -39,7 +39,7 @@ IGL_Mesh Mesh_PSI::generate_cube(const GridSpec& grid_spec) {
     return cube;
 }
 
-IGL_Mesh Mesh_PSI::marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec) {
+IGL_Mesh Mesh_BSH::marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spec) {
     ScopedTimer<> timer("Marching cube");
     size_t num_grid_pts = (grid_spec.resolution[0] + 1) *
                           (grid_spec.resolution[1] + 1) *
@@ -75,7 +75,7 @@ IGL_Mesh Mesh_PSI::marching_cubes(Sampled_Implicit& fn, const GridSpec& grid_spe
     return mesh;
 }
 
-void Mesh_PSI::merge_meshes(const std::vector<IGL_Mesh>& meshes,
+void Mesh_BSH::merge_meshes(const std::vector<IGL_Mesh>& meshes,
                       // output
                       IGL_Mesh &merged_mesh,
                       Eigen::VectorXi &face_to_mesh) {
@@ -113,12 +113,12 @@ void Mesh_PSI::merge_meshes(const std::vector<IGL_Mesh>& meshes,
 
 }
 
-void Mesh_PSI::add_implicit(const GridSpec &grid, const std::unique_ptr<Sampled_Implicit>& fn) {
+void Mesh_BSH::add_implicit(const GridSpec &grid, const std::unique_ptr<Sampled_Implicit>& fn) {
     m_implicit_meshes.emplace_back();
     update_implicit(grid, fn, m_implicit_meshes.size()-2);
 }
 
-void Mesh_PSI::update_implicit(
+void Mesh_BSH::update_implicit(
         const GridSpec &grid,
         const std::unique_ptr<Sampled_Implicit>& fn, size_t i) {
     // Index of implicit goes from 1 to num_implicits.  Index 0 is for bbox.
@@ -198,7 +198,7 @@ void Mesh_PSI::update_implicit(
     }
 }
 
-void Mesh_PSI::compute_arrangement_for_graph_cut(
+void Mesh_BSH::compute_arrangement_for_graph_cut(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
     // arrangement computation independent of samples
@@ -209,7 +209,7 @@ void Mesh_PSI::compute_arrangement_for_graph_cut(
     process_samples();
 }
 
-IGL_Mesh Mesh_PSI::generate_plane(const GridSpec &grid, const Point &p, const Eigen::Vector3d &normal)
+IGL_Mesh Mesh_BSH::generate_plane(const GridSpec &grid, const Point &p, const Eigen::Vector3d &normal)
 {
     auto pmin = grid.bbox_min;
     auto pmax = grid.bbox_max;
@@ -270,7 +270,7 @@ IGL_Mesh Mesh_PSI::generate_plane(const GridSpec &grid, const Point &p, const Ei
 }
 
 
-//IGL_Mesh Mesh_PSI::generate_cylinder(const GridSpec &grid, int n,
+//IGL_Mesh Mesh_BSH::generate_cylinder(const GridSpec &grid, int n,
 //                           const Point& axis_point, const Eigen::Vector3d &axis_unit_vector,
 //                           double radius, bool is_flipped)
 //{
@@ -427,7 +427,7 @@ IGL_Mesh Mesh_PSI::generate_plane(const GridSpec &grid, const Point &p, const Ei
 //}
 
 
-IGL_Mesh Mesh_PSI::generate_cylinder(const GridSpec &grid, int n,
+IGL_Mesh Mesh_BSH::generate_cylinder(const GridSpec &grid, int n,
                                      const Point& axis_point, const Eigen::Vector3d &axis_unit_vector,
                                      double radius, bool is_flipped)
 {
@@ -514,7 +514,7 @@ IGL_Mesh Mesh_PSI::generate_cylinder(const GridSpec &grid, int n,
     return cylinder;
 }
 
-IGL_Mesh Mesh_PSI::generate_cone(const GridSpec &grid, int n,
+IGL_Mesh Mesh_BSH::generate_cone(const GridSpec &grid, int n,
                        const Point& apex, const Eigen::Vector3d& axis_unit_vector,
                        double apex_angle, bool is_flipped)
 {
@@ -596,7 +596,7 @@ IGL_Mesh Mesh_PSI::generate_cone(const GridSpec &grid, int n,
     return cone;
 }
 
-IGL_Mesh Mesh_PSI::generate_torus(const GridSpec &grid, int n_major, int n_minor,
+IGL_Mesh Mesh_BSH::generate_torus(const GridSpec &grid, int n_major, int n_minor,
                             const Point& center, const Eigen::Vector3d& axis_unit_vector,
                             double major_radius, double minor_radius,
                             bool is_flipped)
@@ -653,7 +653,7 @@ IGL_Mesh Mesh_PSI::generate_torus(const GridSpec &grid, int n_major, int n_minor
 
 }
 
-IGL_Mesh Mesh_PSI::generate_random_plane(const GridSpec &grid)
+IGL_Mesh Mesh_BSH::generate_random_plane(const GridSpec &grid)
 {
     auto pmin = grid.bbox_min;
     auto pmax = grid.bbox_max;
@@ -702,7 +702,7 @@ IGL_Mesh Mesh_PSI::generate_random_plane(const GridSpec &grid)
 
 }
 
-IGL_Mesh Mesh_PSI::generate_unit_sphere(int n_latitude, int n_longitude, bool is_flipped)
+IGL_Mesh Mesh_BSH::generate_unit_sphere(int n_latitude, int n_longitude, bool is_flipped)
 {
     IGL_Mesh sphere;
     sphere.vertices.resize((2*n_longitude-1)*n_latitude+2, 3);
@@ -775,7 +775,7 @@ IGL_Mesh Mesh_PSI::generate_unit_sphere(int n_latitude, int n_longitude, bool is
     return sphere;
 }
 
-IGL_Mesh Mesh_PSI::generate_sphere(const GridSpec &grid, int n_latitude, int n_longitude,
+IGL_Mesh Mesh_BSH::generate_sphere(const GridSpec &grid, int n_latitude, int n_longitude,
                          const Point& center, double radius, bool is_flipped)
 {
     IGL_Mesh sphere = generate_unit_sphere(n_latitude, n_longitude, is_flipped);
@@ -788,7 +788,7 @@ IGL_Mesh Mesh_PSI::generate_sphere(const GridSpec &grid, int n_latitude, int n_l
     return sphere;
 }
 
-void Mesh_PSI::generate_meshes(
+void Mesh_BSH::generate_meshes(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
     auto& meshes = m_implicit_meshes;
@@ -803,7 +803,7 @@ void Mesh_PSI::generate_meshes(
     }
 }
 
-void Mesh_PSI::compute_arrangement(
+void Mesh_BSH::compute_arrangement(
         const GridSpec &grid,
         const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits)
 {

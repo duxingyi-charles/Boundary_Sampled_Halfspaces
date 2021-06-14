@@ -2,7 +2,7 @@
 // Created by Charles Du on 11/5/20.
 //
 
-#include "PSI.h"
+#include "BSH.h"
 #include "ScopedTimer.h"
 
 #include <fstream>
@@ -29,7 +29,7 @@
 
 #include <nlohmann/json.hpp>
 
-void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit>> &implicits){
+void BSH::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit>> &implicits){
     // make a pointer to the input implicits
     Impl_ptr = &implicits;
 
@@ -42,7 +42,7 @@ void PSI::run(const GridSpec &grid, std::vector<std::unique_ptr<Sampled_Implicit
     graph_cut();
 }
 
-void PSI::process_samples() {
+void BSH::process_samples() {
     ScopedTimer<> timer("process samples");
     if (arrangement_ready) {
         process_samples(V,F,P,P_Impl,P_touch_bbox,bbox_area,Impl_ptr,use_distance_weighted_area,P_samples,P_dist);
@@ -53,7 +53,7 @@ void PSI::process_samples() {
 }
 
 // static process_samples function
-void PSI::process_samples(
+void BSH::process_samples(
         //input
         const std::vector<Point> &V,
         const std::vector<std::vector<int>> &F,
@@ -211,7 +211,7 @@ void PSI::process_samples(
     }
 }
 
-double PSI::point_triangle_distance(const Point &p1, const Point &p2, const Point &p3, const Point &q) {
+double BSH::point_triangle_distance(const Point &p1, const Point &p2, const Point &p3, const Point &q) {
     // assume: triangle (p1,p2,p3) is not degenerate
 
     //debug
@@ -271,7 +271,7 @@ double PSI::point_triangle_distance(const Point &p1, const Point &p2, const Poin
 }
 
 
-void PSI::graph_cut() {
+void BSH::graph_cut() {
     ScopedTimer<> timer("graph-cut");
     if (ready_for_graph_cut) {
         ScopedTimer<> timer("graph cut");
@@ -289,7 +289,7 @@ void PSI::graph_cut() {
     }
 }
 
-void PSI::connected_graph_cut() {
+void BSH::connected_graph_cut() {
     if (ready_for_graph_cut) {
         if (!ready_for_connected_graph_cut) {
             compute_patch_adjacency();
@@ -304,7 +304,7 @@ void PSI::connected_graph_cut() {
 }
 
 // static connected graph cut function
-void PSI::connected_graph_cut(
+void BSH::connected_graph_cut(
         //input
         const std::vector<double> &P_dist,
         const std::vector<std::vector<int>> &P_samples,
@@ -408,7 +408,7 @@ void PSI::connected_graph_cut(
 
 
 // static graph_cut function
-void PSI::simple_graph_cut(
+void BSH::simple_graph_cut(
         // input
         const std::vector<double> &P_dist,
         const std::vector<std::vector<int>> &P_samples,
@@ -575,7 +575,7 @@ void PSI::simple_graph_cut(
 }
 
 //
-void PSI::simple_graph_cut(
+void BSH::simple_graph_cut(
         // input
         const std::vector<double> &P_dist,
         const std::vector<std::vector<int>> &P_samples,
@@ -598,7 +598,7 @@ void PSI::simple_graph_cut(
 }
 
 
-void PSI::simple_graph_cut(
+void BSH::simple_graph_cut(
         //input
         const std::vector<double> &P_dist,
         const std::vector<std::vector<int>> &P_samples,
@@ -644,7 +644,7 @@ void PSI::simple_graph_cut(
 //    std::cout << "******" << std::endl;
 }
 
-void PSI::set_parameters(const PSI_Param &param_spec) {
+void BSH::set_parameters(const BSH_Param &param_spec) {
     use_distance_weighted_area = param_spec.use_distance_weighted_area;
     use_state_space_graph_cut = param_spec.use_state_space_graph_cut;
     if (use_state_space_graph_cut) {
@@ -654,7 +654,7 @@ void PSI::set_parameters(const PSI_Param &param_spec) {
     }
 }
 
-bool PSI::export_state(const std::string &filename,
+bool BSH::export_state(const std::string &filename,
                               const std::vector<bool> &P_label,
                               const std::vector<std::vector<int>> &components) {
     std::ofstream fout(filename, std::ofstream::out);
@@ -685,7 +685,7 @@ bool PSI::export_state(const std::string &filename,
     return true;
 }
 
-bool PSI::export_data(const std::string &filename) const
+bool BSH::export_data(const std::string &filename) const
 {
     std::ofstream fout(filename, std::ofstream::out);
     if (!fout.good()) {
@@ -877,7 +877,7 @@ bool PSI::export_data(const std::string &filename) const
     return true;
 }
 
-bool PSI::export_sampled_implicits(const std::string &output_dir) const {
+bool BSH::export_sampled_implicits(const std::string &output_dir) const {
     using json = nlohmann::json;
 
     std::string out_dir = output_dir;
@@ -917,8 +917,8 @@ bool PSI::export_sampled_implicits(const std::string &output_dir) const {
 
 // Algorithms for reverse engineering
 
-void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr_sparse) {
-    // should first run PSI on dense samples
+void BSH::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr_sparse) {
+    // should first run BSH on dense samples
     if (!graph_cut_finished) {
         return;
     }
@@ -1068,7 +1068,7 @@ void PSI::reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *I
 
 }
 
-void PSI::compute_patch_adjacency() {
+void BSH::compute_patch_adjacency() {
     // require: P, P_Impl, F, V
     if (arrangement_ready) {
         compute_patch_adjacency(P,F,V,P_Impl,
@@ -1082,7 +1082,7 @@ void PSI::compute_patch_adjacency() {
 
 }
 
-void PSI::compute_patch_adjacency(
+void BSH::compute_patch_adjacency(
         //input
         const std::vector<std::vector<int>> &P,
         const std::vector<std::vector<int>> &F,
@@ -1145,7 +1145,7 @@ void PSI::compute_patch_adjacency(
 
 }
 
-void PSI::get_unsampled_patch_components(
+void BSH::get_unsampled_patch_components(
         //input
         const std::vector<std::vector<int>> &P_Adj_same,
         const std::vector<std::vector<int>> &P_Adj_diff,

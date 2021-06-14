@@ -2,7 +2,7 @@
 // Created by Charles Du on 11/5/20.
 //
 
-#include "Topo_PSI.h"
+#include "Topo_BSH.h"
 
 #include <map>
 #include <queue>
@@ -13,7 +13,7 @@
 #include "ScopedTimer.h"
 
 
-void Topo_PSI::compute_arrangement_for_graph_cut(const GridSpec &grid,
+void Topo_BSH::compute_arrangement_for_graph_cut(const GridSpec &grid,
                                                  const std::vector<std::unique_ptr<Sampled_Implicit>> &implicits) {
     // initialize grid
     init_grid({grid.bbox_min[0], grid.bbox_min[1], grid.bbox_min[2]},
@@ -43,7 +43,7 @@ void Topo_PSI::compute_arrangement_for_graph_cut(const GridSpec &grid,
 
 
 
-void Topo_PSI::insert_implicit_to_arrangement(const Sampled_Implicit &sImplicit, int cur_Impl)  {
+void Topo_BSH::insert_implicit_to_arrangement(const Sampled_Implicit &sImplicit, int cur_Impl)  {
     // record the implicit
 //    int cur_Impl = Impl.size();
 //    Impl.push_back(&sImplicit);
@@ -397,7 +397,7 @@ void Topo_PSI::insert_implicit_to_arrangement(const Sampled_Implicit &sImplicit,
     ///
 }
 
-void Topo_PSI::collect_patch_block() {
+void Topo_BSH::collect_patch_block() {
     /// step 1: group faces into patches
 
     // collect faces on implicit surfaces
@@ -553,7 +553,7 @@ void Topo_PSI::collect_patch_block() {
 
 
 
-void Topo_PSI::init_grid(const Point &p_min, const Point &p_max,
+void Topo_BSH::init_grid(const Point &p_min, const Point &p_max,
                      int n_cell_x, int n_cell_y, int n_cell_z) {
     // make sure grid resolution is non-negative
     n_cell_x = abs(n_cell_x);
@@ -723,7 +723,7 @@ void Topo_PSI::init_grid(const Point &p_min, const Point &p_max,
 
 }
 
-void Topo_PSI::update_F() {
+void Topo_BSH::update_F() {
     F.clear();
     F.reserve(Face_edges.size());
 

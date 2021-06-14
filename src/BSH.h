@@ -10,7 +10,7 @@
 #include "Sampled_Implicit.h"
 
 #include "GridSpec.h"
-#include "PSI_Param.h"
+#include "BSH_Param.h"
 
 
 typedef std::pair<int,int> Edge;
@@ -23,16 +23,16 @@ struct PSI_Search_State {
 };
 
 
-class PSI {
+class BSH {
 
 public:
-    PSI() : Impl_ptr(),
+    BSH() : Impl_ptr(),
     arrangement_ready(false),ready_for_graph_cut(false),ready_for_connected_graph_cut(false),graph_cut_finished(false),
     use_distance_weighted_area(false),use_state_space_graph_cut(false),topK(1),consider_adj_diff(true) {};
 
 
 
-    virtual ~PSI() = default;
+    virtual ~BSH() = default;
 
     void run(const GridSpec &grid,
              std::vector<std::unique_ptr<Sampled_Implicit>> &implicits);
@@ -43,11 +43,11 @@ public:
 
     bool export_data(const std::string &filename) const;
 
-    void set_parameters(const PSI_Param &param_spec);
+    void set_parameters(const BSH_Param &param_spec);
 
     // Algorithms for reverse engineering
 
-    // after running PSI on a dense sampling,
+    // after running BSH on a dense sampling,
     // find a subset of samples that produce the same result as the original dense sampling
     void reduce_samples(const std::vector<std::unique_ptr<Sampled_Implicit>> *Impl_ptr_sparse);
 

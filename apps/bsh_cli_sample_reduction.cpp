@@ -5,8 +5,8 @@
 #include <CLI/CLI.hpp>
 #include <string>
 
-#include "Mesh_PSI.h"
-#include "Topo_PSI.h"
+#include "Mesh_BSH.h"
+#include "Topo_BSH.h"
 
 #include "config.h"
 #include "ScopedTimer.h"
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
         std::string arrangement_algorithm;
     } args;
 
-    CLI::App app{"Piecewise implicit surface demo"};
+    CLI::App app{"BSH demo"};
     app.add_option("-G,--grid-file", args.grid_file, "Grid spec file")
             ->required();
     app.add_option("-P,--param-file", args.param_file, "Parameter spec file")
@@ -46,22 +46,22 @@ int main(int argc, char** argv) {
 
     auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
 
-    auto param_spec = PSI_Param::parse_psi_param(args.param_file);
+    auto param_spec = BSH_Param::parse_bsh_param(args.param_file);
 
-    // PSI
-    Topo_PSI topo_psi;
-    Mesh_PSI mesh_psi;
+    // BSH
+    Topo_BSH topo_bsh;
+    Mesh_BSH mesh_bsh;
 
-    PSI *psi;
+    BSH *bsh;
     if (args.arrangement_algorithm[0] == 't') {
-        psi = &topo_psi;
+        bsh = &topo_bsh;
     } else {
-        psi = &mesh_psi;
+        bsh = &mesh_bsh;
     }
-    psi->set_parameters(param_spec);
+    bsh->set_parameters(param_spec);
 
-    // run PSI on dense samples
-    psi->run(grid_spec, implicit_functions);
+    // run BSH on dense samples
+    bsh->run(grid_spec, implicit_functions);
 
     // sparse samples
     auto implicit_functions_sparse =
@@ -69,13 +69,13 @@ int main(int argc, char** argv) {
     //
     {
         ScopedTimer<> timer("sample reduction");
-//        psi->reduce_samples(nullptr);
-        psi->reduce_samples(&implicit_functions_sparse);
+//        bsh->reduce_samples(nullptr);
+        bsh->reduce_samples(&implicit_functions_sparse);
     }
 
 
     // export result
-    psi->export_data(args.output_grid_file);
+    bsh->export_data(args.output_grid_file);
 
 
     return 0;

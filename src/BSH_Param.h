@@ -9,11 +9,11 @@
 #include <fstream>
 #include <limits>
 
-class PSI_Param {
+class BSH_Param {
 
 public:
-    PSI_Param() :use_distance_weighted_area(false),use_state_space_graph_cut(false),topK(1),consider_adj_diff(true) {};
-    ~PSI_Param() = default;
+    BSH_Param() :use_distance_weighted_area(false),use_state_space_graph_cut(false),topK(1),consider_adj_diff(true) {};
+    ~BSH_Param() = default;
 
     bool use_distance_weighted_area;
     bool use_state_space_graph_cut;
@@ -21,7 +21,7 @@ public:
     bool consider_adj_diff;
     int max_search_count = std::numeric_limits<int>::max();
 
-    static PSI_Param parse_psi_param(const std::string& param_spec);
+    static BSH_Param parse_bsh_param(const std::string& param_spec);
 
 };
 

@@ -5,19 +5,19 @@
 #ifndef PSI_MESH_PSI_H
 #define PSI_MESH_PSI_H
 
-#include "PSI.h"
+#include "BSH.h"
 
 struct IGL_Mesh {
     Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor> vertices;
     Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> faces;
 };
 
-class Mesh_PSI : public PSI {
+class Mesh_BSH : public BSH {
 
 public:
-    Mesh_PSI() : PSI() {};
+    Mesh_BSH() : BSH() {};
 
-    ~Mesh_PSI() override = default;
+    ~Mesh_BSH() override = default;
 
 public:
     const std::vector<IGL_Mesh>& get_input_meshes() const  {

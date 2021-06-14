@@ -6,7 +6,7 @@
 #include <Eigen/Core>
 #include <string>
 
-#include "PSIStates.h"
+#include "BSHStates.h"
 #include "UI.h"
 
 int main(int argc, char** argv)
@@ -17,7 +17,7 @@ int main(int argc, char** argv)
         std::string grid_file;
     } args;
 
-    CLI::App app{"Piecewise implicit surface demo"};
+    CLI::App app{"Boundary-Sampled Halfspaces GUI"};
     app.add_option("-G,--grid", args.grid_file, "Grid spec file")->required();
     app.add_option("config_file", args.config_file, "Configuration file")->required();
     CLI11_PARSE(app, argc, argv);
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
     auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
 
-    PSIStates states(grid_spec, implicit_functions);
+    BSHStates states(grid_spec, implicit_functions);
 
     igl::opengl::glfw::Viewer viewer;
     viewer.core().background_color.setOnes();

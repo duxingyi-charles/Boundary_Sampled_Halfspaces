@@ -1,5 +1,5 @@
 #pragma once
-#include <PSI.h>
+#include <BSH.h>
 
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
@@ -13,7 +13,7 @@
 #include <map>
 #include <string>
 
-#include "PSIStates.h"
+#include "BSHStates.h"
 
 struct ActiveState
 {
@@ -47,7 +47,7 @@ public:
         : m_states(nullptr)
     {}
 
-    void set_states(PSIStates* states)
+    void set_states(BSHStates* states)
     {
         assert(states != nullptr);
         m_states = states;
@@ -314,7 +314,7 @@ private:
         for (size_t i = 0; i < num_patches; i++) {
             const auto& patch = patches[i];
             const auto patch_size = patch.size();
-            PSIStates::FaceArray patch_faces(patch_size, 3);
+            BSHStates::FaceArray patch_faces(patch_size, 3);
             for (size_t j = 0; j < patch_size; j++) {
                 patch_faces.row(j) = faces.row(patch[j]);
             }
@@ -954,7 +954,7 @@ private:
     std::vector<bool> m_patch_visible;
 
     igl::opengl::glfw::imgui::ImGuiMenu m_menu;
-    PSIStates* m_states;
+    BSHStates* m_states;
     double m_down_x, m_down_y;
     int m_ui_mode = 0;
     bool m_show_wire_frame = false;

@@ -5,14 +5,14 @@
 #ifndef PSI_TOPO_PSI_H
 #define PSI_TOPO_PSI_H
 
-#include "PSI.h"
+#include "BSH.h"
 
-class Topo_PSI : public PSI {
+class Topo_BSH : public BSH {
 
 public:
-    Topo_PSI() : PSI() {};
+    Topo_BSH() : BSH() {};
 
-    ~Topo_PSI() override = default;
+    ~Topo_BSH() override = default;
 
 
 private:

@@ -5,8 +5,8 @@
 #include <CLI/CLI.hpp>
 #include <string>
 
-#include "Mesh_PSI.h"
-#include "Topo_PSI.h"
+#include "Mesh_BSH.h"
+#include "Topo_BSH.h"
 
 #include "config.h"
 #include "ScopedTimer.h"
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
         bool consider_adj_diff;
     } args;
 
-    CLI::App app{"Piecewise implicit surface demo"};
+    CLI::App app{"BSH demo"};
     app.add_option("-G,--grid-file", args.grid_file, "Grid spec file")
             ->required();
     app.add_option("-A,--arr-algo", args.arrangement_algorithm, "Arrangement algorithm " )
@@ -49,27 +49,27 @@ int main(int argc, char** argv) {
     auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
 
     // PSI
-    Topo_PSI topo_psi;
-    Mesh_PSI mesh_psi;
+    Topo_BSH topo_bsh;
+    Mesh_BSH mesh_bsh;
 
-    PSI *psi;
+    BSH *bsh;
     if (args.arrangement_algorithm[0] == 't') {
-        psi = &topo_psi;
+        bsh = &topo_bsh;
     } else {
-        psi = &mesh_psi;
+        bsh = &mesh_bsh;
     }
 
-    psi->run(grid_spec, implicit_functions);
-    psi->export_data("/Users/charlesdu/Downloads/research/implicit_modeling/code/piecewise_sampled_implicits/data/state_search_test/init_res.grid");
+    bsh->run(grid_spec, implicit_functions);
+    bsh->export_data("/Users/charlesdu/Downloads/research/implicit_modeling/code/piecewise_sampled_implicits/data/state_search_test/init_res.grid");
     {
         ScopedTimer<> timer("search for connected result");
 //        int topK = 1;
-//        psi->search_for_connected_result(args.topK, args.consider_adj_diff);
+//        bsh->search_for_connected_result(args.topK, args.consider_adj_diff);
     }
 
 
     // export result
-    psi->export_data(args.output_grid_file);
+    bsh->export_data(args.output_grid_file);
 
 
     return 0;

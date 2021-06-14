@@ -5,9 +5,9 @@
 #include <CLI/CLI.hpp>
 #include <string>
 
-//#include "PSI.h"
-#include "Mesh_PSI.h"
-#include "Topo_PSI.h"
+//#include "BSH.h"
+#include "Mesh_BSH.h"
+#include "Topo_BSH.h"
 
 #include "config.h"
 //#include "ScopedTimer.h"
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
         std::string arrangement_algorithm;
     } args;
 
-    CLI::App app{"Piecewise implicit surface demo"};
+    CLI::App app{"BSH demo"};
     app.add_option("-G,--grid-file", args.grid_file, "Grid spec file")
             ->required();
     app.add_option("-A,--arr-algo", args.arrangement_algorithm, "Arrangement algorithm " )
@@ -42,18 +42,18 @@ int main(int argc, char** argv) {
 
     auto grid_spec = GridSpec::parse_grid_spec(args.grid_file);
 
-    // PSI
-    Topo_PSI topo_psi;
-    Mesh_PSI mesh_psi;
+    // BSH
+    Topo_BSH topo_bsh;
+    Mesh_BSH mesh_bsh;
 
-    PSI *psi;
+    BSH *bsh;
     if (args.arrangement_algorithm[0] == 't') {
-        psi = &topo_psi;
+        bsh = &topo_bsh;
     } else {
-        psi = &mesh_psi;
+        bsh = &mesh_bsh;
     }
 
-    psi->run(grid_spec, implicit_functions);
+    bsh->run(grid_spec, implicit_functions);
 
     // add implicit
     Point center(1,1,0);
@@ -63,10 +63,10 @@ int main(int argc, char** argv) {
     samples.push_back(Point(1,0,0));
     implicit_functions.push_back(std::make_unique<Sphere_sImplicit>(center, radius));
     implicit_functions.back()->set_sample_points(samples);
-    psi->run(grid_spec, implicit_functions);
+    bsh->run(grid_spec, implicit_functions);
 
     // export result
-    psi->export_data(args.output_grid_file);
+    bsh->export_data(args.output_grid_file);
 
 
     return 0;
