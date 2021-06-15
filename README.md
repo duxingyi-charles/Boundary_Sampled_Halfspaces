@@ -27,7 +27,7 @@ The programs have been tested on macOS 11.4.
     cmake -DCMAKE_BUILD_TYPE=Release ..
     make
 
-The program `BSH_CLI`and `BSH_GUI` will be generated in the `build` subdirectory.
+The program `BSH_CLI` and `BSH_GUI` will be generated in the `build` subdirectory.
 
 ## Usage
 
@@ -38,14 +38,14 @@ Usage:
     ./BSH_CLI [OPTIONS] config_file output_grid_file
 
 Positionals:
-- config_file (REQUIRED): configuration file, specifying input halfspaces and samples. See `/example/xxx/input/config.json` for examples.
+- config_file (REQUIRED): Configuration file, specifying input halfspaces and samples. See `/example/xxx/input/config.json` for examples.
 - output_grid_file (REQUIRED): Output grid file, containing the extracted BSH boundary and other related information. See `/example/xxx/output/result.grid` for examples.
 
 Options:
-- -h,--help : Print help message and exit
-- -G,--grid-file (REQUIRED): Grid spec file, specifying bounding box and grid resolution for marching cube.
-- -P,--param-file (REQUIRED): Parameter spec file. See `param.json` files under `/example` for examples.
-- -A,--arr-algo (REQUIRED): Arrangement algorithm. Currently, only `mesh` is supported.
+- -h,--help : Print help message and exit.
+- -G,--grid-file (REQUIRED): Grid spec file, specifying bounding box and grid resolution for Marching Cube.
+- -P,--param-file (REQUIRED): Parameter spec file, specifying parameters for BSH boundary extraction algorithm. For default parameters, see `param.json` files under `/example`.
+- -A,--arr-algo (REQUIRED): Arrangement algorithm. Currently, only `mesh` ([this method](https://github.com/gcherchi/FastAndRobustMeshArrangements)) is supported.
 
 Example:
 
