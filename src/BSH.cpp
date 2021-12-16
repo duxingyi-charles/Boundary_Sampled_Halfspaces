@@ -321,6 +321,7 @@ void BSH::connected_graph_cut(
 ) {
     std::cout << "topK = " << topK << std::endl;
     std::cout << "explore adjacent patches: " << consider_adj_diff << std::endl;
+    std::cout << "max_search_count = " << max_search_count << std::endl;
 
 
     // initial state
