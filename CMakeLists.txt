@@ -76,6 +76,9 @@ add_executable(BSH_GUI apps/bsh_ui.cpp apps/UI.h)
 target_link_libraries(BSH_GUI bsh CLI11::CLI11 nlohmann::json igl::core igl_opengl_glfw_imgui
         arrangement)
 
+add_executable(graph_cut apps/graph_cut.cpp)
+target_link_libraries(graph_cut PRIVATE bsh)
+
 
 # unit tests
 #add_executable(mesh_arrangement apps/mesh_arrangement.cpp)

@@ -114,6 +114,7 @@ protected:
 
     void connected_graph_cut();
 
+public:
     /**
      * Run iterative graph cut algorithm.
      * @param[in]  P_dist  Per-ppatch weights.  It is an array of size
@@ -165,6 +166,7 @@ protected:
             std::vector<int>  &P_prohibited
             );
 
+protected:
     // export intermediate state for state-space search
     static bool export_state(const std::string &filename,
                              const std::vector<bool> &P_label,
