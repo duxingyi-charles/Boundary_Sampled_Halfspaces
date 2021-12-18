@@ -354,6 +354,13 @@ void BSH::connected_graph_cut(
         std::cout << "------ state " << search_count << " ------" << std::endl;
         std::cout << "cost: " << s.cost << ", ";
         std::cout << components.size() << " unsampled patch components." << std::endl;
+        for (const auto& comp : components) {
+            std::cout << "  ";
+            for (int i : comp) {
+                std::cout << i << " ";
+            }
+            std::cout << std::endl;
+        }
         std::cout << "prohibited patches:" << std::endl;
         for (auto i : s.prohibited_patches) {
             std::cout << i << ",";

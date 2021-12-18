@@ -114,6 +114,42 @@ protected:
 
     void connected_graph_cut();
 
+public:
+    /**
+     * Run iterative graph cut algorithm.
+     * @param[in]  P_dist  Per-ppatch weights.  It is an array of size
+     *                     #Patches. Each entry represents the distance-weighted
+     *                     patch area.
+     * @param[in]  P_samples  Indices of sample points on each patch.
+     * @param[in]  P_block Patch-block adjacency list.  It is an array of size
+     *                     #Patches. Each subarray is of size 2, representing
+     *                     the block id on the positive and negative side of the
+     *                     patch (the orientation is specified in `P_sign`).
+     * @param[in]  P_sign  Patch orientations.  It is an array of size #Patches.
+     *                     Each subarray is of size 2.  `P_sign[i][0] > 0` means
+     *                     that the block indexed by `P_block[i][0]` is on the
+     *                     positive side of the patch.
+     * @param[in]  B_patch Block-patch adjacency list.  It is an array of size
+     *                     #Blocks.  Each subarray is a list of patch ids
+     *                     representing the patching bounding this block.
+     * @param[in]  P_Adj_same `P_Adj_same[i]` is the list of indices of patches
+     *                        that are adjacent to patch i and on the same
+     *                        implicit surface.
+     * @param[in]  P_Adj_diff `P_Adj_diff[i]` is the list of indices of patches
+     *                        that are adjacent to patch i but not on the same
+     *                        implicit surface.
+     *
+     * @param[in]  topK    K value (see paper, suggested value: 1).
+     * @param[in]  consider_adj_diff  Whether to consider adjacent patch
+     *                                to islands in state space search.
+     *                                (suggested value: true)
+     * @param[in]  max_search_count  Max search count.  (suggested value: inf)
+     *
+     * @param[out]  B_label In/out label per block.
+     * @param[out]  P_label whether each patch is active.
+     * @param[out]  P_prohibited Patches prohibited to be part of the final
+     *                           surface in the state-space search.
+     */
     static void connected_graph_cut(
             //input
             const std::vector<double> &P_dist,
@@ -130,6 +166,7 @@ protected:
             std::vector<int>  &P_prohibited
             );
 
+protected:
     // export intermediate state for state-space search
     static bool export_state(const std::string &filename,
                              const std::vector<bool> &P_label,
