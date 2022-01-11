@@ -505,15 +505,20 @@ void BSH::simple_graph_cut(
             e_reverse = get(boost::edge_reverse,g);
 
     // add edges between blocks
+    std::set<std::array<int, 2>> added_edges;
     for (int p = 0; p < nPatch; ++p) {
         int b1 = P_block[p][0];
         int b2 = P_block[p][1];
-        auto e = add_edge(b1,b2,g).first;
-        e_weights[e] = hPair[Edge(b1,b2)];
-        auto re = add_edge(b2,b1,g).first;
-        e_weights[re] = hPair[Edge(b2,b1)];
-        e_reverse[e] = re;
-        e_reverse[re] = e;
+        if (added_edges.find({b1, b2}) == added_edges.end()) {
+            auto e = add_edge(b1,b2,g).first;
+            e_weights[e] = hPair[Edge(b1,b2)];
+            added_edges.insert({b1, b2});
+            auto re = add_edge(b2,b1,g).first;
+            e_weights[re] = hPair[Edge(b2,b1)];
+            added_edges.insert({b2, b1});
+            e_reverse[e] = re;
+            e_reverse[re] = e;
+        }
     }
 
     // add edges between blocks and terminals (s,t)

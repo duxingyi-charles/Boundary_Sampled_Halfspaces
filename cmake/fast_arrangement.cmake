@@ -19,7 +19,7 @@ add_library(indirect_predicates::indirect_predicates ALIAS indirectPredicates)
 FetchContent_Declare(
     cinolib
     GIT_REPOSITORY https://github.com/mlivesu/cinolib.git
-    GIT_TAG v1.0
+    GIT_TAG master
 )
 if(NOT cinolib_POPULATED)
   FetchContent_Populate(cinolib)
