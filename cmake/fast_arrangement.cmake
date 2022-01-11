@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
     indirect_predicates
     GIT_REPOSITORY https://github.com/qnzhou/Indirect_Predicates.git
-    GIT_TAG master
+    GIT_TAG c7c9d0b0ce8563b368f032083ecda0854e4feb12
 )
 
 FetchContent_MakeAvailable(indirect_predicates)
@@ -19,7 +19,7 @@ add_library(indirect_predicates::indirect_predicates ALIAS indirectPredicates)
 FetchContent_Declare(
     cinolib
     GIT_REPOSITORY https://github.com/mlivesu/cinolib.git
-    GIT_TAG master
+    GIT_TAG a0cb8ee0345c2515711a48a088c3305283fa49d3
 )
 if(NOT cinolib_POPULATED)
   FetchContent_Populate(cinolib)
@@ -29,7 +29,7 @@ endif()
 FetchContent_Declare(
     fast_arrangement
     GIT_REPOSITORY https://github.com/qnzhou/FastAndRobustMeshArrangements.git
-    GIT_TAG master
+    GIT_TAG 44580b5136adc7acff76e2f6f0ad4556340dd073
 )
 if(NOT fast_arrangement_POPULATED)
   FetchContent_Populate(fast_arrangement)
