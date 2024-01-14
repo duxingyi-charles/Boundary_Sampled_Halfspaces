@@ -7,7 +7,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(
     nlopt
-    GIT_REPOSITORY git@github.com:stevengj/nlopt.git
+    GIT_REPOSITORY https://github.com/stevengj/nlopt.git
     GIT_TAG        v2.7.0
     GIT_SHALLOW TRUE
 )
