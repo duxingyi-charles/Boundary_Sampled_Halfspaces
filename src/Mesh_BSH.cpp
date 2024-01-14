@@ -840,7 +840,7 @@ void Mesh_BSH::compute_arrangement(
         }
     }
 
-    //find vertices/faces outside of bounding box
+    //find vertices/faces outside bounding box
     const Point& bbox_min = grid.bbox_min;
     const Point& bbox_max = grid.bbox_max;
     std::vector<bool> V_outside(V.size(), false);
