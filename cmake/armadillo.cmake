@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
     armadillo
     GIT_REPOSITORY https://gitlab.com/conradsnicta/armadillo-code.git
-    GIT_TAG 7b9215a35870e2ff3a7522eacf815f8f4a8489f7
+    GIT_TAG ef4736878b2d1b2bbef1a0f22e18e776f171feaf
     GIT_SHALLOW TRUE
 )
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not use shared lib.")
