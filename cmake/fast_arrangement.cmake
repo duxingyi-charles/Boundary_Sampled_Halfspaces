@@ -29,7 +29,7 @@ endif()
 FetchContent_Declare(
     fast_arrangement
     GIT_REPOSITORY https://github.com/qnzhou/FastAndRobustMeshArrangements.git
-    GIT_TAG master
+    GIT_TAG 0c200b45a2d2b28c6a8dbd49ae71a9140f49b7b8
 )
 if(NOT fast_arrangement_POPULATED)
   FetchContent_Populate(fast_arrangement)
