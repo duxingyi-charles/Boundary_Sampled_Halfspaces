@@ -98,8 +98,8 @@ target_link_libraries(graph_cut PRIVATE bsh)
 #add_executable(bsh_cli_sample_reduction apps/bsh_cli_sample_reduction.cpp)
 #target_link_libraries(bsh_cli_sample_reduction PRIVATE bsh CLI11::CLI11)
 #
-#add_executable(vipss_fitting apps/vipss_fitting.cpp)
-#target_link_libraries(vipss_fitting PRIVATE bsh CLI11::CLI11)
+add_executable(vipss_fitting apps/vipss_fitting.cpp)
+target_link_libraries(vipss_fitting PRIVATE bsh CLI11::CLI11)
 #
 #add_executable(efficient_ransac_test apps/efficient_ransac_test.cpp)
 #target_link_libraries(efficient_ransac_test PRIVATE CLI11::CLI11 igl::cgal)

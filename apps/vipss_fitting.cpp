@@ -18,15 +18,17 @@ int main(int argc, char** argv) {
     } args;
 
     CLI::App app{"vipss implicit fitting"};
-    app.add_option("-S,--sample-file", args.sample_file, "Input sample points file")
-            ->required();
-    app.add_option("-E,--error-bound", args.error_bound, "error bound")
-            ->required();
+//    app.add_option("-S,--sample-file", args.sample_file, "Input sample points file")
+//            ->required();
+    app.add_option("-S,--control-file", args.sample_file, "Input control points file")
+        ->required();
+//    app.add_option("-E,--error-bound", args.error_bound, "error bound")
+//            ->required();
     app.add_option("output_rbf_coef_file", args.output_coef_file, "Output RBF coef file")
             ->required();
-    app.add_option("output_control_point_file", args.output_pts_file,
-                   "Output control points file")
-            ->required();
+//    app.add_option("output_control_point_file", args.output_pts_file,
+//                   "Output control points file")
+//            ->required();
     CLI11_PARSE(app, argc, argv);
 
 
@@ -35,12 +37,14 @@ int main(int argc, char** argv) {
     Sampled_Implicit::import_xyz(args.sample_file, sample_pts);
 
     // vipss fitting
-    Hermite_RBF_sImplicit rbf;
-    rbf.fit_RBF(sample_pts, args.error_bound);
+//    Hermite_RBF_sImplicit rbf;
+//    rbf.fit_RBF(sample_pts, args.error_bound);
+
+    Hermite_RBF_sImplicit rbf(sample_pts, sample_pts);
 
     // export result
     rbf.export_RBF_coeff(args.output_coef_file);
-    Sampled_Implicit::export_xyz(args.output_pts_file,rbf.get_control_points());
+    //Sampled_Implicit::export_xyz(args.output_pts_file,rbf.get_control_points());
 
     return 0;
 }
